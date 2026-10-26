@@ -1,0 +1,375 @@
+// Domain model reconstructed from Reportei (see docs/EVIDENCE.md §2) plus extensions.
+// SQLite by default; switch `provider` to "postgresql" and set DATABASE_URL for production.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id             Int      @id @default(autoincrement())
+  name           String
+  logo           String?
+  type           String   @default("agency") // agency | company
+  specialty      String?
+  locale         String   @default("en") // the workspace language: en | el (spec v3 §5)
+  // white-label (extension: Reportei does not confirm white-label)
+  brandColor     String   @default("#1a36e6")
+  accentColor    String   @default("#0e9f8e")
+  customDomain   String?  @unique
+  hidePoweredBy  Boolean  @default(false)
+  showDataNotes  Boolean  @default(true) // "About these numbers" on client pages (spec v3 §1.4)
+  emailFromName  String?
+  plan           String   @default("pro")
+  createdAt      DateTime @default(now())
+
+  users          User[]
+  projects       Project[]
+  integrations   Integration[]
+  templates      Template[]
+  reports        Report[]
+  webhooks       Webhook[]
+  apiTokens      ApiToken[]
+  notifications  Notification[]
+  customMetrics  CustomMetric[]
+  media          Media[]
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  companyId    Int
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("editor") // owner | admin | editor | viewer | client
+  locale       String?  // en | el: a personal override of the company language (spec v3 §5)
+  createdAt    DateTime @default(now())
+  access       ProjectAccess[]
+}
+
+// Restricts a non-admin user (or a client-portal user) to specific projects.
+model ProjectAccess {
+  userId    Int
+  projectId Int
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([userId, projectId])
+}
+
+model ApiToken {
+  id         Int       @id @default(autoincrement())
+  companyId  Int
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name       String
+  prefix     String
+  tokenHash  String    @unique
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+model Project {
+  id                     Int      @id @default(autoincrement())
+  companyId              Int
+  company                Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name                   String
+  logo                   String?
+  timezone               String   @default("UTC")
+  locale                 String   @default("en")
+  dateFormat             String   @default("DD/MM/YYYY")
+  decimalSeparatorFormat String   @default("comma_dot") // comma_dot = 1,234.56 | dot_comma = 1.234,56
+  // public goals page /g/[token] (spec v3 §3.4)
+  goalsToken             String?  @unique
+  goalsPassword          String?  // hash, same scheme as Report.password
+  currency               String   @default("EUR")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  integrations   Integration[]
+  reports        Report[]
+  automations    Automation[]
+  goals          Goal[]
+  timeline       TimelineEvent[]
+  access         ProjectAccess[]
+  webhooks       Webhook[]
+  customMetrics  CustomMetric[]
+}
+
+model Integration {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  projectId   Int
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  slug        String   // facebook_ads, google_analytics_4, ... (see src/lib/catalog/integrations.ts)
+  name        String
+  sourceId    String   // the network's own id: act_123, GA4 property, site URL, sheet|||gid|||tab ...
+  status      String   @default("active") // active | inactive
+  credentials String?  // AES-GCM encrypted JSON
+  config      Json?    // connector config, detected columns for custom data, currency ...
+  lastSyncAt  DateTime?
+  lastError   String?
+  // health (spec v3 §1.1, src/lib/services/health.ts): a daily check + token expiry, alerts sent once per transition
+  health          String    @default("unknown") // unknown | ok | failing | expiring
+  healthCheckedAt DateTime?
+  healthError     String?
+  tokenExpiresAt  DateTime?
+  healthAlertAt   DateTime?
+  healthAlertKind String?   // failing | expiring7 | expiring1 | recovered
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  goals       Goal[]
+  rows        IngestRow[]
+}
+
+model Template {
+  id          Int      @id @default(autoincrement())
+  companyId   Int?     // null = platform template
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title       String
+  description String   @default("")
+  kind        String   @default("report") // report | dashboard
+  isDefault   Boolean  @default(false)
+  usedCount   Int      @default(0)
+  // [{ id, title, widgets: [{ slug, key }] }]  — see src/lib/engine/types.ts
+  sections    Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reports     Report[]
+}
+
+// A Report is a STATIC snapshot; a Dashboard (kind="dashboard") is LIVE and re-queried on view.
+model Report {
+  id               Int       @id @default(autoincrement())
+  companyId        Int
+  company          Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  projectId        Int
+  project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind             String    @default("report") // report | dashboard
+  title            String
+  subtitle         String    @default("Performance analysis")
+  startDate        String
+  endDate          String
+  comparisonStart  String?
+  comparisonEnd    String?
+  // dashboards: rolling preset so the live view keeps moving (last_7d | last_30d | this_month | previous_month | custom)
+  preset           String    @default("custom")
+  templateId       Int?
+  template         Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  integrationIds   Json      // number[]
+  data             Json?     // frozen snapshot for reports (+ `widgets` map keyed by "integrationId:key[@period]" for widgets added in the editor)
+  dataSyncedAt     DateTime?
+  // in-report editor: { version: 1, blocks: [{ id, title, integrationId, slug, widgets: [{ id, slug, key, component, integrationId, x, y, w, h, custom }] }] } — see src/lib/layout/types.ts
+  layout           Json?
+  analysis         Json?     // analysis cards: [{ id, title, html, author, ai }]
+  campaignScopes   Json?     // per-report campaign scope per ads account, chosen in the wizard or the API (spec v3 §2.2): { [integrationId]: CampaignScope }
+  clientPresets    Json?     // dashboards: presets the client may switch to on the link (spec v3 §3.5); null = locked
+  shareToken       String    @unique
+  shareEnabled     Boolean   @default(true)
+  password         String?   // optional share-link password (hash)
+  views            Int       @default(0)
+  createdBy        Int?
+  automationId     Int?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  timeline         TimelineEvent[]
+}
+
+model Automation {
+  id                   Int       @id @default(autoincrement())
+  projectId            Int
+  project              Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title                String
+  enabled              Boolean   @default(true)
+  frequency            String    @default("monthly") // daily | weekly | biweekly | monthly
+  dayOfWeek            Int       @default(1)         // 0-6, weekly/biweekly
+  dayOfMonth           Int       @default(1)         // 1-28, monthly
+  hour                 Int       @default(8)
+  // delivery (spec v3 §3): daily on weekdays only, monthly by weekday position, hold the report when a source fails, attach the PDF
+  weekdaysOnly         Boolean   @default(false)
+  monthlyRule          String    @default("day")     // day | first:<0-6> | last:<0-6>
+  holdOnFailure        Boolean   @default(true)
+  attachPdf            Boolean   @default(false)
+  templateId           Int?
+  integrationIds       Json      // number[]
+  comparison           Boolean   @default(true)
+  // channels: email | in-app | whatsapp | slack | teams | discord | telegram
+  channels             Json      // string[]
+  emails               Json?     // string[]
+  whatsappUrl          String?
+  whatsappType         String?   // generic | zapi | evolution | twilio
+  slackUrl             String?
+  teamsUrl             String?
+  discordUrl           String?
+  telegramBotToken     String?
+  telegramChatId       String?
+  attachAnalysis       Boolean   @default(true) // write an AI analysis card into each generated report
+  nextRunAt            DateTime?
+  lastRunAt            DateTime?
+  lastReportId         Int?
+  lastError            String?
+  createdAt            DateTime  @default(now())
+  runs                 AutomationRun[]
+}
+
+model AutomationRun {
+  id           Int        @id @default(autoincrement())
+  automationId Int
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  startedAt    DateTime   @default(now())
+  status       String     // ok | error | held | sending (claimed by Send now, back to held if the delivery throws)
+  reportId     Int?
+  detail       Json?
+}
+
+// "Reportei Controle": a tracked metric with a target and alerts.
+model Goal {
+  id            Int         @id @default(autoincrement())
+  projectId     Int
+  project       Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  integrationId Int
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  referenceKey  String      // e.g. fb_ads:spend
+  title         String
+  frequency     String      @default("monthly") // weekly | monthly
+  target        Float
+  direction     String      @default("higher_better") // higher_better | lower_better
+  alert         Boolean     @default(true)
+  alertEmails   Json?       // string[]: goal alerts by e-mail (spec v3 §3.3)
+  lastSituation String?
+  lastAlertAt   DateTime?
+  lastMetPeriod String?
+  lastClosedPeriod String?
+  createdAt     DateTime    @default(now())
+  values        GoalValue[]
+}
+
+model GoalValue {
+  id     Int    @id @default(autoincrement())
+  goalId Int
+  goal   Goal   @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  date   String
+  value  Float
+
+  @@unique([goalId, date])
+}
+
+model TimelineEvent {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reportId  Int?
+  report    Report?  @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  title     String
+  content   String   @default("")
+  date      String
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Webhook {
+  id         Int       @id @default(autoincrement())
+  companyId  Int
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  projectId  Int?
+  project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  url        String
+  eventType  String    // report_viewed | report_created | dashboard_created | automation_executed | control_goal_met | control_goal_not_met | timeline_milestone_added
+  source     String    @default("custom") // custom | make | zapier | n8n | slack | teams | discord
+  status     String    @default("active")
+  secret     String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deliveries WebhookDelivery[]
+}
+
+model WebhookDelivery {
+  id         Int      @id @default(autoincrement())
+  webhookId  Int
+  webhook    Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event      String
+  payload    Json
+  statusCode Int?
+  error      String?
+  createdAt  DateTime @default(now())
+}
+
+model Notification {
+  id        Int       @id @default(autoincrement())
+  companyId Int
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  projectId Int?
+  title     String
+  body      String    @default("")
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+// Email/messages that could not be sent because SMTP is not configured (or failed). Visible in the UI.
+model Outbox {
+  id        Int      @id @default(autoincrement())
+  companyId Int?
+  channel   String
+  toAddr    String
+  subject   String
+  body      String
+  status    String   @default("queued") // queued | sent | error
+  error     String?
+  attachmentNames Json? // string[]: files attached to the e-mail (PDF, spec v3 §4.1)
+  createdAt DateTime @default(now())
+}
+
+// Cross-network custom/blended metric, e.g. Blended ROAS = {fb_ads:conversion_value}+{google_adwords:conversion_value} / ...
+model CustomMetric {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  projectId Int?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  formula   String
+  format    String   @default("number") // number | currency | percent | decimal
+  diff      String   @default("positive_good")
+  createdAt DateTime @default(now())
+}
+
+// Rows pushed through POST /api/v2/ingest (CRM exports, call-tracker events, offline conversions, ...)
+model IngestRow {
+  id            Int         @id @default(autoincrement())
+  integrationId Int
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  date          String
+  data          Json
+
+  @@index([integrationId, date])
+}
+
+model MetricCache {
+  key       String   @id
+  value     Json
+  expiresAt DateTime
+}
+
+// uploaded images (src/lib/media/store.ts): the row is the index, the bytes live in data/uploads/<companyId>/<id>.<ext>
+model Media {
+  id        String   @id @default(cuid())
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  projectId Int?
+  name      String
+  mime      String
+  size      Int
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now())
+}

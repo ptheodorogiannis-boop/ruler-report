@@ -1,0 +1,135 @@
+feature,area,priority,original,clone,notes
+Drag a metric from a searchable catalog panel into a block of the open report,Report editor,must,yes,yes,"Add metrics drawer per block: Predefined (searchable, GET /api/v2/metrics) + Customizable tabs; click to add or drag onto the grid"
+Move widgets by drag on a 12-column grid,Report editor,must,yes,yes,"in-house grid (src/components/grid.tsx): drag handle, push-down + vertical compaction, placeholder"
+Resize widgets with a corner handle,Report editor,must,yes,yes,bottom-right handle; per-component minimum sizes
+Reorder network blocks by drag,Report editor,should,yes,partial,blocks reorder with up/down arrows in the report editor (and in the template editor)
+Autosave with a Saved indicator,Report editor,should,yes,yes,"debounced server action, Saved / Saving / Unsaved / retry states, beforeunload guard"
+Add or remove a network block in an existing report,Report editor,should,yes,yes,"""Add block"" lists every account of the project; remove block; report integration list follows the blocks"
+Custom block (title colour icon header) that mixes networks,Report editor,must,yes,partial,"custom block holds manual / text / formula / blended widgets and metrics of any account; title only, no colour or icon"
+Manual metric (typed value),Report editor,should,yes,yes,"value, previous value, format"
+Manual chart (metric x dimension),Report editor,could,yes,no,
+Calculated metric with a formula (+ - x / parentheses),Report editor,must,yes,yes,"per-report formula widget over {prefix:key} refs (+ - * / parentheses, sum/avg/min/max/round) plus workspace blended metrics"
+Grouped metrics (ads / GMB / social / CRM / e-mail totals),Report editor,should,yes,partial,a formula can sum prefixes; no ready-made groups
+Cross-network funnel (steps from different integrations),Report editor,should,yes,no,
+Calculated step inside a funnel,Report editor,could,yes,no,
+Analysis text card with rich text images and links anywhere in the report,Report editor,must,yes,partial,"analysis card widget anywhere on the grid; sanitized simple HTML (headings, lists, links); no image upload"
+Highlight (star) a number widget,Report editor,could,yes,yes,
+Duplicate a widget,Report editor,could,yes,yes,
+Hide a widget or a campaign,Report editor,could,yes,partial,"hide / show a widget (kept in the editor, dropped from client link, CSV and templates); no campaign containers"
+Per-widget period override,Report editor,should,yes,yes,"custom date range per widget, compared with the previous period of the same length; resolved once and stored"
+Number widget: toggle previous value / variation % / absolute difference,Report editor,should,yes,yes,
+Number widget: positive-is-bad colour meaning,Report editor,should,yes,yes,per-widget toggle
+Number widget: edit title and description,Report editor,should,yes,yes,
+Chart: switch line / bar / pie,Report editor,should,yes,yes,"line or bar for time series, bar or pie for categories"
+Chart: group by day / week / month / quarter,Report editor,should,yes,yes,re-bucketed from the stored daily series (sum / avg / last-of-bucket per series)
+Chart: two axes,Report editor,could,yes,no,
+Chart: start-at-zero toggle,Report editor,could,yes,no,
+Chart: reference lines,Report editor,could,yes,no,
+Table: hide move or add columns,Report editor,must,yes,partial,hide and reorder columns per widget; no added columns
+Table: change dimension,Report editor,should,yes,no,
+Table: row count hide rows highlight rows,Report editor,should,yes,partial,row limit only
+Table: keyword filters with AND / OR,Report editor,should,yes,no,
+Table: sort by any column,Report editor,should,yes,yes,column + direction
+Campaign containers (per-campaign widgets inside an ads block),Report editor,must,yes,no,
+Campaign filter by rule (contains / does not contain),Report editor,should,yes,no,
+Per-widget CSV / Excel export,Report editor,should,yes,partial,CSV per widget from the settings drawer; no Excel
+Generate the API query of a widget from the editor,Report editor,could,yes,yes,settings drawer shows the POST /metrics/get-data body with a copy button
+Save a metric to the timeline from the widget toolbar,Report editor,could,yes,no,
+Undo / redo in the editor,Report editor,could,yes,yes,"last 20 layouts in memory, Ctrl+Z / Ctrl+Shift+Z"
+Cover editor: title subtitle logo colours show/hide,Theming & cover,must,yes,partial,title/subtitle + agency logo and colour from white-label; no per-report cover editor
+Footer customization,Theming & cover,could,yes,no,
+Report themes (17) that recolour charts,Theming & cover,should,yes,no,one brand colour
+Per-block theme override,Theming & cover,could,yes,no,
+Decimal and date format per project,Theming & cover,should,yes,yes,
+Timezone per project,Theming & cover,should,yes,yes,
+Static report snapshot with a comparison period,Reports,must,yes,yes,
+Save an edited report as a template,Reports,must,yes,yes,"blocks become sections; widget sizes, positions and settings are kept and re-applied when a report is generated from the template"
+Convert report <-> dashboard,Reports,should,yes,no,
+Duplicate a report or dashboard,Reports,should,yes,no,
+Delete a report or dashboard,Reports,must,yes,yes,
+Reports list with search badges and bulk delete,Reports,should,yes,partial,search and view counter; no bulk actions or badges
+Generation wizard with Reportei / expert / my templates,Reports,must,yes,partial,built-in + own templates; no expert templates
+Generation wizard: select campaigns per ads account,Reports,should,yes,no,
+AI analysis at generation (general or template-based),Reports,should,yes,partial,general only
+Failure state with retry / reintegrate hints,Reports,should,yes,partial,per-source error banner
+Live dashboard that re-queries on open,Dashboards,must,yes,yes,
+Rolling period presets,Dashboards,must,yes,yes,
+Client can change period on the shared link,Dashboards,should,yes,no,
+Real-time auto refresh every 1-2 min,Dashboards,should,yes,no,5-minute cache and manual refresh
+Pause real-time on custom period with a warning,Dashboards,could,yes,no,
+Template management for reports and dashboards with usage counts,Templates,must,yes,yes,
+Studio templates,Templates,could,yes,no,
+Templates that carry AI-analysis configuration,Templates,could,yes,no,
+Public link per report / dashboard,Sharing & export,must,yes,yes,
+Password protection of shared links,Sharing & export,must,yes,yes,per report instead of per project
+Embed view,Sharing & export,should,yes,yes,
+Share by PDF with page breaks,Sharing & export,must,yes,partial,browser print only
+Share by WhatsApp from the editor,Sharing & export,could,yes,no,only as an automation channel
+Share by e-mail from the editor,Sharing & export,should,yes,yes,
+See as client,Sharing & export,should,yes,yes,
+View counter and report_viewed webhook,Sharing & export,could,yes,yes,
+Weekly / biweekly / monthly schedule with hour,Automations,must,yes,yes,
+Daily frequency,Automations,should,yes,no,
+Monthly by weekday position (first/last Monday),Automations,could,yes,no,
+E-mail delivery with report link and KPIs,Automations,must,yes,yes,
+In-app notification,Automations,should,yes,yes,
+WhatsApp direct from an official number,Automations,should,yes,no,
+WhatsApp via webhook (Make / Zapier / n8n),Automations,should,yes,yes,
+WhatsApp summary automation (metrics in the message),Automations,could,yes,partial,message carries title and link only
+Integration-failure alert e-mail before the next run,Automations,should,yes,no,
+Bulk automation across projects,Automations,could,yes,no,
+Quick-create automation from inside a report,Automations,could,yes,no,
+Goal or limit per metric with target and period,Control (goals),must,yes,yes,
+Progress projection days-left and situation,Control (goals),must,yes,yes,
+Alerts when met missed or drifting (in-app + webhook),Control (goals),must,yes,yes,
+Alerts by e-mail / WhatsApp,Control (goals),should,yes,no,
+Goal filtered by campaign,Control (goals),could,yes,no,
+Shareable control dashboard (link e-mail WhatsApp),Control (goals),should,yes,no,
+Auto-record goal outcome to the timeline,Control (goals),could,yes,no,
+Create an indicator from a report widget,Control (goals),could,yes,no,
+Milestones with title date details and linked report,Timeline,must,yes,yes,
+Event icons and outcome icons,Timeline,could,yes,no,
+Standalone shareable timeline link,Timeline,should,yes,partial,milestones appear inside shared reports only
+Save event and write e-mail,Timeline,could,yes,no,
+AI analysis per report and per block,AI,must,yes,partial,one card per report; Claude or rule-based fallback
+Tone-specific analyses per integration,AI,should,yes,no,
+Regenerate an analysis,AI,could,yes,partial,generates an additional card
+Ask-your-data chat on a report,AI,should,yes,yes,
+Cross-project Chat AI that can create reports automations and goals,AI,should,yes,partial,possible through the MCP server from Claude; no in-app chat
+Assistants (Ads Instagram E-mail),AI,could,yes,no,
+Studio: describe and the AI builds a single-page or multi-slide material,AI,should,yes,partial,deck generated from a report; no chat editing or publishing
+MCP server,AI,should,yes,yes,
+Opportunity score and Meta Ads alerts with pause / swap creative,AI,could,yes,no,
+Cross-project KPI table with comparison,Overview,must,yes,yes,
+Multiple pages with chosen metrics,Overview,should,yes,no,fixed KPI set
+Real-time polling,Overview,could,yes,no,
+Per-project filters and saved presets,Overview,could,yes,no,
+One-click OAuth connect with account picker,Integrations,must,yes,partial,Google and Meta only; others paste tokens
+Breadth of live integrations (about 58 platforms),Integrations,must,yes,partial,67 slugs but 8 live connectors; the rest run on synthetic data
+Google Sheets as a data source with column mapping,Integrations,should,yes,yes,columns auto-detected
+Expired-integration notifications with reconnect link,Integrations,should,yes,partial,error shown on the project page only
+Plan-gated integrations,Integrations,could,yes,skip,self-hosted; no plans
+Campaign-level selection for ads integrations,Integrations,should,yes,no,
+Project settings (logo language date decimal timezone),Projects & account,must,yes,yes,
+Team roles with per-project access,Projects & account,must,yes,yes,
+Owner transfer,Projects & account,could,yes,no,
+Activity log,Projects & account,could,yes,no,
+Multi-company membership and switcher,Projects & account,could,yes,no,
+Archive a project (read-only history),Projects & account,could,yes,no,delete only
+Notification centre,Projects & account,should,yes,yes,
+Billing plans and invoices,Projects & account,could,yes,skip,self-hosted; no billing
+Multi-language UI (PT EN ES FR),Projects & account,should,yes,no,English UI; report language is a project field only
+REST API v2 with tokens pagination and rate limits,API & automation,must,yes,yes,
+Seven webhook events,API & automation,must,yes,yes,
+Official Zapier / Make / n8n connectors,API & automation,should,yes,partial,generic webhooks and Push API instead
+Per-widget query endpoint (v1 widgets/value),API & automation,could,yes,partial,POST /metrics/get-data
+OAuth-issued MCP tokens,API & automation,could,yes,no,static tokens
+Push API to ingest rows from Make / Zapier / n8n / call trackers,API & automation,should,no,yes,
+Slack / Teams / Discord / Telegram delivery for automations,Automations,should,no,yes,
+Anomaly flags on the overview (z-score),Overview,could,no,yes,
+Client-portal user role,Projects & account,should,no,yes,
+Whole-report CSV export,Sharing & export,could,no,yes,
+HMAC-signed webhooks with a delivery log,API & automation,should,no,yes,
+Self-hosted with no plan limits (Docker),Projects & account,should,no,yes,
+Extra integrations: Snapchat Reddit Amazon Apple Ads Matomo Plausible Omnisend Brevo Salesforce Zoho Stripe BigCommerce PrestaShop Ruler Attribution Ruler Click-to-Call CSV REST,Integrations,could,no,partial,all on synthetic data
+Synthetic demo-data mode per integration,Integrations,could,no,yes,

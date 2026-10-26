@@ -1,0 +1,235 @@
+// Greek labels for the most used metrics, charts and tables (spec v3 §5): the catalog keeps the platforms' own English
+// titles; a Greek page shows these for the keys below and the English title for everything else. Listed in
+// docs/i18n-review.md for review. One map per archetype, applied to every demo platform of that archetype.
+import type { Locale } from '@/lib/i18n';
+import type { TableValue } from '@/lib/engine/types';
+
+const ADS = {
+  spend: 'Δαπάνη',
+  impressions: 'Εμφανίσεις',
+  reach: 'Απήχηση',
+  clicks: 'Κλικ (όλα)',
+  link_clicks: 'Κλικ στον σύνδεσμο',
+  ctr: 'CTR (ποσοστό κλικ)',
+  cpc: 'Μέσο CPC',
+  cpm: 'CPM (κόστος ανά χίλιες)',
+  frequency: 'Συχνότητα',
+  conversions: 'Μετατροπές',
+  cost_per_conversion: 'Κόστος ανά μετατροπή',
+  conversion_value: 'Αξία μετατροπών',
+  roas: 'ROAS (απόδοση δαπάνης)',
+  leads: 'Υποψήφιοι πελάτες (leads)',
+  cost_per_lead: 'Κόστος ανά lead',
+  purchases: 'Αγορές',
+  cost_per_purchase: 'Κόστος ανά αγορά',
+  view_content: 'Προβολές περιεχομένου',
+  add_to_cart: 'Προσθήκες στο καλάθι',
+  checkout: 'Έναρξη αγοράς',
+  video_views: 'Προβολές βίντεο',
+  engagements: 'Αλληλεπιδράσεις',
+  spend_by_date: 'Δαπάνη ανά ημέρα',
+  impressions_reach_by_date: 'Εμφανίσεις και απήχηση ανά ημέρα',
+  clicks_ctr_by_date: 'Κλικ και CTR στον χρόνο',
+  conversions_by_date: 'Μετατροπές ανά ημέρα',
+  impressions_reach_by_age: 'Εμφανίσεις και απήχηση ανά ηλικία',
+  impressions_reach_by_gender: 'Εμφανίσεις και απήχηση ανά φύλο',
+  reach_by_device: 'Απήχηση ανά συσκευή',
+  impressions_reach_by_hour: 'Εμφανίσεις και απήχηση ανά ώρα',
+  spend_by_country: 'Δαπάνη ανά χώρα',
+  spend_by_placement: 'Δαπάνη ανά τοποθέτηση',
+  campaigns: 'Κορυφαίες καμπάνιες',
+  adsets: 'Κορυφαία σύνολα διαφημίσεων',
+  ads: 'Κορυφαίες διαφημίσεις',
+};
+const SOCIAL = {
+  followers: 'Σύνολο ακολούθων',
+  follower_growth: 'Καθαρή αύξηση ακολούθων',
+  new_followers: 'Νέοι ακόλουθοι',
+  unfollows: 'Διαγραφές ακολούθων',
+  reach: 'Απήχηση',
+  impressions: 'Εμφανίσεις',
+  views: 'Προβολές',
+  engagements: 'Αλληλεπιδράσεις',
+  engagement_rate: 'Ποσοστό αλληλεπίδρασης',
+  likes: 'Μου αρέσει',
+  comments: 'Σχόλια',
+  shares: 'Κοινοποιήσεις',
+  saves: 'Αποθηκεύσεις',
+  posts: 'Δημοσιεύσεις',
+  profile_views: 'Προβολές προφίλ',
+  link_clicks: 'Κλικ σε συνδέσμους',
+  video_views: 'Προβολές βίντεο',
+  followers_by_date: 'Ακόλουθοι στον χρόνο',
+  reach_by_date: 'Απήχηση ανά ημέρα',
+  engagement_by_date: 'Αλληλεπιδράσεις ανά ημέρα',
+  new_followers_by_date: 'Νέοι ακόλουθοι έναντι απωλειών',
+  audience_age: 'Κοινό ανά ηλικία',
+  audience_gender: 'Κοινό ανά φύλο',
+  audience_country: 'Κοινό ανά χώρα',
+  audience_city: 'Κοινό ανά πόλη',
+  followers_online_by_hour: 'Ακόλουθοι online ανά ώρα',
+  engagement_by_content_type: 'Αλληλεπιδράσεις ανά τύπο περιεχομένου',
+  top_posts: 'Κορυφαίες δημοσιεύσεις',
+};
+const WEB = {
+  sessions: 'Συνεδρίες',
+  users: 'Ενεργοί χρήστες',
+  new_users: 'Νέοι χρήστες',
+  pageviews: 'Προβολές',
+  pages_per_session: 'Προβολές ανά συνεδρία',
+  engagement_rate: 'Ποσοστό αλληλεπίδρασης',
+  bounce_rate: 'Ποσοστό εγκατάλειψης',
+  avg_session_duration: 'Μέση διάρκεια συνεδρίας (δευτ.)',
+  events: 'Πλήθος συμβάντων',
+  conversions: 'Βασικά συμβάντα (μετατροπές)',
+  conversion_rate: 'Ποσοστό μετατροπής συνεδριών',
+  transactions: 'Συναλλαγές',
+  revenue: 'Έσοδα αγορών',
+  aov: 'Μέση αξία παραγγελίας',
+  view_item: 'Προβολές προϊόντων',
+  add_to_cart: 'Προσθήκες στο καλάθι',
+  abandoned_carts: 'Εγκαταλειμμένα καλάθια',
+  sessions_by_date: 'Συνεδρίες ανά ημέρα',
+  users_by_date: 'Χρήστες ανά ημέρα',
+  revenue_by_date: 'Έσοδα ανά ημέρα',
+  conversions_by_date: 'Μετατροπές ανά ημέρα',
+  sessions_by_channel: 'Συνεδρίες ανά κανάλι',
+  sessions_by_device: 'Συνεδρίες ανά συσκευή',
+  sessions_by_country: 'Συνεδρίες ανά χώρα',
+  revenue_by_channel: 'Έσοδα ανά κανάλι',
+  top_pages: 'Κορυφαίες σελίδες',
+  landing_pages: 'Σελίδες προορισμού',
+  source_medium: 'Πηγή / μέσο',
+  campaigns: 'Καμπάνιες',
+  countries: 'Χώρες',
+  cities: 'Πόλεις',
+  event_names: 'Συμβάντα',
+  products: 'Κορυφαία προϊόντα',
+};
+const SEO = {
+  clicks: 'Κλικ',
+  impressions: 'Εμφανίσεις',
+  ctr: 'CTR (ποσοστό κλικ)',
+  position: 'Μέση θέση',
+  clicks_impressions_by_date: 'Κλικ και εμφανίσεις',
+  position_by_date: 'Μέση θέση στον χρόνο',
+  clicks_by_device: 'Κλικ ανά συσκευή',
+  clicks_by_country: 'Κλικ ανά χώρα',
+  queries: 'Κορυφαία ερωτήματα',
+  pages: 'Κορυφαίες σελίδες',
+  countries: 'Χώρες',
+};
+const ECOM = {
+  revenue: 'Έσοδα',
+  orders: 'Παραγγελίες',
+  aov: 'Μέση αξία παραγγελίας',
+  items_sold: 'Προϊόντα που πουλήθηκαν',
+  items_per_order: 'Προϊόντα ανά παραγγελία',
+  new_customers: 'Νέοι πελάτες',
+  returning_customers: 'Επαναλαμβανόμενοι πελάτες',
+  refunds: 'Επιστροφές χρημάτων',
+  discounts: 'Εκπτώσεις',
+  shipping: 'Χρεώσεις αποστολής',
+  taxes: 'Φόροι',
+  carts_created: 'Καλάθια που δημιουργήθηκαν',
+  abandoned_carts: 'Εγκαταλειμμένα καλάθια',
+  cart_abandonment_rate: 'Ποσοστό εγκατάλειψης καλαθιού',
+  revenue_by_date: 'Έσοδα ανά ημέρα',
+  orders_by_date: 'Παραγγελίες ανά ημέρα',
+  revenue_by_country: 'Έσοδα ανά χώρα',
+  revenue_by_payment_method: 'Έσοδα ανά τρόπο πληρωμής',
+  revenue_by_category: 'Έσοδα ανά κατηγορία',
+  top_products: 'Κορυφαία προϊόντα',
+  coupons: 'Κουπόνια',
+  countries: 'Πωλήσεις ανά χώρα',
+  funnel: 'Διοχέτευση καλαθιού',
+};
+const EMAIL = {
+  sent: 'Απεσταλμένα email',
+  delivered: 'Παραδόθηκαν',
+  opens: 'Ανοίγματα',
+  clicks: 'Κλικ',
+  open_rate: 'Ποσοστό ανοίγματος',
+  click_rate: 'Ποσοστό κλικ',
+  ctor: 'Ποσοστό κλικ προς άνοιγμα',
+  unsubscribes: 'Διαγραφές',
+  unsub_rate: 'Ποσοστό διαγραφών',
+  bounces: 'Αναπηδήσεις (bounces)',
+  revenue: 'Αποδιδόμενα έσοδα',
+  subscribers: 'Συνδρομητές',
+  new_subscribers: 'Νέοι συνδρομητές',
+  sent_by_date: 'Απεσταλμένα ανά ημέρα',
+  engagement_by_date: 'Ανοίγματα και κλικ ανά ημέρα',
+  subscribers_by_date: 'Συνδρομητές στον χρόνο',
+  campaigns: 'Καμπάνιες',
+};
+const LOCAL = {
+  views_search: 'Προβολές στην Αναζήτηση',
+  views_maps: 'Προβολές στους Χάρτες',
+  calls: 'Κλήσεις',
+  direction_requests: 'Αιτήματα οδηγιών',
+  website_clicks: 'Κλικ στον ιστότοπο',
+  messages: 'Μηνύματα',
+  bookings: 'Κρατήσεις',
+  new_reviews: 'Νέες κριτικές',
+  rating: 'Μέση βαθμολογία',
+  views_by_date: 'Προβολές προφίλ ανά ημέρα',
+  actions_by_date: 'Ενέργειες ανά ημέρα',
+  views_by_platform: 'Προβολές ανά πλατφόρμα και συσκευή',
+  search_terms: 'Κορυφαίοι όροι αναζήτησης',
+};
+const withPrefix = (prefix: string, m: Record<string, string>) => Object.fromEntries(Object.entries(m).map(([k, v]) => [`${prefix}:${k}`, v]));
+
+export const METRIC_LABELS_EL: Record<string, string> = {
+  ...withPrefix('fb_ads', ADS),
+  ...withPrefix('gads', ADS),
+  ...withPrefix('fb', SOCIAL),
+  ...withPrefix('ig', SOCIAL),
+  ...withPrefix('ga4', WEB),
+  ...withPrefix('gsc', SEO),
+  ...withPrefix('shop', ECOM),
+  ...withPrefix('woo', ECOM),
+  ...withPrefix('mc', EMAIL),
+  ...withPrefix('gbp', LOCAL),
+};
+
+/** The first column of a table: the dimension's name in Greek (the English title for anything else). */
+export const DIMENSION_LABELS_EL: Record<string, string> = {
+  campaign: 'Καμπάνια',
+  adset: 'Σύνολο διαφημίσεων',
+  ad: 'Διαφήμιση',
+  post: 'Δημοσίευση',
+  page: 'Σελίδα',
+  landing_page: 'Σελίδα προορισμού',
+  source_medium: 'Πηγή / μέσο',
+  country: 'Χώρα',
+  city: 'Πόλη',
+  channel: 'Κανάλι',
+  device: 'Συσκευή',
+  event_name: 'Συμβάν',
+  product: 'Προϊόν',
+  query: 'Ερώτημα',
+  coupon: 'Κουπόνι',
+  source: 'Πηγή',
+  owner: 'Υπεύθυνος',
+  stage: 'Στάδιο',
+  search_term: 'Όρος αναζήτησης',
+};
+
+const LABELS: Record<Locale, Record<string, string>> = { en: {}, el: METRIC_LABELS_EL };
+const DIMENSIONS: Record<Locale, Record<string, string>> = { en: {}, el: DIMENSION_LABELS_EL };
+
+/** The label of a metric in `locale`: the Greek entry when there is one, else the catalog title (never empty when the title is not). */
+export function metricLabel(w: { reference_key: string; title: string }, locale: Locale): string {
+  return LABELS[locale]?.[w.reference_key] ?? w.title;
+}
+
+/** A table's column headers in `locale`: the dimension first, then each metric column through `metricLabel` with the platform's prefix. */
+export function tableColumnLabels(prefix: string, v: Pick<TableValue, 'columns' | 'columnLabels'>, locale: Locale): string[] {
+  return v.columnLabels.map((label, i) => {
+    const key = v.columns?.[i];
+    if (!key) return label;
+    if (i === 0) return DIMENSIONS[locale]?.[key] ?? label;
+    return metricLabel({ reference_key: `${prefix}:${key}`, title: label }, locale);
+  });
+}

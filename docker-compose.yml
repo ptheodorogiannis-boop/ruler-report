@@ -1,0 +1,25 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3100:3100"
+    environment:
+      APP_SECRET: ${APP_SECRET:?set APP_SECRET to 32+ random characters}
+      APP_URL: ${APP_URL:-http://localhost:3100}
+      CRON_SECRET: ${CRON_SECRET:-change-me}
+      SEED_DEMO: ${SEED_DEMO:-0}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+    volumes:
+      - rr-data:/data
+      - rr-uploads:/app/data/uploads
+    restart: unless-stopped
+volumes:
+  rr-data:
+  rr-uploads:

@@ -1,0 +1,771 @@
+{
+ "version": 1,
+ "capturedAt": "2026-10-23T09:01:22.027Z",
+ "langs": [
+  "en",
+  "el"
+ ],
+ "chrome": "overview",
+ "routes": [
+  {
+   "path": "/overview",
+   "key": "overview",
+   "group": "overview"
+  },
+  {
+   "path": "/projects",
+   "key": "projects",
+   "group": "projects"
+  },
+  {
+   "path": "/projects/1?tab=overview",
+   "key": "projects-1-overview",
+   "group": "projects-1"
+  },
+  {
+   "path": "/projects/1?tab=integrations",
+   "key": "projects-1-integrations",
+   "group": "projects-1"
+  },
+  {
+   "path": "/projects/1?tab=reports",
+   "key": "projects-1-reports",
+   "group": "projects-1"
+  },
+  {
+   "path": "/projects/1?tab=dashboards",
+   "key": "projects-1-dashboards",
+   "group": "projects-1"
+  },
+  {
+   "path": "/projects/1?tab=automations",
+   "key": "projects-1-automations",
+   "group": "projects-1"
+  },
+  {
+   "path": "/projects/1?tab=goals",
+   "key": "projects-1-goals",
+   "group": "projects-1"
+  },
+  {
+   "path": "/projects/1?tab=timeline",
+   "key": "projects-1-timeline",
+   "group": "projects-1"
+  },
+  {
+   "path": "/projects/1?tab=settings",
+   "key": "projects-1-settings",
+   "group": "projects-1"
+  },
+  {
+   "path": "/projects/1/connect",
+   "key": "projects-1-connect",
+   "group": "projects-1"
+  },
+  {
+   "path": "/projects/2?tab=overview",
+   "key": "projects-2-overview",
+   "group": "projects-2"
+  },
+  {
+   "path": "/projects/2?tab=integrations",
+   "key": "projects-2-integrations",
+   "group": "projects-2"
+  },
+  {
+   "path": "/projects/2?tab=reports",
+   "key": "projects-2-reports",
+   "group": "projects-2"
+  },
+  {
+   "path": "/projects/2?tab=dashboards",
+   "key": "projects-2-dashboards",
+   "group": "projects-2"
+  },
+  {
+   "path": "/projects/2?tab=automations",
+   "key": "projects-2-automations",
+   "group": "projects-2"
+  },
+  {
+   "path": "/projects/2?tab=goals",
+   "key": "projects-2-goals",
+   "group": "projects-2"
+  },
+  {
+   "path": "/projects/2?tab=timeline",
+   "key": "projects-2-timeline",
+   "group": "projects-2"
+  },
+  {
+   "path": "/projects/2?tab=settings",
+   "key": "projects-2-settings",
+   "group": "projects-2"
+  },
+  {
+   "path": "/projects/2/connect",
+   "key": "projects-2-connect",
+   "group": "projects-2"
+  },
+  {
+   "path": "/projects/3?tab=overview",
+   "key": "projects-3-overview",
+   "group": "projects-3"
+  },
+  {
+   "path": "/projects/3?tab=integrations",
+   "key": "projects-3-integrations",
+   "group": "projects-3"
+  },
+  {
+   "path": "/projects/3?tab=reports",
+   "key": "projects-3-reports",
+   "group": "projects-3"
+  },
+  {
+   "path": "/projects/3?tab=dashboards",
+   "key": "projects-3-dashboards",
+   "group": "projects-3"
+  },
+  {
+   "path": "/projects/3?tab=automations",
+   "key": "projects-3-automations",
+   "group": "projects-3"
+  },
+  {
+   "path": "/projects/3?tab=goals",
+   "key": "projects-3-goals",
+   "group": "projects-3"
+  },
+  {
+   "path": "/projects/3?tab=timeline",
+   "key": "projects-3-timeline",
+   "group": "projects-3"
+  },
+  {
+   "path": "/projects/3?tab=settings",
+   "key": "projects-3-settings",
+   "group": "projects-3"
+  },
+  {
+   "path": "/projects/3/connect",
+   "key": "projects-3-connect",
+   "group": "projects-3"
+  },
+  {
+   "path": "/projects/4?tab=overview",
+   "key": "projects-4-overview",
+   "group": "projects-4"
+  },
+  {
+   "path": "/projects/4?tab=integrations",
+   "key": "projects-4-integrations",
+   "group": "projects-4"
+  },
+  {
+   "path": "/projects/4?tab=reports",
+   "key": "projects-4-reports",
+   "group": "projects-4"
+  },
+  {
+   "path": "/projects/4?tab=dashboards",
+   "key": "projects-4-dashboards",
+   "group": "projects-4"
+  },
+  {
+   "path": "/projects/4?tab=automations",
+   "key": "projects-4-automations",
+   "group": "projects-4"
+  },
+  {
+   "path": "/projects/4?tab=goals",
+   "key": "projects-4-goals",
+   "group": "projects-4"
+  },
+  {
+   "path": "/projects/4?tab=timeline",
+   "key": "projects-4-timeline",
+   "group": "projects-4"
+  },
+  {
+   "path": "/projects/4?tab=settings",
+   "key": "projects-4-settings",
+   "group": "projects-4"
+  },
+  {
+   "path": "/projects/4/connect",
+   "key": "projects-4-connect",
+   "group": "projects-4"
+  },
+  {
+   "path": "/projects/5?tab=overview",
+   "key": "projects-5-overview",
+   "group": "projects-5"
+  },
+  {
+   "path": "/projects/5?tab=integrations",
+   "key": "projects-5-integrations",
+   "group": "projects-5"
+  },
+  {
+   "path": "/projects/5?tab=reports",
+   "key": "projects-5-reports",
+   "group": "projects-5"
+  },
+  {
+   "path": "/projects/5?tab=dashboards",
+   "key": "projects-5-dashboards",
+   "group": "projects-5"
+  },
+  {
+   "path": "/projects/5?tab=automations",
+   "key": "projects-5-automations",
+   "group": "projects-5"
+  },
+  {
+   "path": "/projects/5?tab=goals",
+   "key": "projects-5-goals",
+   "group": "projects-5"
+  },
+  {
+   "path": "/projects/5?tab=timeline",
+   "key": "projects-5-timeline",
+   "group": "projects-5"
+  },
+  {
+   "path": "/projects/5?tab=settings",
+   "key": "projects-5-settings",
+   "group": "projects-5"
+  },
+  {
+   "path": "/projects/5/connect",
+   "key": "projects-5-connect",
+   "group": "projects-5"
+  },
+  {
+   "path": "/projects/6?tab=overview",
+   "key": "projects-6-overview",
+   "group": "projects-6"
+  },
+  {
+   "path": "/projects/6?tab=integrations",
+   "key": "projects-6-integrations",
+   "group": "projects-6"
+  },
+  {
+   "path": "/projects/6?tab=reports",
+   "key": "projects-6-reports",
+   "group": "projects-6"
+  },
+  {
+   "path": "/projects/6?tab=dashboards",
+   "key": "projects-6-dashboards",
+   "group": "projects-6"
+  },
+  {
+   "path": "/projects/6?tab=automations",
+   "key": "projects-6-automations",
+   "group": "projects-6"
+  },
+  {
+   "path": "/projects/6?tab=goals",
+   "key": "projects-6-goals",
+   "group": "projects-6"
+  },
+  {
+   "path": "/projects/6?tab=timeline",
+   "key": "projects-6-timeline",
+   "group": "projects-6"
+  },
+  {
+   "path": "/projects/6?tab=settings",
+   "key": "projects-6-settings",
+   "group": "projects-6"
+  },
+  {
+   "path": "/projects/6/connect",
+   "key": "projects-6-connect",
+   "group": "projects-6"
+  },
+  {
+   "path": "/projects/1/connect/facebook",
+   "key": "projects-1-connect-facebook",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/instagram_business",
+   "key": "projects-1-connect-instagram_business",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/youtube",
+   "key": "projects-1-connect-youtube",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/linkedin",
+   "key": "projects-1-connect-linkedin",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/tiktok",
+   "key": "projects-1-connect-tiktok",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/pinterest",
+   "key": "projects-1-connect-pinterest",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/threads",
+   "key": "projects-1-connect-threads",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/twitter",
+   "key": "projects-1-connect-twitter",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/facebook_ads",
+   "key": "projects-1-connect-facebook_ads",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/google_adwords",
+   "key": "projects-1-connect-google_adwords",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/tiktok_ads",
+   "key": "projects-1-connect-tiktok_ads",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/linkedin_ads",
+   "key": "projects-1-connect-linkedin_ads",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/pinterest_ads",
+   "key": "projects-1-connect-pinterest_ads",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/microsoft_ads",
+   "key": "projects-1-connect-microsoft_ads",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/twitter_ads",
+   "key": "projects-1-connect-twitter_ads",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/spotify_ads",
+   "key": "projects-1-connect-spotify_ads",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/kwai_ads",
+   "key": "projects-1-connect-kwai_ads",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/snapchat_ads",
+   "key": "projects-1-connect-snapchat_ads",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/reddit_ads",
+   "key": "projects-1-connect-reddit_ads",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/amazon_ads",
+   "key": "projects-1-connect-amazon_ads",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/apple_search_ads",
+   "key": "projects-1-connect-apple_search_ads",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/google_analytics_4",
+   "key": "projects-1-connect-google_analytics_4",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/search_console",
+   "key": "projects-1-connect-search_console",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/google_my_business",
+   "key": "projects-1-connect-google_my_business",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/matomo",
+   "key": "projects-1-connect-matomo",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/plausible",
+   "key": "projects-1-connect-plausible",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/ruler_attribution",
+   "key": "projects-1-connect-ruler_attribution",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/hubspot_crm",
+   "key": "projects-1-connect-hubspot_crm",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/pipedrive",
+   "key": "projects-1-connect-pipedrive",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/rd_station_crm",
+   "key": "projects-1-connect-rd_station_crm",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/kommo",
+   "key": "projects-1-connect-kommo",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/gohighlevel",
+   "key": "projects-1-connect-gohighlevel",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/activecampaign",
+   "key": "projects-1-connect-activecampaign",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/salesforce",
+   "key": "projects-1-connect-salesforce",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/zoho_crm",
+   "key": "projects-1-connect-zoho_crm",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/mailchimp",
+   "key": "projects-1-connect-mailchimp",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/rd_station_marketing",
+   "key": "projects-1-connect-rd_station_marketing",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/egoi",
+   "key": "projects-1-connect-egoi",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/klaviyo",
+   "key": "projects-1-connect-klaviyo",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/omnisend",
+   "key": "projects-1-connect-omnisend",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/brevo",
+   "key": "projects-1-connect-brevo",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/greatpages",
+   "key": "projects-1-connect-greatpages",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/shopify",
+   "key": "projects-1-connect-shopify",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/woo_commerce",
+   "key": "projects-1-connect-woo_commerce",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/nuvemshop",
+   "key": "projects-1-connect-nuvemshop",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/magazord",
+   "key": "projects-1-connect-magazord",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/olist",
+   "key": "projects-1-connect-olist",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/hotmart",
+   "key": "projects-1-connect-hotmart",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/kiwify",
+   "key": "projects-1-connect-kiwify",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/eduzz",
+   "key": "projects-1-connect-eduzz",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/ifood",
+   "key": "projects-1-connect-ifood",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/cardapio_web",
+   "key": "projects-1-connect-cardapio_web",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/repediu",
+   "key": "projects-1-connect-repediu",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/stripe",
+   "key": "projects-1-connect-stripe",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/bigcommerce",
+   "key": "projects-1-connect-bigcommerce",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/prestashop",
+   "key": "projects-1-connect-prestashop",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/phonetrack",
+   "key": "projects-1-connect-phonetrack",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/callrail",
+   "key": "projects-1-connect-callrail",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/ruler_click_to_call",
+   "key": "projects-1-connect-ruler_click_to_call",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/google_sheets",
+   "key": "projects-1-connect-google_sheets",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/csv_url",
+   "key": "projects-1-connect-csv_url",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/rest_api",
+   "key": "projects-1-connect-rest_api",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/webhook_ingest",
+   "key": "projects-1-connect-webhook_ingest",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/make",
+   "key": "projects-1-connect-make",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/n8n",
+   "key": "projects-1-connect-n8n",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/zapier",
+   "key": "projects-1-connect-zapier",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/projects/1/connect/pluga",
+   "key": "projects-1-connect-pluga",
+   "group": "connect-forms"
+  },
+  {
+   "path": "/reports",
+   "key": "reports",
+   "group": "reports"
+  },
+  {
+   "path": "/dashboards",
+   "key": "dashboards",
+   "group": "dashboards"
+  },
+  {
+   "path": "/templates",
+   "key": "templates",
+   "group": "templates"
+  },
+  {
+   "path": "/templates/new",
+   "key": "templates-new",
+   "group": "templates"
+  },
+  {
+   "path": "/templates/1",
+   "key": "templates-1",
+   "group": "templates"
+  },
+  {
+   "path": "/templates/2",
+   "key": "templates-2",
+   "group": "templates"
+  },
+  {
+   "path": "/templates/3",
+   "key": "templates-3",
+   "group": "templates"
+  },
+  {
+   "path": "/templates/4",
+   "key": "templates-4",
+   "group": "templates"
+  },
+  {
+   "path": "/templates/5",
+   "key": "templates-5",
+   "group": "templates"
+  },
+  {
+   "path": "/templates/6",
+   "key": "templates-6",
+   "group": "templates"
+  },
+  {
+   "path": "/templates/7",
+   "key": "templates-7",
+   "group": "templates"
+  },
+  {
+   "path": "/templates/8",
+   "key": "templates-8",
+   "group": "templates"
+  },
+  {
+   "path": "/templates/9",
+   "key": "templates-9",
+   "group": "templates"
+  },
+  {
+   "path": "/templates/10",
+   "key": "templates-10",
+   "group": "templates"
+  },
+  {
+   "path": "/templates/11",
+   "key": "templates-11",
+   "group": "templates"
+  },
+  {
+   "path": "/automations",
+   "key": "automations",
+   "group": "automations"
+  },
+  {
+   "path": "/goals",
+   "key": "goals",
+   "group": "goals"
+  },
+  {
+   "path": "/integrations",
+   "key": "integrations",
+   "group": "integrations"
+  },
+  {
+   "path": "/notifications",
+   "key": "notifications",
+   "group": "notifications"
+  },
+  {
+   "path": "/metrics",
+   "key": "metrics",
+   "group": "metrics"
+  },
+  {
+   "path": "/custom-metrics",
+   "key": "custom-metrics",
+   "group": "custom-metrics"
+  },
+  {
+   "path": "/api-docs",
+   "key": "api-docs",
+   "group": "api-docs"
+  },
+  {
+   "path": "/settings?tab=branding",
+   "key": "settings-branding",
+   "group": "settings"
+  },
+  {
+   "path": "/settings?tab=team",
+   "key": "settings-team",
+   "group": "settings"
+  },
+  {
+   "path": "/settings?tab=api",
+   "key": "settings-api",
+   "group": "settings"
+  },
+  {
+   "path": "/settings?tab=webhooks",
+   "key": "settings-webhooks",
+   "group": "settings"
+  },
+  {
+   "path": "/settings?tab=outbox",
+   "key": "settings-outbox",
+   "group": "settings"
+  },
+  {
+   "path": "/settings?tab=system",
+   "key": "settings-system",
+   "group": "settings"
+  },
+  {
+   "path": "/__demo_missing_page",
+   "key": "not-found",
+   "group": "not-found"
+  }
+ ]
+}

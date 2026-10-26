@@ -1,0 +1,26 @@
+node_modules
+.next
+.next-v2
+.env
+prisma/*.db*
+*.log
+tsconfig.tsbuildinfo
+
+# working ledgers, review packages and source snapshots of the build-out sessions
+.superpowers/
+
+# Claude-hosted demo: build/ is output of demo-host/build.mjs (capture-out/ is kept: it is the only way to rebuild
+# the demo without the local database)
+demo-host/build/
+
+# local production preview (scripts/start-prod.mjs)
+.next-prod
+.preview-url
+
+# award QA screenshots (awwwards shoot.mjs)
+.shots
+
+# uploaded media (src/lib/media/store.ts)
+data/
+prisma/test-uploads
+demo-host/.test-out/
