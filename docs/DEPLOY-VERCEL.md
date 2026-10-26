@@ -28,6 +28,7 @@ Each default can be overridden with its own variable: `MEDIA_STORE=db|disk`, `EN
    - `SEED_DEMO=1`, optional: loads the demo agency (six sample clients) on a build that finds the database empty. It signs in as `admin@demo.local` / `demo1234`, so change that password after the first sign-in, or delete the user. Remove the variable afterwards.
    - `ANTHROPIC_API_KEY`, optional: AI analysis and Ask. Without it the app uses its rule-based analyst.
    - `APP_URL`, optional: only when the site should link to an address other than the project's production domain.
+   - Confirm that **Automatically expose System Environment Variables** is ticked on the same page. The Vercel defaults in the table above depend on `VERCEL=1`, which Vercel sets only when this is ticked. Without it, uploads try to write to a disk Vercel discards.
 3. **Redeploy** from **Deployments**, because settings only apply to new deployments.
 4. **Sign in.** With `SEED_DEMO=1`, use the demo login. Otherwise create a workspace at `/signup`.
 
