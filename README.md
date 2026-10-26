@@ -76,7 +76,7 @@ The structure pass (same document, "Structure pass") replaced the admin skeleton
 
 ## Configuration
 
-See [`.env.example`](.env.example): `APP_SECRET` (sessions + credential encryption), `APP_URL`, `ANTHROPIC_API_KEY`, `SMTP_*`, `GOOGLE_CLIENT_ID/SECRET` and `META_APP_ID/SECRET` (enable the one-click “Continue with Google / Meta” buttons — see [One-click OAuth](#one-click-oauth)), `ENABLE_SCHEDULER`, `CRON_SECRET`. SQLite by default; to use Postgres change `provider` in `prisma/schema.prisma`, set `DATABASE_URL`, and run `npx prisma db push`.
+See [`.env.example`](.env.example): `APP_SECRET` (sessions + credential encryption), `APP_URL`, `ANTHROPIC_API_KEY`, `SMTP_*`, `GOOGLE_CLIENT_ID/SECRET` and `META_APP_ID/SECRET` (enable the one-click “Continue with Google / Meta” buttons — see [One-click OAuth](#one-click-oauth)), `ENABLE_SCHEDULER`, `CRON_SECRET`. SQLite by default. With a `postgres://` `DATABASE_URL`, `npm run build` generates and applies a Postgres schema by itself: see [Deploying to Vercel](docs/DEPLOY-VERCEL.md) for Vercel with a Neon database.
 
 ## One-click OAuth
 
