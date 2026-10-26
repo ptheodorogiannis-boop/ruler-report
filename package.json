@@ -5,7 +5,7 @@
   "description": "Self-hosted marketing reporting platform for agencies: multichannel reports, live dashboards, automations, goals, timeline, AI insights, public API v2, webhooks and MCP.",
   "scripts": {
     "dev": "next dev -p 3104",
-    "build": "prisma generate && next build",
+    "build": "node scripts/build.mjs",
     "start": "next start -p 3104",
     "db:push": "prisma db push --skip-generate",
     "db:seed": "tsx prisma/seed.ts",

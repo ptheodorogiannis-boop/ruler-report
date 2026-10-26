@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { canWrite, getPrincipal, tokenPrincipal } from '@/lib/auth';
 import { listHandler, uploadHandler } from '@/lib/media/handlers';
-import { MEDIA_MAX_BYTES } from '@/lib/media/store';
+import { mediaMaxBytes } from '@/lib/media/store';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   if (!p) return json({ message: 'Unauthenticated.' }, 401);
   if (!canWrite(p)) return json({ message: 'Forbidden.' }, 403);
   const declared = Number(req.headers.get('content-length') ?? 0);
-  if (declared > MEDIA_MAX_BYTES + 64 * 1024) return json({ message: 'Images must be 5 MB or smaller' }, 413);
+  if (declared > mediaMaxBytes() + 64 * 1024) return json({ message: `Images must be ${mediaMaxBytes() / (1024 * 1024)} MB or smaller` }, 413);
   let form: FormData;
   try {
     form = await req.formData();

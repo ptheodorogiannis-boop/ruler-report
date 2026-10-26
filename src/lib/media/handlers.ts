@@ -3,7 +3,7 @@
 import { createReadStream } from 'node:fs';
 import { Readable } from 'node:stream';
 import { canAdmin, canWrite, type Principal } from '@/lib/auth';
-import { MEDIA_MAX_BYTES, deleteMedia, isMediaMime, listMedia, putMedia, readMedia } from './store';
+import { deleteMedia, isMediaMime, listMedia, mediaMaxBytes, putMedia, readMedia } from './store';
 
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
 
@@ -26,7 +26,7 @@ export async function uploadHandler(p: Principal | null, form: FormData): Promis
   if (!canWrite(p)) return json({ message: 'Forbidden.' }, 403);
   const file = form.get('file');
   if (!(file instanceof File)) return json({ message: 'Choose an image file.' }, 422);
-  if (file.size > MEDIA_MAX_BYTES) return json({ message: 'Images must be 5 MB or smaller' }, 422);
+  if (file.size > mediaMaxBytes()) return json({ message: `Images must be ${mediaMaxBytes() / (1024 * 1024)} MB or smaller` }, 422);
   const bytes = Buffer.from(await file.arrayBuffer());
   const sniffed = sniffImage(bytes);
   if (!sniffed || !isMediaMime(file.type) || sniffed !== file.type) return json({ message: 'Unsupported image type (PNG, JPEG, WebP or GIF only)' }, 422);
@@ -50,8 +50,8 @@ export async function getHandler(id: string): Promise<Response> {
   if (!/^[a-z0-9]{10,40}$/i.test(id)) return json({ message: 'Not found.' }, 404);
   const m = await readMedia(id);
   if (!m) return json({ message: 'Not found.' }, 404);
-  const stream = Readable.toWeb(createReadStream(m.path)) as unknown as ReadableStream;
-  return new Response(stream, {
+  const body = 'bytes' in m ? m.bytes : (Readable.toWeb(createReadStream(m.path)) as unknown as ReadableStream);
+  return new Response(body as BodyInit, {
     status: 200,
     headers: {
       'content-type': m.mime,

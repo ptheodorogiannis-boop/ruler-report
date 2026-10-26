@@ -16,8 +16,9 @@ test('media store: put writes file + row, read streams it, delete removes both',
   assert.deepEqual([m.width, m.height], [1, 1]);
   const r = await readMedia(m.id);
   assert.equal(r?.mime, 'image/png');
-  assert.deepEqual(readFileSync(r!.path), PNG);
-  assert.ok(r!.path.startsWith(mediaDir(company.id)), 'file lives under the company folder');
+  assert.ok(r && 'path' in r, 'the disk store returns a path');
+  assert.deepEqual(readFileSync(r.path), PNG);
+  assert.ok(r.path.startsWith(mediaDir(company.id)), 'file lives under the company folder');
   assert.equal(await deleteMedia(m.id, company.id + 1), false, 'another company cannot delete');
   assert.equal(await deleteMedia(m.id, company.id), true);
   assert.equal(await readMedia(m.id), null);

@@ -5,6 +5,7 @@ import { AppShell, Empty, PageHeader } from '@/components/shell';
 import { ReportRows, type ReportRow } from '@/components/report-rows';
 import { canWrite, projectScope, requirePrincipal } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { containsText } from '@/lib/platform';
 import { requestBaseUrl } from '@/lib/share';
 
 export async function ReportIndex({ kind, q, project, page }: { kind: 'report' | 'dashboard'; q?: string; project?: string; page?: string }) {
@@ -14,7 +15,7 @@ export async function ReportIndex({ kind, q, project, page }: { kind: 'report' |
   const pg = Math.max(1, Number(page) || 1);
   const projects = await db.project.findMany({ where: projectScope(p), orderBy: { name: 'asc' }, select: { id: true, name: true } });
   const where = {
-    AND: [{ companyId: p.companyId, kind }, p.projectIds ? { projectId: { in: p.projectIds } } : {}, project ? { projectId: Number(project) } : {}, q ? { OR: [{ title: { contains: q } }, { subtitle: { contains: q } }] } : {}],
+    AND: [{ companyId: p.companyId, kind }, p.projectIds ? { projectId: { in: p.projectIds } } : {}, project ? { projectId: Number(project) } : {}, q ? { OR: [{ title: containsText(q) }, { subtitle: containsText(q) }] } : {}],
   };
   const [items, total, baseUrl] = await Promise.all([db.report.findMany({ where, include: { project: { select: { name: true, dateFormat: true, logo: true } } }, orderBy: { createdAt: 'desc' }, skip: (pg - 1) * per, take: per }), db.report.count({ where }), requestBaseUrl()]);
   const base = kind === 'report' ? '/reports' : '/dashboards';

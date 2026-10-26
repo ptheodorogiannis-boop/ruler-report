@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getT } from '@/lib/i18n/server';
+import { containsText } from '@/lib/platform';
 import { AppShell, Empty, PageHeader } from '@/components/shell';
 import { ActionForm } from '@/components/action-form';
 import { createProjectAction } from '@/app/actions/app';
@@ -18,7 +19,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
   const p = await requirePrincipal();
   const { q } = await searchParams;
   const projects = await db.project.findMany({
-    where: { ...projectScope(p), ...(q ? { name: { contains: q } } : {}) },
+    where: { ...projectScope(p), ...(q ? { name: containsText(q) } : {}) },
     include: { integrations: { select: { slug: true, status: true } }, _count: { select: { reports: true } } },
     orderBy: { name: 'asc' },
   });

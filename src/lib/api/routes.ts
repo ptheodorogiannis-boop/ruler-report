@@ -7,6 +7,7 @@ import { INTEGRATIONS, getIntegrationDef } from '@/lib/catalog/integrations';
 import { connectorFor } from '@/lib/connectors';
 import { randomToken, sha256 } from '@/lib/crypto';
 import { db } from '@/lib/db';
+import { containsText } from '@/lib/platform';
 import { FetchSession, resolveWidget } from '@/lib/engine/resolve';
 import { toCtx } from '@/lib/engine/report';
 import { reportView } from '@/lib/layout/service';
@@ -111,7 +112,7 @@ add('GET', '/companies/settings', async ({ p }) => {
 // ───────────── projects ─────────────
 add('GET', '/projects', async ({ p, query }) => {
   const pg = pageParams(query, ['name', 'created_at', 'updated_at']);
-  const where = { ...projectScope(p), ...(query.get('q') ? { name: { contains: query.get('q')! } } : {}) };
+  const where = { ...projectScope(p), ...(query.get('q') ? { name: containsText(query.get('q')!) } : {}) };
   const [items, total] = await Promise.all([db.project.findMany({ where, orderBy: orderBy(pg.sortBy, pg.descending, { name: 'name', created_at: 'createdAt', updated_at: 'updatedAt' }), skip: (pg.page - 1) * pg.perPage, take: pg.perPage }), db.project.count({ where })]);
   return paginated(items.map(sProject), total, pg, '/projects', query);
 });
@@ -140,7 +141,7 @@ add('DELETE', '/projects/:id', async ({ p, params }) => {
 add('GET', '/integrations', async ({ p, query }) => {
   const pg = pageParams(query, ['name', 'created_at', 'updated_at', 'source_name']);
   const pid = query.get('project_id');
-  const where: any = { AND: [{ companyId: p.companyId }, p.projectIds ? { projectId: { in: p.projectIds } } : {}, pid ? { projectId: num(pid) } : {}, query.get('slug') ? { slug: query.get('slug')! } : {}, query.get('name') ? { name: { contains: query.get('name')! } } : {}] };
+  const where: any = { AND: [{ companyId: p.companyId }, p.projectIds ? { projectId: { in: p.projectIds } } : {}, pid ? { projectId: num(pid) } : {}, query.get('slug') ? { slug: query.get('slug')! } : {}, query.get('name') ? { name: containsText(query.get('name')!) } : {}] };
   const [items, total] = await Promise.all([db.integration.findMany({ where, include: { project: { select: { name: true } } }, orderBy: orderBy(pg.sortBy, pg.descending, { name: 'name', source_name: 'name', created_at: 'createdAt', updated_at: 'updatedAt' }), skip: (pg.page - 1) * pg.perPage, take: pg.perPage }), db.integration.count({ where })]);
   return paginated(items.map(sIntegration), total, pg, '/integrations', query);
 });
@@ -295,7 +296,7 @@ for (const kind of ['report', 'dashboard'] as const) {
         pid ? { projectId: num(pid) } : {},
         query.get('created_at') ? { createdAt: { gte: new Date(query.get('created_at')!) } } : {},
         query.get('updated_at') ? { updatedAt: { gte: new Date(query.get('updated_at')!) } } : {},
-        query.get('search') ? { OR: [{ title: { contains: query.get('search')! } }, { subtitle: { contains: query.get('search')! } }] } : {},
+        query.get('search') ? { OR: [{ title: containsText(query.get('search')!) }, { subtitle: containsText(query.get('search')!) }] } : {},
       ],
     };
     const [items, total] = await Promise.all([db.report.findMany({ where, orderBy: orderBy(pg.sortBy, pg.descending, { title: 'title', created_at: 'createdAt', updated_at: 'updatedAt' }), skip: (pg.page - 1) * pg.perPage, take: pg.perPage }), db.report.count({ where })]);

@@ -371,5 +371,6 @@ model Media {
   size      Int
   width     Int?
   height    Int?
+  data      Bytes?   // the file itself when MEDIA_STORE=db (default on Vercel); null when it lives on disk
   createdAt DateTime @default(now())
 }

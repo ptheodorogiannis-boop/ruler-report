@@ -3,6 +3,7 @@
 // cookie forwarded, so the PDF is exactly what the client link shows. `PDF_ENABLED=off` turns the feature off.
 import { existsSync } from 'node:fs';
 import { chromium, type Browser } from 'playwright';
+import { pdfAllowed } from '@/lib/platform';
 
 export interface RenderOpts {
   url: string;
@@ -54,9 +55,9 @@ function chromiumPath(): string | null {
   }
 }
 
-/** False when `PDF_ENABLED=off` or no Chromium executable can be found; the lookup is cached for the process. */
+/** False when `PDF_ENABLED=off` (the default on Vercel) or no Chromium executable can be found; the lookup is cached for the process. */
 export function pdfAvailable(): boolean {
-  if (process.env.PDF_ENABLED === 'off') return false;
+  if (!pdfAllowed()) return false;
   if (override) return true;
   if (cached == null) {
     const p = chromiumPath();
