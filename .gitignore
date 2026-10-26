@@ -20,7 +20,7 @@ demo-host/build/
 # award QA screenshots (awwwards shoot.mjs)
 .shots
 
-# uploaded media (src/lib/media/store.ts)
-data/
+# uploaded media (src/lib/media/store.ts): the root data/ folder only (src/data/ holds source files)
+/data/
 prisma/test-uploads
 demo-host/.test-out/
