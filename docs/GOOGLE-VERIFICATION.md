@@ -16,8 +16,9 @@ Prepared 2 November 2026 for the `v4` deployment of Ruler Reports, operated by R
 | yes | Google Data Access: all scopes the app requests are declared (list below) |
 | yes | Google OAuth client: redirect URI `https://reports.ruler.agency/api/oauth/google/callback` added next to the preview one |
 | yes | Meta app: app domain `reports.ruler.agency`, privacy and terms links, category *Business and pages*, redirect URI `https://reports.ruler.agency/api/oauth/meta/callback` |
-| yes | Vercel: `reports.ruler.agency` added to the project, serving branch `v4` (waiting for DNS) |
+| yes | Vercel: `reports.ruler.agency` added to the project, serving branch `v4` (waiting for DNS, and behind Vercel Authentication: see below) |
 | yes | Search Console: Domain property `ruler.agency` created, waiting for its DNS record |
+| **you** | Choose how the domain becomes public (below) |
 | **you** | The two DNS records below |
 | **you** | Steps 2 to 4 after DNS |
 
@@ -25,10 +26,31 @@ The legal texts are a working draft written from what the code does. Have them r
 legal matters before publishing. Who operates the app and the contact address come from `src/lib/legal.ts` and can be
 overridden with `LEGAL_ENTITY` and `LEGAL_EMAIL`.
 
-**A decision before clients use it.** reports.ruler.agency serves the `v4` *preview* deployment, and on Vercel the
-preview and production deployments share one Neon database. That is fine for review and testing. For real client
-use, decide whether v4 becomes production first (merge it into `main` and move the domain to Production in Vercel ›
-Domains › Edit).
+**A decision before anyone outside can open it.** reports.ruler.agency serves the `v4` *preview* deployment, and two
+things follow from that:
+
+- **Vercel Authentication blocks it.** Preview deployments are protected, custom domains on a preview included:
+  anyone not signed in to your Vercel team gets a Vercel login instead of the page (checked 2 November 2026: the
+  preview answers `302` to `vercel.com/sso-api`). Google's reviewer, Meta's crawler and your clients would all see that
+  login, and the review fails on "home page not reachable".
+- **It shares production's database.** On Vercel the preview and production deployments use the same Neon
+  `DATABASE_URL`.
+
+Pick one route:
+
+1. **Make v4 production (recommended).** Merge `v4` into `main`, then in Vercel › Domains › Edit move
+   reports.ruler.agency to *Production*. Standard Protection leaves production custom domains public, and the database
+   question goes away. The Google and Meta variables (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `META_APP_ID`,
+   `META_APP_SECRET`, `META_LOGIN_CONFIG_ID`) are set for *Preview* only today: add them for *Production* too, and set
+   `APP_URL` for *Production* instead of Preview in step 2.
+2. **Keep it a preview.** Vercel › Settings › Deployment Protection › Vercel Authentication › off. Every preview URL of
+   the project becomes public, so only do this if nothing else in the project needs to stay private.
+
+Check from a terminal with no cookies; `200` means it is reachable:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://reports.ruler.agency/privacy
+```
 
 ## 1. DNS records (at the ruler.agency DNS host)
 
