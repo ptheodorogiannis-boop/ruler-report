@@ -36,8 +36,9 @@ redeploy.
    Data API, Google Search Console API, YouTube Data API v3, YouTube Analytics API, and the Business Profile APIs
    listed in CONNECTORS.md.
 3. **Consent screen status.** While the app is in *Testing*, only listed test users can sign in and refresh tokens
-   expire after 7 days. For clients, publish the app. The scopes it asks for (`adwords`, `business.manage`) are
-   *sensitive*, so Google reviews the app before it can be published for everyone.
+   expire after 7 days. For clients, publish the app. Three of the scopes it asks for (`adwords`,
+   `analytics.readonly`, `youtube.readonly`) are *sensitive*, so Google reviews the app before everyone can use it
+   without a warning. Every step, from the domain to the demo video, is in [GOOGLE-VERIFICATION.md](GOOGLE-VERIFICATION.md).
 4. **Google Ads developer token.** Apply in the API Center of the manager account. A *test* token only reaches test
    accounts. *Basic access* (granted after Google's review) is enough for reporting. Without a token the Google sign-in
    still works for the other four networks, and Google Ads shows a note instead of accounts.
