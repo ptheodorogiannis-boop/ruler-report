@@ -1,6 +1,9 @@
 // On Vercel without APP_URL, links in e-mails, the API docs and client links use the project's production address
-// (VERCEL_PROJECT_PRODUCTION_URL is set at build and run time, without the protocol). An explicit APP_URL always wins.
-const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+// (VERCEL_PROJECT_PRODUCTION_URL is set at build and run time, without the protocol). A preview uses its stable branch
+// address instead (VERCEL_BRANCH_URL, e.g. ruler-report-git-v4-<scope>.vercel.app), so the Google / Meta sign-in comes
+// back to the preview that started it rather than to production. An explicit APP_URL always wins.
+const vercelUrl =
+  process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_BRANCH_URL ? process.env.VERCEL_BRANCH_URL : process.env.VERCEL_PROJECT_PRODUCTION_URL;
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

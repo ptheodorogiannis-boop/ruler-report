@@ -11,7 +11,7 @@ The app runs on Vercel with a hosted Postgres database from Neon. Local developm
 | Uploaded images | Stored in the database (`MEDIA_STORE=db`), up to 4 MB each | `data/uploads` on disk, up to 5 MB |
 | Automations, goals, health checks | A Vercel cron calls `/api/cron/tick` once a day at 06:00 UTC (`vercel.json`) | In-process scheduler |
 | PDF export | Off (no Chromium in Vercel functions); the PDF menu is hidden | Chromium through Playwright |
-| Links in e-mails and the API docs | The project's production address, unless `APP_URL` is set | `APP_URL` |
+| Links in e-mails and the API docs | The project's production address (a preview: its branch address), unless `APP_URL` is set | `APP_URL` |
 
 Each default can be overridden with its own variable: `MEDIA_STORE=db|disk`, `ENABLE_SCHEDULER=0|1`, `PDF_ENABLED=off|auto`.
 

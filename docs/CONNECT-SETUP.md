@@ -66,6 +66,21 @@ name, and every later call sends the manager's ID in the `login-customer-id` hea
    that adds every ticked account across every network.
 3. Back on the project: how many accounts were added, and which network failed, if any.
 
+## Testing on a Vercel preview
+
+Every pushed branch gets a stable preview address, `https://ruler-report-git-<branch>-<scope>.vercel.app` (for the v4
+branch: `https://ruler-report-git-v4-ptheodorogiannis-boop.vercel.app`). Without `APP_URL`, a preview uses that address
+for its own links and redirect URIs, so:
+
+1. Add the keys above in Vercel → Settings → Environment Variables with **Preview** ticked (or scoped to the branch),
+   then redeploy the branch.
+2. Add the preview's two redirect URIs to the Google OAuth client and the Meta app, next to the production ones:
+   `https://ruler-report-git-v4-ptheodorogiannis-boop.vercel.app/api/oauth/google/callback` and
+   `…/api/oauth/meta/callback`.
+3. Open the preview while signed in to Vercel (previews are protected by Vercel Authentication by default).
+4. Check which database the Preview environment uses: if it shares production's `DATABASE_URL`, accounts connected
+   while testing land in the production data.
+
 ## Trying it without real accounts
 
 `scripts/dev-mock.mjs` runs fake Google and Meta servers and a dev server wired to them, on its own port (3106),
