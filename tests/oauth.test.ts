@@ -279,9 +279,18 @@ test('callback and start refuse other users, other companies, wrong provider, ba
 
   assert.equal((await handleCallback(get(cbUrl), { ...p, userId: 2 }, 'google')).status, 403, 'a different user cannot finish someone else’s flow');
   assert.equal((await handleCallback(get(cbUrl), await principalFor(other.company.id, 'admin', null), 'google')).status, 403);
-  assert.equal((await handleCallback(get(cbUrl), p, 'meta')).status, 400, 'google state on the meta callback');
-  assert.equal((await handleCallback(get('/api/oauth/google/callback?code=c&state=garbage'), p, 'google')).status, 400);
-  assert.equal((await handleCallback(get('/api/oauth/google/callback?code=c'), p, 'google')).status, 400);
+  // no usable state: back to the projects page with a readable message, never a bare JSON error
+  const lostTo = async (res: Promise<Response>) => {
+    const r = await res;
+    assert.equal(r.status, 307);
+    const to = location(r);
+    assert.equal(to.pathname, '/projects');
+    return to.searchParams.get('oauth_error')!;
+  };
+  assert.match(await lostTo(handleCallback(get(cbUrl), p, 'meta')), /Meta sign-in could not be completed: the sign-in link belongs to another provider/, 'google state on the meta callback');
+  assert.match(await lostTo(handleCallback(get('/api/oauth/google/callback?code=c&state=garbage'), p, 'google')), /expired or is invalid/);
+  assert.match(await lostTo(handleCallback(get('/api/oauth/google/callback?code=c'), p, 'google')), /Missing OAuth state/);
+  assert.match(await lostTo(handleCallback(get('/api/oauth/meta/callback?error=access_denied&error_description=The+domain+of+this+URL+is+not+included'), p, 'meta')), /Meta sign-in could not be completed: The domain of this URL is not included/, 'the provider says why');
   assert.equal(location(await handleCallback(get(cbUrl), null, 'google')).pathname, '/login');
   assert.equal((await handleCallback(get(cbUrl), await principalFor(company.id, 'viewer', null), 'google')).status, 403);
   assert.equal((await handleCallback(get(cbUrl), await principalFor(company.id, 'editor', [project.id + 1000]), 'google')).status, 403, 'project outside the user’s access');

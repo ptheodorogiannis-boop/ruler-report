@@ -67,13 +67,20 @@ export async function startOAuth(req: NextRequest, p: Principal | null, provider
 
 export async function handleCallback(req: NextRequest, p: Principal | null, provider: Provider): Promise<NextResponse> {
   const q = req.nextUrl.searchParams;
+  // no usable state: nothing ties this callback to a project, so explain on the projects page what went wrong. A
+  // provider that refused the request (a misconfigured app, say) usually says why in error_description.
+  const lost = (why: string) => {
+    const said = q.get('error_description') || q.get('error_message') || q.get('error_reason');
+    const msg = `The ${PROVIDER_NAME[provider]} sign-in could not be completed: ${said || why} Start again from the project's Connect page.`;
+    return go(req, `/projects?oauth_error=${encodeURIComponent(msg.slice(0, 300))}`);
+  };
   let state;
   try {
     state = await verifyState(q.get('state'));
   } catch (e) {
-    return NextResponse.json({ message: (e as Error).message }, { status: 400 });
+    return lost((e as Error).message);
   }
-  if (state.provider !== provider) return NextResponse.json({ message: 'OAuth state belongs to another provider' }, { status: 400 });
+  if (state.provider !== provider) return lost('the sign-in link belongs to another provider.');
   if (!p) return go(req, '/login');
   // the person finishing the flow must be the person who started it, in the same company
   if (p.companyId !== state.companyId || p.userId !== state.userId) return NextResponse.json({ message: 'This connect link was started by a different user.' }, { status: 403 });

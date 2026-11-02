@@ -14,10 +14,10 @@ export const dynamic = 'force-dynamic';
 
 const TZ = ['UTC', 'Europe/Athens', 'Europe/London', 'Europe/Berlin', 'Europe/Stockholm', 'America/New_York', 'America/Chicago', 'America/Los_Angeles', 'America/Sao_Paulo', 'Asia/Dubai', 'Asia/Singapore', 'Australia/Sydney'];
 
-export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ q?: string; oauth_error?: string }> }) {
   const { t } = await getT();
   const p = await requirePrincipal();
-  const { q } = await searchParams;
+  const { q, oauth_error } = await searchParams;
   const projects = await db.project.findMany({
     where: { ...projectScope(p), ...(q ? { name: containsText(q) } : {}) },
     include: { integrations: { select: { slug: true, status: true } }, _count: { select: { reports: true } } },
@@ -32,6 +32,12 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
           <button className="btn">{t('common.search')}</button>
         </form>
       } />
+
+      {oauth_error && (
+        <p role="alert" className="mb-5 border-l-2 border-[var(--down)] pl-3 text-sm leading-6 text-[var(--down)]">
+          {oauth_error}
+        </p>
+      )}
 
       {canWrite(p) && (
         <details className="card mb-5 p-4" open={projects.length === 0}>
