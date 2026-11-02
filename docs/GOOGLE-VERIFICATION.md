@@ -5,7 +5,8 @@ completed the Google verification process, Error 403: access_denied". While the 
 people with a role on the app can sign in with Meta. Reportei has neither problem because its Google and Meta apps are
 published and reviewed. This guide gets ours there.
 
-Prepared 2 November 2026 for the `v4` deployment of Ruler Reports, operated by Ruler SMPC.
+Prepared 2 November 2026 for the production deployment of Ruler Reports (branch `main`, same code as `v4`), operated by
+Ruler SMPC.
 
 ## Where it stands
 
@@ -16,9 +17,10 @@ Prepared 2 November 2026 for the `v4` deployment of Ruler Reports, operated by R
 | yes | Google Data Access: all scopes the app requests are declared (list below) |
 | yes | Google OAuth client: redirect URI `https://reports.ruler.agency/api/oauth/google/callback` added next to the preview one |
 | yes | Meta app: app domain `reports.ruler.agency`, privacy and terms links, category *Business and pages*, redirect URI `https://reports.ruler.agency/api/oauth/meta/callback` |
-| yes | Vercel: `reports.ruler.agency` added to the project, serving branch `v4` (waiting for DNS, and behind Vercel Authentication: see below) |
+| yes | v4 is production: `main` fast-forwarded to `v4`, `reports.ruler.agency` is a *Production* domain in Vercel (waiting for DNS) |
+| yes | Vercel Production variables: `GOOGLE_CLIENT_ID`, `META_APP_ID`, `META_LOGIN_CONFIG_ID`, `APP_URL=https://reports.ruler.agency` |
 | yes | Search Console: Domain property `ruler.agency` created, waiting for its DNS record |
-| **you** | Choose how the domain becomes public (below) |
+| **you** | Add `GOOGLE_CLIENT_SECRET` and `META_APP_SECRET` for *Production* (below) |
 | **you** | The two DNS records below |
 | **you** | Steps 2 to 4 after DNS |
 
@@ -26,27 +28,19 @@ The legal texts are a working draft written from what the code does. Have them r
 legal matters before publishing. Who operates the app and the contact address come from `src/lib/legal.ts` and can be
 overridden with `LEGAL_ENTITY` and `LEGAL_EMAIL`.
 
-**A decision before anyone outside can open it.** reports.ruler.agency serves the `v4` *preview* deployment, and two
-things follow from that:
+**Why production.** Preview deployments sit behind Vercel Authentication: anyone not signed in to your Vercel team
+gets a Vercel login instead of the page (checked 2 November 2026, the v4 preview answers `302` to `vercel.com/sso-api`).
+Google's reviewer, Meta's crawler and clients would all have hit it. Production domains stay public, so v4 was made
+production on 2 November 2026. The v4 preview address keeps working for you, behind the login as before. Keep using
+the `v4` branch for changes and fast-forward `main` when they should go live, or work on `main` directly.
 
-- **Vercel Authentication blocks it.** Preview deployments are protected, custom domains on a preview included:
-  anyone not signed in to your Vercel team gets a Vercel login instead of the page (checked 2 November 2026: the
-  preview answers `302` to `vercel.com/sso-api`). Google's reviewer, Meta's crawler and your clients would all see that
-  login, and the review fails on "home page not reachable".
-- **It shares production's database.** On Vercel the preview and production deployments use the same Neon
-  `DATABASE_URL`.
+**The two secrets for Production.** Vercel › Settings › Environment Variables › Add Environment Variable, type
+*Secret*, environment *Production*: `GOOGLE_CLIENT_SECRET` and `META_APP_SECRET`, with the same values you pasted for
+Preview. Vercel keeps production secrets separate, so they cannot be copied over. Production needs a new deployment
+afterwards: redeploy the latest production deployment, or push any commit to `main`. Until then the production site
+shows Google and Meta sign-in as not configured.
 
-Pick one route:
-
-1. **Make v4 production (recommended).** Merge `v4` into `main`, then in Vercel › Domains › Edit move
-   reports.ruler.agency to *Production*. Standard Protection leaves production custom domains public, and the database
-   question goes away. The Google and Meta variables (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `META_APP_ID`,
-   `META_APP_SECRET`, `META_LOGIN_CONFIG_ID`) are set for *Preview* only today: add them for *Production* too, and set
-   `APP_URL` for *Production* instead of Preview in step 2.
-2. **Keep it a preview.** Vercel › Settings › Deployment Protection › Vercel Authentication › off. Every preview URL of
-   the project becomes public, so only do this if nothing else in the project needs to stay private.
-
-Check from a terminal with no cookies; `200` means it is reachable:
+Check from a terminal with no cookies, once DNS is in; `200` means it is reachable:
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" https://reports.ruler.agency/privacy
@@ -84,9 +78,8 @@ nslookup -type=TXT ruler.agency
    owns the Cloud project (ptheodorogiannis@ruler.agency).
 2. **Vercel.** Project ruler-report › Settings › Domains: reports.ruler.agency turns to *Valid Configuration*. Press
    *Refresh* if it lags.
-3. **APP_URL.** Settings › Environment Variables › add `APP_URL` = `https://reports.ruler.agency`, environment
-   *Preview*, branch `v4` only. Then redeploy the latest v4 deployment. The build fixes its own address, so without
-   this a sign-in started on reports.ruler.agency would come back to the vercel.app address and lose the session.
+3. **APP_URL** is already `https://reports.ruler.agency` for Production. Sign-in on production therefore only works
+   on reports.ruler.agency, not on ruler-report-pi.vercel.app, and links in e-mails point there too.
 4. **Meta data deletion link.** Meta refused it while the domain did not answer. In the Meta app › App settings ›
    Basic › User data deletion, pick *Data deletion instructions URL* and enter
    `https://reports.ruler.agency/privacy#delete-data`, then Save changes and reload to check it stayed.
