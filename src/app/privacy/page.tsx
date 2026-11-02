@@ -45,8 +45,8 @@ export default function PrivacyPage() {
 
         <LegalSection title="Google user data">
           <p>
-            When you choose <em className="not-italic font-medium">Connect with Google</em>, you sign in on Google's own page and grant read-only access.
-            {` ${LEGAL.product}`} reads only what is needed to show the data in reports:
+            When you choose <em className="not-italic font-medium">Connect with Google</em>, you sign in on Google's own page and grant access.
+            {` ${LEGAL.product}`} only reads, and only what is needed to show the data in reports:
           </p>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
@@ -66,6 +66,10 @@ export default function PrivacyPage() {
               </tbody>
             </table>
           </div>
+          <p>
+            Google's consent screen describes the Google Ads and Business Profile permissions as seeing, editing, creating and deleting, because
+            those products offer no read-only permission. {LEGAL.product} never uses them to change anything.
+          </p>
           <p>We also receive your email address from Google, to show which Google account a connection belongs to.</p>
           <p>
             <strong className="font-semibold">

@@ -64,7 +64,7 @@ export default async function Home() {
         </h2>
         <div className="max-w-[620px] space-y-3 leading-7 text-ink-2">
           <p>
-            You sign in on Google's or Meta's own page and choose the accounts to connect. Access is read-only: {LEGAL.product} reads performance
+            You sign in on Google's or Meta's own page and choose the accounts to connect. {LEGAL.product} only reads: it fetches performance
             figures to show them in reports and never creates, edits or posts anything.
           </p>
           <p>

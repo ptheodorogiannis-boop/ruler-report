@@ -25,6 +25,11 @@ The legal texts are a working draft written from what the code does. Have them r
 legal matters before publishing. Who operates the app and the contact address come from `src/lib/legal.ts` and can be
 overridden with `LEGAL_ENTITY` and `LEGAL_EMAIL`.
 
+**A decision before clients use it.** reports.ruler.agency serves the `v4` *preview* deployment, and on Vercel the
+preview and production deployments share one Neon database. That is fine for review and testing. For real client
+use, decide whether v4 becomes production first (merge it into `main` and move the domain to Production in Vercel ›
+Domains › Edit).
+
 ## 1. DNS records (at the ruler.agency DNS host)
 
 ruler.agency's nameservers are `ns1.rulerhost.com` and `ns2.rulerhost.com`, so the records go in that DNS panel.
@@ -70,10 +75,14 @@ nslookup -type=TXT ruler.agency
 
 Google Cloud console › Google Auth Platform, project `ruler-reports`.
 
-1. **Audience › Publish app** (moves it from Testing to In production). Ask before you press it if someone else
+1. **Remove the vercel.app entries first.** Google only accepts a submission when every authorized domain is verified,
+   and `ruler-report-git-v4-ptheodorogiannis-boop.vercel.app` cannot be. Once sign-in works on reports.ruler.agency,
+   delete that domain under Branding › Authorized domains and its redirect URI under Clients › Ruler Reports web.
+   Leave them until then: today's preview sign-in depends on them.
+2. **Audience › Publish app** (moves it from Testing to In production). Ask before you press it if someone else
    manages the project.
-2. **Verification Center › Prepare for verification.** Google re-checks the branding, then asks for the items below.
-3. Submit. Google first verifies the brand (app name, logo if any, home page, domain), then reviews the sensitive
+3. **Verification Center › Prepare for verification.** Google re-checks the branding, then asks for the items below.
+4. Submit. Google first verifies the brand (app name, logo if any, home page, domain), then reviews the sensitive
    scopes. The reviewer writes to the developer contact email (ptheodorogiannis@ruler.agency) and may ask follow-up
    questions there. Answer in that thread.
 
