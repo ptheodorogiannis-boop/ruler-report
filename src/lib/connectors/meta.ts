@@ -54,11 +54,18 @@ function rowToPrims(r: any, prims: string[]): Record<string, number> {
   return v;
 }
 
+/** Insights fields, plus the name/id fields of a breakdown level. Graph API v26 rejects a trailing comma
+ *  ("Syntax error \"Expected name.\""), so the list is joined, never concatenated. */
+export function metaInsightsFields(extra?: string): string {
+  const base = ['impressions', 'reach', 'clicks', 'inline_link_clicks', 'spend', 'actions', 'action_values'];
+  return [...base, ...(extra ?? '').split(',')].map((f) => f.trim()).filter(Boolean).join(',');
+}
+
 async function insights(ctx: any, params: Record<string, string>): Promise<any[]> {
   const token = ctx.integration.credentials?.accessToken;
   if (!token) throw new Error('invalid_token: no Meta access token stored');
   const qs = new URLSearchParams({
-    fields: 'impressions,reach,clicks,inline_link_clicks,spend,actions,action_values,' + (params.extraFields ?? ''),
+    fields: metaInsightsFields(params.extraFields),
     limit: '500',
     access_token: token,
     ...params,
