@@ -71,7 +71,8 @@ export async function handleCallback(req: NextRequest, p: Principal | null, prov
   // provider that refused the request (a misconfigured app, say) usually says why in error_description.
   const lost = (why: string) => {
     const said = q.get('error_description') || q.get('error_message') || q.get('error_reason');
-    const msg = `The ${PROVIDER_NAME[provider]} sign-in could not be completed: ${said || why} Start again from the project's Connect page.`;
+    const reason = (said || why).trim().replace(/[.\s]*$/, '.');
+    const msg = `The ${PROVIDER_NAME[provider]} sign-in could not be completed: ${reason} Start again from the project's Connect page.`;
     return go(req, `/projects?oauth_error=${encodeURIComponent(msg.slice(0, 300))}`);
   };
   let state;

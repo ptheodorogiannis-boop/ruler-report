@@ -289,7 +289,7 @@ test('callback and start refuse other users, other companies, wrong provider, ba
   };
   assert.match(await lostTo(handleCallback(get(cbUrl), p, 'meta')), /Meta sign-in could not be completed: the sign-in link belongs to another provider/, 'google state on the meta callback');
   assert.match(await lostTo(handleCallback(get('/api/oauth/google/callback?code=c&state=garbage'), p, 'google')), /expired or is invalid/);
-  assert.match(await lostTo(handleCallback(get('/api/oauth/google/callback?code=c'), p, 'google')), /Missing OAuth state/);
+  assert.match(await lostTo(handleCallback(get('/api/oauth/google/callback?code=c'), p, 'google')), /Missing OAuth state\. Start again/);
   assert.match(await lostTo(handleCallback(get('/api/oauth/meta/callback?error=access_denied&error_description=The+domain+of+this+URL+is+not+included'), p, 'meta')), /Meta sign-in could not be completed: The domain of this URL is not included/, 'the provider says why');
   assert.equal(location(await handleCallback(get(cbUrl), null, 'google')).pathname, '/login');
   assert.equal((await handleCallback(get(cbUrl), await principalFor(company.id, 'viewer', null), 'google')).status, 403);
