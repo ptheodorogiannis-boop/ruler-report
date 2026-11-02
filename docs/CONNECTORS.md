@@ -80,8 +80,8 @@ without a developer token), and the callback lands on **accounts found**, which 
 | `search_console` | `webmasters.readonly` | verified sites (`sites`) | site URL / `sc-domain:` | yes |
 | `google_my_business` | `business.manage` | locations per account | `accounts/…/locations/…` | yes |
 | `youtube` | `youtube.readonly`, `yt-analytics.readonly` | your channels | channel id | yes |
-| `facebook_ads` | `ads_read` | `/me/adaccounts` | `act_…` | yes |
-| `facebook` | `pages_show_list`, `pages_read_engagement`, `read_insights` | `/me/accounts` | page id (+ Page token) | yes |
+| `facebook_ads` | `ads_read` (+ optional `business_management`) | `/me/adaccounts` + each Business Portfolio's `owned_ad_accounts` / `client_ad_accounts` | `act_…` | yes |
+| `facebook` | `pages_show_list`, `pages_read_engagement`, `read_insights` (+ optional `business_management`) | `/me/accounts` + each Business Portfolio's `owned_pages` / `client_pages`, whose Page token comes from `/{page-id}?fields=access_token`; a business Page without a token is listed as blocked | page id (+ Page token) | yes |
 | `instagram_business` | + `instagram_basic`, `instagram_manage_insights` | Pages' linked IG accounts | IG account id (+ Page token) | yes |
 
 Rules the implementation follows:
@@ -119,7 +119,7 @@ First, `APP_URL` in `.env` must be the address you actually open (e.g. `http://l
 
 1. developers.facebook.com → **Create app** → add a Facebook login product with the valid OAuth redirect URI above. **Login for Business:** set `META_LOGIN_CONFIG_ID` to the configuration that holds the permissions below; the dialog then sends `config_id` instead of `scope=`. Without it the classic `scope=` permissions are sent. Also check whether Meta accepts an `http://localhost:3104` redirect URI in Development mode; if it insists on HTTPS, expose port 3104 through an HTTPS tunnel and set `APP_URL` to that address. Copy the app id and secret into `META_APP_ID` / `META_APP_SECRET`.
 2. In **Development mode** only people with a role on the app (admin, developer, tester) can connect: add yourself and your testers. Live mode for other people's accounts needs App Review for the permissions below (and business verification for some).
-3. Permissions the connect buttons request: Facebook Page `pages_show_list`, `pages_read_engagement`, `read_insights`; Instagram adds `instagram_basic`, `instagram_manage_insights`; Meta Ads `ads_read`.
+3. Permissions the connect buttons request: Facebook Page `pages_show_list`, `pages_read_engagement`, `read_insights`; Instagram adds `instagram_basic`, `instagram_manage_insights`; Meta Ads `ads_read`; plus `business_management`, optional, for assets reached through a Business Portfolio (`OPTIONAL_SCOPES`: declining it never blocks a network, it only limits the list to directly assigned assets).
 4. The person connecting needs the right role on the asset: a Page role that includes *Analyze* for Page Insights; for Instagram, a **Business or Creator** account **linked to a Facebook Page** that the person manages.
 5. Facebook Page insights need a Page with **100 or more likes/followers**; Instagram follower demographics need 100+ followers, and `follows_and_unfollows` style metrics are not requested.
 6. Page and Instagram tokens are Page access tokens taken from `/me/accounts` with the long-lived user token. Meta has said such Page tokens do not expire, but that was **not re-checked against the current docs**: if a Page connection stops working, reconnect it. They also stop working if the person loses the Page role or changes their password. Meta Ads uses the long-lived user token itself (about 60 days, no refresh: reconnect).

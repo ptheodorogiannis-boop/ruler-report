@@ -328,7 +328,7 @@ test('Meta flow: long-lived token, ad account picker with paging, one Meta Ads i
   const { start, cb } = await consent('meta', 'facebook_ads', p, project.id);
   assert.equal(start.origin + start.pathname, `${base}/m/dialog`);
   assert.equal(start.searchParams.get('client_id'), 'm-app');
-  assert.equal(start.searchParams.get('scope'), 'ads_read');
+  assert.equal(start.searchParams.get('scope'), 'ads_read,business_management', 'plus the optional scope for Business Portfolio assets');
   assert.equal(start.searchParams.get('redirect_uri'), `${appUrl}/api/oauth/meta/callback`);
   assert.equal((await verifyState(start.searchParams.get('state'))).slug, 'facebook_ads');
 

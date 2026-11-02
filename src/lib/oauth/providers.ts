@@ -57,6 +57,8 @@ export interface AccountOption {
   detail?: string;
   /** an account that exists but cannot run (a disabled or closed ad account): listed last and muted */
   inactive?: boolean;
+  /** visible but not connectable, with the reason (a business Page the person has no Page access to): shown, not selectable */
+  blocked?: string;
   /** merged over the base credentials (e.g. a Page access token) */
   credentials?: Record<string, any>;
   config?: Record<string, any>;
@@ -71,6 +73,9 @@ export interface Tokens {
 const qs = (o: Record<string, string | undefined>) => new URLSearchParams(Object.entries(o).filter(([, v]) => v != null) as [string, string][]);
 
 export const scopesFor = (slugs: string[]): string[] => [...new Set(slugs.flatMap((s) => OAUTH_SLUGS[s]?.scopes ?? []))];
+/** Asked for, never required: without business_management Meta lists only the Pages and ad accounts assigned to the
+ *  person directly, not the ones they reach through a Business Portfolio (owned or client assets). */
+export const OPTIONAL_SCOPES: Record<Provider, string[]> = { google: [], meta: ['business_management'] };
 
 export function authUrl(provider: Provider, slug: string | string[], state: string, redirectUri: string): string {
   const scopes = scopesFor(Array.isArray(slug) ? slug : [slug]);
@@ -88,7 +93,7 @@ export function authUrl(provider: Provider, slug: string | string[], state: stri
   }
   // Facebook Login for Business apps define their permissions in a configuration instead of `scope`
   const config = process.env.META_LOGIN_CONFIG_ID;
-  return `${endpoints.meta.dialog}?${qs({ client_id: process.env.META_APP_ID, redirect_uri: redirectUri, response_type: 'code', ...(config ? { config_id: config } : { scope: scopes.join(',') }), state })}`;
+  return `${endpoints.meta.dialog}?${qs({ client_id: process.env.META_APP_ID, redirect_uri: redirectUri, response_type: 'code', ...(config ? { config_id: config } : { scope: [...scopes, ...OPTIONAL_SCOPES.meta].join(',') }), state })}`;
 }
 
 const form = (o: Record<string, string | undefined>) => ({ method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: qs(o) });
@@ -260,21 +265,90 @@ async function graphList(path: string, params: Record<string, string>, token: st
 }
 const AD_STATUS: Record<number, string> = { 1: 'active', 2: 'disabled', 3: 'unsettled', 7: 'pending review', 9: 'grace period', 101: 'closed' };
 
-async function metaList(slug: string, token: string): Promise<AccountOption[]> {
-  if (slug === 'facebook_ads') {
-    const rows = await graphList('/me/adaccounts', { fields: 'account_id,name,currency,account_status' }, token);
-    return rows.map((a) => {
-      const id = String(a.id ?? `act_${a.account_id}`);
-      const active = Number(a.account_status) === 1;
-      return { key: id, sourceId: id, name: a.name || id, detail: `${id} · ${a.currency ?? '?'}${active ? '' : ` · ${AD_STATUS[a.account_status] ?? 'status ' + a.account_status}`}`, ...(active ? {} : { inactive: true }), config: a.currency ? { currency: a.currency } : undefined };
-    });
+// ── Meta: assets assigned to the person directly, plus everything their Business Portfolios own or manage for clients
+const MAX_BUSINESSES = 25;
+const AD_FIELDS = 'account_id,name,currency,account_status';
+const PAGE_FIELDS = 'id,name,category,access_token,instagram_business_account{id,username,name}';
+
+/** Business Portfolios the person belongs to. Needs business_management; without it (declined, or an older consent)
+ *  the list is empty and only directly assigned assets are offered. */
+async function metaBusinesses(token: string): Promise<{ id: string; name: string }[]> {
+  try {
+    return (await graphList('/me/businesses', { fields: 'id,name' }, token)).slice(0, MAX_BUSINESSES).map((b) => ({ id: String(b.id), name: String(b.name ?? b.id) }));
+  } catch {
+    return [];
   }
-  const pages = await graphList('/me/accounts', { fields: 'id,name,category,access_token,instagram_business_account{id,username,name}' }, token);
+}
+/** One business edge (owned_pages, client_ad_accounts…); an edge the person may not read is skipped, not fatal. */
+async function businessEdge(path: string, fields: string, token: string): Promise<any[]> {
+  try {
+    return await graphList(path, { fields }, token);
+  } catch {
+    return [];
+  }
+}
+
+function adOption(a: any, via?: string): AccountOption {
+  const id = String(a.id ?? `act_${a.account_id}`);
+  const active = Number(a.account_status) === 1;
+  const status = active ? '' : ` · ${AD_STATUS[a.account_status] ?? 'status ' + a.account_status}`;
+  return { key: id, sourceId: id, name: a.name || id, detail: `${id} · ${a.currency ?? '?'}${status}${via ? ` · via ${via}` : ''}`, ...(active ? {} : { inactive: true }), config: a.currency ? { currency: a.currency } : undefined };
+}
+
+async function metaAdAccounts(token: string): Promise<AccountOption[]> {
+  const out = new Map<string, AccountOption>();
+  for (const a of await graphList('/me/adaccounts', { fields: AD_FIELDS }, token)) {
+    const o = adOption(a);
+    out.set(o.key, o);
+  }
+  const perBusiness = await Promise.all(
+    (await metaBusinesses(token)).map(async (b) => ({ b, rows: [...(await businessEdge(`/${b.id}/owned_ad_accounts`, AD_FIELDS, token)), ...(await businessEdge(`/${b.id}/client_ad_accounts`, AD_FIELDS, token))] }))
+  );
+  for (const { b, rows } of perBusiness)
+    for (const a of rows) {
+      const o = adOption(a, b.name);
+      if (!out.has(o.key)) out.set(o.key, o); // directly assigned wins: same account, no "via"
+    }
+  return [...out.values()];
+}
+
+interface PageEntry {
+  page: any;
+  via?: string;
+}
+/** Pages with their Page access tokens: from /me/accounts, then each business's owned and client Pages. A business
+ *  Page's token is asked for with the person's token; Meta returns one only when the person has a task on that Page. */
+async function metaPages(token: string): Promise<PageEntry[]> {
+  const out = new Map<string, PageEntry>();
+  for (const p of await graphList('/me/accounts', { fields: PAGE_FIELDS }, token)) out.set(String(p.id), { page: p });
+  const perBusiness = await Promise.all(
+    (await metaBusinesses(token)).map(async (b) => ({ b, rows: [...(await businessEdge(`/${b.id}/owned_pages`, 'id,name', token)), ...(await businessEdge(`/${b.id}/client_pages`, 'id,name', token))] }))
+  );
+  for (const { b, rows } of perBusiness)
+    for (const p of rows) {
+      const id = String(p.id);
+      if (out.has(id)) continue;
+      let full: any = null;
+      try {
+        full = await fetchJson(`${endpoints.meta.graph}/${id}?${qs({ fields: PAGE_FIELDS })}`, bearer(token));
+      } catch {
+        full = null;
+      }
+      out.set(id, { page: full ? { ...p, ...full } : p, via: b.name });
+    }
+  return [...out.values()];
+}
+/** reason code, translated by the pickers (connect.blocked_no_page_access) */
+const NO_PAGE_ACCESS = 'no_page_access';
+
+async function metaList(slug: string, token: string): Promise<AccountOption[]> {
+  if (slug === 'facebook_ads') return metaAdAccounts(token);
   const out: AccountOption[] = [];
-  for (const p of pages) {
+  for (const { page: p, via } of await metaPages(token)) {
     const cred = p.access_token ? { accessToken: p.access_token } : undefined; // Page token: does not expire when derived from a long-lived user token
-    if (slug === 'facebook') out.push({ key: p.id, sourceId: p.id, name: p.name, detail: String(p.id), credentials: cred });
-    else if (p.instagram_business_account) {
+    if (slug === 'facebook')
+      out.push({ key: String(p.id), sourceId: String(p.id), name: p.name, detail: `${p.id}${via ? ` · via ${via}` : ''}`, credentials: cred, ...(cred ? {} : { blocked: NO_PAGE_ACCESS }) });
+    else if (p.instagram_business_account && cred) {
       const ig = p.instagram_business_account;
       out.push({ key: ig.id, sourceId: ig.id, name: ig.username ? `@${ig.username}` : ig.name || ig.id, detail: `${ig.id} · via Page ${p.name}`, credentials: cred, config: { pageId: p.id } });
     }

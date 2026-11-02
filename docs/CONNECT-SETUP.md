@@ -52,9 +52,12 @@ name, and every later call sends the manager's ID in the `login-customer-id` hea
 1. Create a **Business** app with **Facebook Login for Business** and add the redirect URI above
    ([CONNECTORS.md › Going live › Meta](CONNECTORS.md#meta-facebook-page-instagram-meta-ads)).
 2. Login for Business apps define their permissions in a *configuration*. Create one with `ads_read`,
-   `pages_show_list`, `pages_read_engagement`, `read_insights`, `instagram_basic` and `instagram_manage_insights`, and
-   put its ID in `META_LOGIN_CONFIG_ID`. Without it the app sends classic `scope=` permissions, which older app types
-   accept.
+   `pages_show_list`, `pages_read_engagement`, `read_insights`, `instagram_basic`, `instagram_manage_insights` and
+   `business_management`, and put its ID in `META_LOGIN_CONFIG_ID`. Without it the app sends classic `scope=`
+   permissions, which older app types accept. `business_management` lists the Pages and ad accounts you reach through a
+   Business Portfolio (owned and client assets); without it only the ones assigned to you directly appear. A business
+   Page you can see but have no Page access to is shown greyed out with the reason: give yourself access to it in Meta
+   Business settings and sign in again.
 3. In Development mode only people with a role on the app can connect. For client accounts outside the agency's own
    business, request **advanced access** for those permissions through App Review.
 

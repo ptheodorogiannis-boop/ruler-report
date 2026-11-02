@@ -135,7 +135,7 @@ export interface FinalizeResult {
 export async function finalizeSelection(pending: Pending, keys: string[], deps: { listAccounts?: typeof listAccounts; onConnected?: (integrationId: number) => void; nameFor?: (o: AccountOption) => string } = {}): Promise<FinalizeResult> {
   const wanted = new Set(keys);
   if (!wanted.size) throw new Error('Select at least one account.');
-  const chosen = (await (deps.listAccounts ?? listAccounts)(pending.slug, pending.credentials)).filter((o) => wanted.has(o.key));
+  const chosen = (await (deps.listAccounts ?? listAccounts)(pending.slug, pending.credentials)).filter((o) => wanted.has(o.key) && !o.blocked);
   if (!chosen.length) throw new Error('None of the selected accounts is accessible any more.');
   const stored = storedCredentials(pending.provider, pending.credentials, pending.account);
   const out: FinalizeResult = { created: 0, reconnected: 0 };

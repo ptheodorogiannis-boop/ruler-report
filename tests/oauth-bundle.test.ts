@@ -171,35 +171,47 @@ test('Meta: one consent for ad accounts, Pages and Instagram; a declined Instagr
   const { company, project } = await makeCompany();
   const p = await principalFor(company.id, 'admin', null);
   const { start, asked, cb } = await bundleConsent('meta', p, project.id);
-  assert.deepEqual(asked, ['ads_read', 'pages_show_list', 'pages_read_engagement', 'read_insights', 'instagram_basic', 'instagram_manage_insights']);
+  assert.deepEqual(asked, ['ads_read', 'pages_show_list', 'pages_read_engagement', 'read_insights', 'instagram_basic', 'instagram_manage_insights', 'business_management'], 'business_management rides along, optional');
   assert.equal(start.origin + start.pathname, `${base}/m/dialog`);
   const pending = openPending(cb.cookies.get(PENDING_COOKIE)!.value)!;
   assert.deepEqual(pending.granted, ['facebook_ads', 'facebook', 'instagram_business']);
 
   const found = await listBundle(pending.slugs!, pending.granted!, pending.credentials);
   const by = Object.fromEntries(found.map((n) => [n.slug, n.options.map((o) => o.name)]));
-  assert.deepEqual(by.facebook_ads, ['Acme Running Co', 'Olive Grove Taverna', 'Northwind Optics', 'Old test account']);
-  assert.deepEqual(by.facebook, ['Acme Running Co', 'Olive Grove Taverna', 'Northwind Optics']);
-  assert.deepEqual(by.instagram_business, ['@acmerunning', '@olivegrove.taverna']);
+  // direct assets first, then the Business Portfolio's owned and client assets, each listed once
+  assert.deepEqual(by.facebook_ads, ['Acme Running Co', 'Olive Grove Taverna', 'Northwind Optics', 'Old test account', 'Kifisia Running Club', 'Seaside Hotel']);
+  assert.deepEqual(by.facebook, ['Acme Running Co', 'Olive Grove Taverna', 'Northwind Optics', 'Kifisia Running Club', 'Seaside Hotel']);
+  assert.deepEqual(by.instagram_business, ['@acmerunning', '@olivegrove.taverna', '@kifisiarunning'], 'Instagram linked to a business Page too');
   const ads = found.find((n) => n.slug === 'facebook_ads')!.options;
   assert.deepEqual(ads.map((o) => [o.detail, !!o.inactive]), [
     ['act_100200300400 · EUR', false],
     ['act_100200300401 · EUR', false],
     ['act_100200300402 · EUR', false],
     ['act_100200300499 · USD · disabled', true],
-  ], 'a status only when the account cannot run');
+    ['act_100200300410 · EUR · via Ruler SMPC', false],
+    ['act_100200300411 · EUR · via Ruler SMPC', false],
+  ], 'a status only when the account cannot run; business assets say which portfolio');
+  const pagesFound = found.find((n) => n.slug === 'facebook')!.options;
+  assert.deepEqual(pagesFound.slice(3).map((o) => [o.detail, o.credentials?.accessToken ?? null, o.blocked ?? null]), [
+    ['100000000000004 · via Ruler SMPC', 'mock-page-4', null],
+    ['100000000000005 · via Ruler SMPC', null, 'no_page_access'],
+  ], 'a business Page gets its own Page token; one without access is shown but blocked');
   assert.equal(found.find((n) => n.slug === 'facebook')!.options[0].detail, '100000000000001', 'Pages show their id, not an English category');
   assert.equal(found.find((n) => n.slug === 'instagram_business')!.options[0].detail, '17840000000000001 · via Page Acme Running Co');
 
-  const r = await finalizeBundle(pending, [pickValue('facebook_ads', 'act_100200300400'), pickValue('facebook', '100000000000001'), pickValue('instagram_business', '17840000000000001')]);
-  assert.equal(r.created, 3);
+  const r = await finalizeBundle(pending, [pickValue('facebook_ads', 'act_100200300400'), pickValue('facebook', '100000000000001'), pickValue('instagram_business', '17840000000000001'), pickValue('facebook', '100000000000005')]);
+  assert.equal(r.created, 3, 'the blocked business Page is never connected, whatever the form posts');
   assert.deepEqual((await db.integration.findMany({ where: { projectId: project.id }, orderBy: { id: 'asc' } })).map((x) => x.name), ['Acme Running Co – Meta Ads', 'Acme Running Co – Facebook Page', '@acmerunning – Instagram Business']);
   const ig = await db.integration.findFirstOrThrow({ where: { projectId: project.id, slug: 'instagram_business' } });
   assert.equal(decryptJson<any>(ig.credentials).accessToken, 'mock-page-1', 'Instagram keeps the Page token');
   assert.equal((ig.config as any).pageId, '100000000000001');
 
   const partial = await bundleConsent('meta', p, project.id, ['ads_read', 'pages_show_list', 'pages_read_engagement', 'read_insights']);
-  assert.deepEqual(openPending(partial.cb.cookies.get(PENDING_COOKIE)!.value)!.granted, ['facebook_ads', 'facebook']);
+  const partialPending = openPending(partial.cb.cookies.get(PENDING_COOKIE)!.value)!;
+  assert.deepEqual(partialPending.granted, ['facebook_ads', 'facebook'], 'declining business_management never blocks a network');
+  const direct = await listBundle(partialPending.slugs!, partialPending.granted!, partialPending.credentials);
+  assert.equal(direct.find((n) => n.slug === 'facebook_ads')!.options.length, 4, 'without business_management only directly assigned ad accounts are listed');
+  assert.equal(direct.find((n) => n.slug === 'facebook_ads')!.error, undefined, 'and that is not an error');
 
   process.env.META_LOGIN_CONFIG_ID = 'cfg-123';
   try {

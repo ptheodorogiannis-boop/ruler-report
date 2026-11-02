@@ -52,8 +52,8 @@ export default async function AccountsFound({ params, searchParams }: { params: 
       notGranted: !!n.notGranted,
       // inactive accounts (a disabled ad account) last; the sort is stable, so the provider's order stays otherwise
       accounts: n.options
-        .map((o) => ({ value: pickValue(n.slug, o.key), name: o.name, detail: detailParts(o.detail, t), inProject: inProject.has(`${n.slug}:${o.sourceId}`), inactive: !!o.inactive }))
-        .sort((a, b) => Number(a.inactive) - Number(b.inactive)),
+        .map((o) => ({ value: pickValue(n.slug, o.key), name: o.name, detail: detailParts(o.detail, t), inProject: inProject.has(`${n.slug}:${o.sourceId}`), inactive: !!o.inactive, blocked: o.blocked ? t(`connect.blocked_${o.blocked}`) : null }))
+        .sort((a, b) => Number(!!a.blocked) - Number(!!b.blocked) || Number(a.inactive) - Number(b.inactive)),
     };
   });
 

@@ -83,7 +83,7 @@ export default async function PickAccounts({ params }: { params: Promise<{ id: s
                 {options.map((o) => (
                   <li key={o.key}>
                     <label className="flex cursor-pointer items-start gap-3 px-1 py-3 transition-colors hover:bg-[var(--paper)] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--focus)]">
-                      <input type="checkbox" name="pick" value={o.key} className="mt-0.5 h-4 w-4 accent-[var(--brand)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]" />
+                      <input type="checkbox" name="pick" value={o.key} disabled={!!o.blocked} className="mt-0.5 h-4 w-4 accent-[var(--brand)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]" />
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-medium leading-5">{o.name}</span>
                         <span className="num flex flex-wrap gap-x-3 text-xs leading-4 text-ink-3">
@@ -92,6 +92,7 @@ export default async function PickAccounts({ params }: { params: Promise<{ id: s
                           ))}
                         </span>
                         {existing.has(o.sourceId) && <span className="mt-1 block text-xs text-ink-2">{t('connect.inProject')}</span>}
+                        {o.blocked && <span className="mt-1 block text-xs text-ink-2">{t(`connect.blocked_${o.blocked}`)}</span>}
                       </span>
                     </label>
                   </li>

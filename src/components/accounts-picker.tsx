@@ -15,6 +15,8 @@ export interface PickerAccount {
   inProject: boolean;
   /** a disabled or closed account: still selectable, muted and listed last */
   inactive?: boolean;
+  /** visible but not connectable; the reason, in the reader's language */
+  blocked?: string | null;
 }
 export interface PickerNetwork {
   slug: string;
@@ -63,7 +65,7 @@ export function AccountsPicker(props: {
   const setGroup = (n: PickerNetwork, on: boolean) =>
     setPicked((prev) => {
       const next = new Set(prev);
-      for (const a of n.accounts) if (visible.get(n.slug)?.has(a.value)) (on ? next.add(a.value) : next.delete(a.value));
+      for (const a of n.accounts) if (!a.blocked && visible.get(n.slug)?.has(a.value)) (on ? next.add(a.value) : next.delete(a.value));
       return next;
     });
 
@@ -130,7 +132,8 @@ export function AccountsPicker(props: {
             const shown = visible.get(n.slug)!;
             if (needle && shown.size === 0) return null;
             const inProject = n.accounts.filter((a) => a.inProject).length;
-            const allOn = shown.size > 0 && [...shown].every((v) => picked.has(v));
+            const pickable = n.accounts.filter((a) => !a.blocked && shown.has(a.value)).map((a) => a.value);
+            const allOn = pickable.length > 0 && pickable.every((v) => picked.has(v));
             const headId = `net-${n.slug}`;
             return (
               <section key={n.slug} aria-labelledby={headId} data-network={n.slug}>
@@ -145,7 +148,7 @@ export function AccountsPicker(props: {
                       {inProject > 0 && <>, {t('connect.inProjectCount', { count: inProject })}</>}
                     </p>
                   </div>
-                  {shown.size > 1 && (
+                  {pickable.length > 1 && (
                     <button type="button" onClick={() => setGroup(n, !allOn)} className="rounded-md px-2 py-1 text-sm font-medium text-brand transition-colors hover:bg-[var(--brand-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]">
                       {allOn ? t('connect.selectNone') : t('connect.selectAll')}
                     </button>
@@ -165,6 +168,25 @@ export function AccountsPicker(props: {
                   <ul className="mt-3 grid gap-2 sm:grid-cols-2">
                     {n.accounts.map((a) => {
                       const on = picked.has(a.value);
+                      if (a.blocked)
+                        return (
+                          <li key={a.value} hidden={!shown.has(a.value)}>
+                            <div className="flex h-full items-start gap-3 rounded-lg border border-dashed border-[var(--line-strong)] px-4 py-3 text-ink-2" data-blocked>
+                              <span aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 rounded border border-[var(--line)] bg-[var(--paper)]" />
+                              <span className="min-w-0">
+                                <span className="block truncate text-sm font-medium leading-5">{a.name}</span>
+                                {a.detail.length > 0 && (
+                                  <span className="num mt-0.5 flex flex-wrap gap-x-3 text-xs leading-4 text-ink-3">
+                                    {a.detail.map((part, i) => (
+                                      <span key={i}>{part}</span>
+                                    ))}
+                                  </span>
+                                )}
+                                <span className="mt-1.5 block text-xs leading-4">{a.blocked}</span>
+                              </span>
+                            </div>
+                          </li>
+                        );
                       return (
                         <li key={a.value} hidden={!shown.has(a.value)}>
                           <label

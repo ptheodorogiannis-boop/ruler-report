@@ -67,6 +67,25 @@ export const FIXTURES = {
       { id: '100000000000002', name: 'Olive Grove Taverna', category: 'Greek restaurant', access_token: 'mock-page-2', instagram_business_account: { id: '17840000000000002', username: 'olivegrove.taverna' } },
       { id: '100000000000003', name: 'Northwind Optics', category: 'Eyewear store', access_token: 'mock-page-3' },
     ],
+    /** a Business Portfolio the person belongs to (needs business_management to be listed) */
+    businesses: [{ id: '900100', name: 'Ruler SMPC' }],
+    businessAssets: {
+      '900100': {
+        owned_pages: [{ id: '100000000000004', name: 'Kifisia Running Club' }],
+        // the second one is also assigned directly: listed once
+        client_pages: [{ id: '100000000000005', name: 'Seaside Hotel' }, { id: '100000000000001', name: 'Acme Running Co' }],
+        owned_ad_accounts: [{ id: 'act_100200300410', account_id: '100200300410', name: 'Kifisia Running Club', currency: 'EUR', account_status: 1 }],
+        client_ad_accounts: [
+          { id: 'act_100200300400', account_id: '100200300400', name: 'Acme Running Co', currency: 'EUR', account_status: 1 },
+          { id: 'act_100200300411', account_id: '100200300411', name: 'Seaside Hotel', currency: 'EUR', account_status: 1 },
+        ],
+      },
+    },
+    /** what GET /{page-id}?fields=access_token,... returns for business Pages: a token only where the person has access */
+    pageLookup: {
+      '100000000000004': { id: '100000000000004', name: 'Kifisia Running Club', category: 'Sports club', access_token: 'mock-page-4', instagram_business_account: { id: '17840000000000004', username: 'kifisiarunning' } },
+      '100000000000005': { id: '100000000000005', name: 'Seaside Hotel', category: 'Hotel' },
+    },
   },
 };
 
@@ -199,7 +218,7 @@ export function createMockProviders(opts = {}) {
         res.writeHead(302, { location: back.toString() }).end();
         return;
       }
-      const scopes = String(q.get('scope') ?? 'ads_read,pages_show_list,pages_read_engagement,read_insights,instagram_basic,instagram_manage_insights').split(',').filter(Boolean);
+      const scopes = String(q.get('scope') ?? 'ads_read,pages_show_list,pages_read_engagement,read_insights,instagram_basic,instagram_manage_insights,business_management').split(',').filter(Boolean);
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(consentPage('Continue as Jane Meta', 'your Facebook Pages, Instagram accounts and ad accounts', scopes, {}, '/m/dialog', { redirect_uri: q.get('redirect_uri') ?? '', state: q.get('state') ?? '' }));
       return;
     }
@@ -216,11 +235,16 @@ export function createMockProviders(opts = {}) {
       if (!tokenScopes && !bearer.startsWith('mock-page-')) return reply(res, 401, { error: { message: 'Invalid OAuth access token.' } });
       if (u.pathname === '/m/me') return reply(res, 200, FIXTURES.meta.me);
       if (u.pathname === '/m/me/permissions') {
-        const all = ['ads_read', 'pages_show_list', 'pages_read_engagement', 'read_insights', 'instagram_basic', 'instagram_manage_insights'];
+        const all = ['ads_read', 'pages_show_list', 'pages_read_engagement', 'read_insights', 'instagram_basic', 'instagram_manage_insights', 'business_management'];
         return reply(res, 200, { data: all.map((p) => ({ permission: p, status: tokenScopes.includes(p) ? 'granted' : 'declined' })) });
       }
       if (u.pathname === '/m/me/adaccounts') return reply(res, 200, { data: FIXTURES.meta.adaccounts });
       if (u.pathname === '/m/me/accounts') return reply(res, 200, { data: FIXTURES.meta.pages });
+      if (u.pathname === '/m/me/businesses') return has('business_management') ? reply(res, 200, { data: FIXTURES.meta.businesses }) : reply(res, 403, { error: { message: '(#100) Missing Permission', code: 100 } });
+      const biz = /^\/m\/(\d+)\/(owned_pages|client_pages|owned_ad_accounts|client_ad_accounts)$/.exec(u.pathname);
+      if (biz) return has('business_management') ? reply(res, 200, { data: FIXTURES.meta.businessAssets[biz[1]]?.[biz[2]] ?? [] }) : reply(res, 403, { error: { message: '(#100) Missing Permission', code: 100 } });
+      const page = /^\/m\/(\d{15})$/.exec(u.pathname);
+      if (page && FIXTURES.meta.pageLookup[page[1]]) return reply(res, 200, FIXTURES.meta.pageLookup[page[1]]);
     }
     reply(res, 404, { error: { message: `no mock for ${req.method} ${u.pathname}` } });
   });
