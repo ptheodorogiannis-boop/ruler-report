@@ -1,9 +1,9 @@
 // Meta Ads — Marketing API insights. Written against the public Graph API docs; not exercised against a
 // live ad account in this repo's tests (needs a token).
 import type { BreakdownRow, Campaign, Connector, DailyData, DailyFilter, DateRange } from '@/lib/engine/types';
+import { endpoints } from '@/lib/oauth/endpoints';
 import { fetchJson } from './http';
 
-const V = process.env.META_API_VERSION || 'v21.0';
 
 const ACTION: Record<string, string[]> = {
   video_views: ['video_view'],
@@ -64,7 +64,7 @@ async function insights(ctx: any, params: Record<string, string>): Promise<any[]
     ...params,
   });
   qs.delete('extraFields');
-  let url: string | undefined = `https://graph.facebook.com/${V}/${act(ctx.integration.sourceId)}/insights?${qs}`;
+  let url: string | undefined = `${endpoints.meta.graph}/${act(ctx.integration.sourceId)}/insights?${qs}`;
   const rows: any[] = [];
   let pages = 0;
   while (url && pages++ < 40) {
@@ -161,7 +161,7 @@ export const metaConnector: Connector = {
   async listCampaigns(ctx): Promise<Campaign[]> {
     const token = ctx.integration.credentials?.accessToken;
     if (!token) throw new Error('invalid_token: no Meta access token stored');
-    let url: string | undefined = `https://graph.facebook.com/${V}/${act(ctx.integration.sourceId)}/campaigns?fields=id,name,status,objective&limit=200&access_token=${encodeURIComponent(token)}`;
+    let url: string | undefined = `${endpoints.meta.graph}/${act(ctx.integration.sourceId)}/campaigns?fields=id,name,status,objective&limit=200&access_token=${encodeURIComponent(token)}`;
     const out: Campaign[] = [];
     let pages = 0;
     while (url && pages++ < 20) {
@@ -175,7 +175,7 @@ export const metaConnector: Connector = {
   async validate(ctx) {
     const token = ctx.integration.credentials?.accessToken;
     if (!token) throw new Error('Missing access token');
-    const j = await fetchJson<any>(`https://graph.facebook.com/${V}/${act(ctx.integration.sourceId)}?fields=name,currency,account_status&access_token=${encodeURIComponent(token)}`);
+    const j = await fetchJson<any>(`${endpoints.meta.graph}/${act(ctx.integration.sourceId)}?fields=name,currency,account_status&access_token=${encodeURIComponent(token)}`);
     return { name: j.name, config: { currency: j.currency } };
   },
 };

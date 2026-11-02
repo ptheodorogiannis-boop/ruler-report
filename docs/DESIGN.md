@@ -677,3 +677,45 @@ Spec `docs/superpowers/specs/2026-10-22-v3-programme-design.md` §5, plan H.
   shared component rendered in the SSR pass of a client tree under concurrent requests can read the other request's
   locale (a label in the wrong language, corrected on hydration); setup help texts, OAuth nouns, anomaly metric names and
   page titles stay English.
+
+## Connect pass (2026-11-02): one sign-in, unslop + Hallmark
+
+**Direction (unslop).** Product: the agency's reporting tool, where each client's ad, analytics and social accounts are
+connected once. Character: exact, unhurried, plain-spoken. World: the measuring instrument of the rest of the system,
+paper and ink. Moments: the platform marks of the networks one sign-in reaches, the only colour on these screens.
+Signature: the row of network marks on each sign-in tile, dimmed for a network that is not available yet.
+
+**Screens.** Project Connect page (two sign-in tiles, then live connectors as cards by category, then every
+sample-data platform as one quiet list of 40 px rows), the single-integration page (one sentence, one button, the
+token form behind "Connect with a token or ID instead"), **accounts found** (`connect/accounts`: title names the next
+step, search, a group per network, two-column account cards, sticky footer with the count and "Add N accounts", a
+loading skeleton), the reconnect picker, the integrations tab rows, the global Integrations page and the sign-in
+section of Settings → System.
+
+**Fixed (unslop audit).** Tracked-caps category headings → sentence case, translated; green / indigo / grey pills on
+every card and row → quiet text ("Live data", "Sample data for now", "Paused"); `hover:shadow-md` cards → colour step;
+uppercase form labels → sentence-case labels; developer copy in the UI (".env", "Implement the 2-method Connector
+interface") → plain sentences; raw API words in account details (siteOwner, via, property, active) → translated
+labels, with a status shown only when an ad account cannot run; two clear buttons on the search field → one; boxes
+inside cards → a rule on the left; dot-joined meta → spaced parts; a row that said "live connector" while the account
+ran on synthetic data → the truth, per account.
+
+**Fresh-eyes review** (screenshots only, verdict *fix*): acted on the mixed Greek title face (below), brand-coloured
+monograms (neutral tile now, `platform-tile.tsx`), the wall of 67 equal cards, four buttons per integration row (one
+Check now, the rest in a menu; Reconnect stays in the row when the integration needs it), repeated copy, a picker
+title translated from Reportei's, button sizes, the slug column on the Integrations page, the platform column width,
+declined permissions shown last (now a line under the intro), search counts ("1 of 4 accounts"), the selected state
+and button count, naming what was just added. Dismissed with reasons: the focus ring colour (`--focus` stays blue for
+visibility in every workspace colour), sentence case on the health chip (its words sit mid-sentence and tests pin
+them), the wrapping top nav on phones (app-wide shell, not this pass), search above the sign-in tiles on phones (sign-in
+is the primary path).
+
+**Greek titles.** Bricolage Grotesque has no Greek glyphs, so a Greek title mixed Inter and Bricolage in one line.
+`:lang(el) .display` now uses Inter for the whole line; English keeps Bricolage.
+
+**Hallmark.** App screens, polish sweep in place, check stamp at the top of `globals.css` with one waiver (26b: the
+press and disabled states live on `.btn` / `.btn-primary`). `sloplint --scope app` on the connect files: 0 FAIL.
+Printed, not changed (app-wide, outside this pass): 44 Floor findings in `globals.css` (29 literal colours outside
+tokens, 7 pure #fff, 4 keyframes animating `left` on the caliper, 3 tracked-caps labels on the band and board table,
+1 `100vw` width on the media picker).
+

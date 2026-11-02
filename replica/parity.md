@@ -1,5 +1,52 @@
 # Parity report — Ruler Reports vs Reportei (2026-10-21, re-scored after the in-report editor)
 
+## Connect flow re-test (2026-11-02)
+
+What changed: one sign-in per provider (Google covers Google Ads, Analytics, Search Console, YouTube and Business
+Profile; Meta covers Meta Ads, Facebook Pages and Instagram), a Reportei-style **accounts found** page, a live Google
+Ads connector, honest live / sample labels, and the unslop + Hallmark polish of the connect screens. Setup for admins:
+[`../docs/CONNECT-SETUP.md`](../docs/CONNECT-SETUP.md).
+
+| | Before | After |
+|---|---|---|
+| Feature score (`parity.py`) | 59.5 (must-haves 23 of 33) | **61.6** (must-haves **24 of 34**, 125 rows counted) |
+| Integrations area | 50.0 | **82.4** |
+| Layout, accounts-found dialog vs Reportei's "Meta accounts found" (searched, one account per network, nothing ticked) | not run | **23.4** as captured, **35.7** with Reportei's modal cropped to its content box: *different* |
+| Overall, features and layout averaged by `parity.py --visual` | 59.5 | 55.2 |
+
+**Where the rise comes from.** No existing must-have changed status: one-click OAuth and the breadth of live connectors
+are still *partial* (Google and Meta only; 17 live connectors of 67). The score moves because of rows added today
+(one sign-in lists every network, a *must*, seen in Reportei for Meta and not checked for Google; account search, a
+*should*) and two Integrations rows re-checked against the v3 code (expiry alerts with Reconnect, campaign selection).
+Today's extras (declined permissions per network, isolated network errors, honest live / sample labels) are not
+scored.
+
+**Why the layout score is low and why that is fine here.** Reportei shows a 626 px modal over the page; ours is a
+720 px page column with a sticky footer, so every row lands at a different height once both are scaled to the same
+width. The structure is the same element for element: title, one sentence, search, one group per network (mark,
+name, count), account cards in two columns, a footer with the selection count and one primary button. The skill's
+rule applies: parity means doing the same job, not looking the same. Screens: `screens/reportei/`,
+`clone-screens/meta-accounts-found.png` and `meta-accounts-selected.png`; diff images in `diffs/`.
+
+**The matrix is older than v3.** Rows outside Integrations still describe the app before v3 (campaign containers,
+server PDF, per-block AI, duplicate / convert, daily schedules, the client period picker and the Greek UI were built
+in v3 and are still marked missing). Only the Integrations rows were re-checked today, so the overall feature score
+understates the app. Re-checking every area is a separate pass.
+
+### Behaviour differences, connect flow
+
+| Flow | Reportei | Ruler Reports | Fix or keep |
+|---|---|---|---|
+| Connect Meta Ads, a Page and an Instagram account | Integrate Meta, Facebook login, "Meta accounts found", tick, Integrate | Connect with Meta, consent, accounts found, tick, Add 3 accounts | keep: same steps |
+| Connect Google Ads and GA4 | not observed whether one Google login lists every network | one Google consent lists Google Ads (incl. accounts under a manager), GA4, Search Console, YouTube, Business Profile | keep |
+| What to copy by hand | nothing | nothing (property IDs, customer IDs and tokens only behind "Connect with a token or ID instead") | keep |
+| Unticking a permission on the consent screen | not observed | that network says "not allowed" with Sign in again; the rest list normally | keep |
+| One network's API fails | not observed | the error shows inside that network's group only | keep |
+| Per-project account limit | "You can integrate 2 more accounts in this project" | none (self-hosted, no plans) | keep |
+| Telling same-named Pages apart | numeric ID under each Page | numeric ID under each Page and Instagram account | done |
+| After adding | back to the integrations list | banner names the added accounts, which are listed first and marked "Just added" | keep |
+| Setup the agency does once | none (Reportei owns verified apps) | a Google OAuth client, a Google Ads developer token, a Meta app (Settings, System shows what is missing) | inherent to self-hosting |
+
 Source matrix: [`features.csv`](features.csv) (123 scored rows, 2 skipped, 9 extras). Evidence for every Reportei
 row: [`../docs/REPORTEI-DEEP-DIVE.md`](../docs/REPORTEI-DEEP-DIVE.md) and [`../docs/EVIDENCE.md`](../docs/EVIDENCE.md).
 Scored with `python replica/parity.py replica/features.csv` (must 3 · should 2 · could 1; partial = ½).

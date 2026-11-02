@@ -28,6 +28,7 @@ export interface Connector {
 
 | Connector | File | Notes |
 |---|---|---|
+| Google Ads | `gads.ts` | Google Ads API v26 over REST (`googleAds:search`, GAQL, paged). Needs `GOOGLE_ADS_DEVELOPER_TOKEN`; accounts under a manager send its ID as `login-customer-id` (`config.loginCustomerId`). Account or campaign level by scope; campaign, ad group, ad, device, hour, age and gender breakdowns; Meta-only primitives (reach, link clicks, pixel events) are `unsupported`. Mock-tested only (`tests/connectors-gads.test.ts`). |
 | Meta Ads | `meta.ts` | Marketing API `/insights`; `omni_*` actions with pixel fallbacks; `publisher_platform` breakdown for platform variants; period `totals()` for reach. Untested against a live account. |
 | Google Analytics 4 | `ga4.ts` | Data API `runReport`; item-scoped metrics for the product table; `totals()` for users. Untested live. |
 | Search Console | `gsc.ts` | `searchAnalytics.query`; average position is stored as `position × impressions` so it aggregates correctly. Untested live. |
@@ -49,10 +50,32 @@ Connect forms (`app/projects/[id]/connect/[slug]`) are driven by `IntegrationDef
 
 ## OAuth one-click connect
 
-Code: `src/lib/oauth/*` (state JWT, provider mechanics, request flow, pending-token cookie), routes `src/app/api/oauth/{google,meta}/{start,callback}`, picker `src/app/projects/[id]/connect/[slug]/pick`, submit action `src/app/actions/oauth.ts`. Tests: `tests/oauth.test.ts` (local mock token + list endpoints; `src/lib/oauth/endpoints.ts` is the single place the provider hosts are defined, which the tests repoint).
+Code: `src/lib/oauth/*` (state JWT, provider mechanics, request flow, pending-token cookie), routes `src/app/api/oauth/{google,meta}/{start,callback}`, pickers `src/app/projects/[id]/connect/accounts` (one consent, every network) and `src/app/projects/[id]/connect/[slug]/pick` (reconnect), submit actions `src/app/actions/oauth.ts`. Tests: `tests/oauth.test.ts` and `tests/oauth-bundle.test.ts` (local mock providers, `scripts/mock-providers.mjs`; `src/lib/oauth/endpoints.ts` is the single place the provider hosts are defined, which the tests repoint). The admin setup for clients is [CONNECT-SETUP.md](CONNECT-SETUP.md).
+
+### One consent per provider (2026-11-02)
+
+"Connect with Google" and "Connect with Meta" (on the project's Connect page, the empty Integrations tab, and the
+Continue button of every Google or Meta integration page) start `/api/oauth/<provider>/start?projectId=…&bundle=1`.
+The consent asks for the union of the scopes of every network of that provider (`PROVIDER_SLUGS`, minus Google Ads
+without a developer token), and the callback lands on **accounts found**, which lists every network side by side.
+
+* **Partial consent** — Google returns the granted scopes; Meta is asked `/me/permissions`. A network whose scopes
+  were not all granted is listed as "not allowed" with a sign-in-again link; if nothing was granted the sign-in fails
+  with a message. The single-integration flow (still used by Reconnect) keeps failing on any missing scope.
+* **Partial listing** — each network is listed with `Promise.allSettled`; one failing (Business Profile before
+  approval, Google Ads without access) shows its error inside its own group.
+* **Submit** — picks are `<slug>:<key>`; `finalizeBundle()` groups them per network and runs `finalizeSelection()`
+  for each, so every account is re-validated against a fresh listing. Picks for networks that were not granted are
+  ignored. New rows are named `<account> – <platform>` (`nameWithPlatform`), because one sign-in can add "Acme" three
+  times (ad account, Page, Instagram) and the wizard lists names only. A network that fails is reported back on the Integrations tab; the others are still added.
+* **Cookie** — only tokens and slugs wait in the encrypted pending cookie (well under 4 KB); the lists are fetched
+  again on the page and on submit.
+* **State** — the state JWT carries `slugs`; `slug` is the integration page the user started from ('' from the
+  catalog), used only to send errors back to the right page.
 
 | Integration (`slug`) | Provider scopes requested | Picker lists | Stored as `sourceId` | Live connector |
 |---|---|---|---|---|
+| `google_adwords` | `adwords` (only with `GOOGLE_ADS_DEVELOPER_TOKEN`) | accounts from `customers:listAccessibleCustomers` + client accounts under each manager (`customer_client`) | customer id (+ `config.loginCustomerId` under a manager) | yes |
 | `google_analytics_4` | `analytics.readonly` | GA4 properties (`accountSummaries`) | property id | yes |
 | `search_console` | `webmasters.readonly` | verified sites (`sites`) | site URL / `sc-domain:` | yes |
 | `google_my_business` | `business.manage` | locations per account | `accounts/…/locations/…` | yes |
@@ -67,7 +90,7 @@ Rules the implementation follows:
 * **State** — `signState()`: HS256 JWT, audience `oauth-state`, 10 min, carries `provider, companyId, projectId, slug, userId`. `/callback` requires a logged-in session of the same user and company with write access to the project.
 * **Tokens** — Google: `access_type=offline&prompt=consent`; the exchange fails with a readable message if no refresh token came back or a requested permission was unticked. Meta: code → short-lived token → long-lived token (≈60 days); `expiresAt` is stored for information, there is no refresh. Pending tokens live in the `rr_oauth_pending` cookie (AES-256-GCM, 15 min, httpOnly) until the picker is submitted.
 * **Finalize** — `finalizeSelection()` re-lists the accounts with the pending tokens, keeps only the ticked ones that are still accessible, then calls `connectIntegration()` (validation skipped — the listing just proved access) once per account. An account already connected to the project (same slug + sourceId) gets its credentials replaced instead of a duplicate row.
-* **Not covered** — providers other than Google/Meta, Google Ads (needs a developer token) and Threads, Meta token refresh, revoking tokens at the provider when an integration is deleted, multiple integration kinds from a single consent. Request/response shapes follow the public API docs and have not been checked against live Google/Meta accounts.
+* **Not covered** — providers other than Google/Meta, Threads, Meta token refresh, revoking tokens at the provider when an integration is deleted, clients connecting their own accounts without a login. Request/response shapes follow the public API docs and have not been checked against live Google/Meta accounts.
 
 ## Going live: the credentials each live connector needs
 
@@ -85,6 +108,7 @@ First, `APP_URL` in `.env` must be the address you actually open (e.g. `http://l
 |---|---|
 | YouTube | YouTube Analytics API, YouTube Data API v3 |
 | Business Profile | **Business Profile Performance API**, My Business Account Management API, My Business Business Information API, and the legacy My Business API (v4, reviews) |
+| Google Ads | Google Ads API, plus the developer token in `GOOGLE_ADS_DEVELOPER_TOKEN` (API Center of the manager account; Basic access for real accounts) |
 | GA4 | Google Analytics Data API, Google Analytics Admin API |
 | Search Console | Google Search Console API |
 
@@ -93,7 +117,7 @@ First, `APP_URL` in `.env` must be the address you actually open (e.g. `http://l
 
 ### Meta (Facebook Page, Instagram, Meta Ads)
 
-1. developers.facebook.com → **Create app** → add a Facebook login product with the valid OAuth redirect URI above. **Check which one Meta offers:** Meta's Instagram docs list *Facebook Login for Business*, and the connect flow (`oauth/providers.ts` `authUrl`) sends classic `scope=` permissions, not a Login-for-Business `config_id`. If Meta will only let the new app use Login for Business, `authUrl` needs a `config_id` (a small change; tell me when you see that screen). Also check whether Meta accepts an `http://localhost:3104` redirect URI in Development mode; if it insists on HTTPS, expose port 3104 through an HTTPS tunnel and set `APP_URL` to that address. Copy the app id and secret into `META_APP_ID` / `META_APP_SECRET`.
+1. developers.facebook.com → **Create app** → add a Facebook login product with the valid OAuth redirect URI above. **Login for Business:** set `META_LOGIN_CONFIG_ID` to the configuration that holds the permissions below; the dialog then sends `config_id` instead of `scope=`. Without it the classic `scope=` permissions are sent. Also check whether Meta accepts an `http://localhost:3104` redirect URI in Development mode; if it insists on HTTPS, expose port 3104 through an HTTPS tunnel and set `APP_URL` to that address. Copy the app id and secret into `META_APP_ID` / `META_APP_SECRET`.
 2. In **Development mode** only people with a role on the app (admin, developer, tester) can connect: add yourself and your testers. Live mode for other people's accounts needs App Review for the permissions below (and business verification for some).
 3. Permissions the connect buttons request: Facebook Page `pages_show_list`, `pages_read_engagement`, `read_insights`; Instagram adds `instagram_basic`, `instagram_manage_insights`; Meta Ads `ads_read`.
 4. The person connecting needs the right role on the asset: a Page role that includes *Analyze* for Page Insights; for Instagram, a **Business or Creator** account **linked to a Facebook Page** that the person manages.

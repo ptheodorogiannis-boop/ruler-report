@@ -1,3 +1,5 @@
+// Single-network picker. Since the one-consent flow, only Reconnect lands here (spec v3 §1.2): the user signs in
+// again and picks the account that is already connected.
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
@@ -8,6 +10,7 @@ import { assertProject, canWrite, requirePrincipal } from '@/lib/auth';
 import { getIntegrationDef } from '@/lib/catalog/integrations';
 import { db } from '@/lib/db';
 import { pendingMatches } from '@/lib/oauth/flow';
+import { detailParts } from '@/lib/oauth/detail';
 import { PENDING_COOKIE, openPending } from '@/lib/oauth/pending';
 import { OAUTH_SLUGS, PROVIDER_NAME, listAccounts, type AccountOption } from '@/lib/oauth/providers';
 import { getT } from '@/lib/i18n/server';
@@ -39,31 +42,32 @@ export default async function PickAccounts({ params }: { params: Promise<{ id: s
 
   return (
     <AppShell active="/projects">
-      <PageHeader title={t('connect.choose', { noun: oauth.noun })} subtitle={<>{t('connect.toConnectTo')} <Link href={`/projects/${project.id}`} className="font-semibold text-brand">{project.name}</Link> — {t('connect.onePerAccount', { platform: def.name })}</>} />
-      <div className="card max-w-3xl p-5">
+      <PageHeader title={t('connect.choose', { noun: oauth.noun })} subtitle={<>{t('connect.toConnectTo')} <Link href={`/projects/${project.id}`} className="link font-medium text-ink">{project.name}</Link></>} />
+      <div className="card max-w-3xl p-6">
         {!valid ? (
-          <div className="space-y-3 text-sm">
-            <div className="rounded-lg bg-amber-50 px-3 py-2 text-amber-800">{t('connect.expired', { provider })}</div>
-            <Link href={`/projects/${project.id}/connect/${slug}`} className="btn-primary inline-flex">{t('connect.backTo', { name: def.name })}</Link>
+          <div className="space-y-4 text-sm">
+            <p className="text-ink-2">{t('connect.expired', { provider })}</p>
+            <Link href={`/projects/${project.id}/connect/${slug}`} className="btn-primary">
+              {t('connect.backTo', { name: def.name })}
+            </Link>
           </div>
         ) : (
           <>
-            <div className="mb-3 text-sm text-slate-600">
+            <p className="mb-4 text-sm leading-6 text-ink-2">
               {t('connect.signedInWith', { provider })}
-              {pending.account ? <> {t('connect.as')} <strong>{pending.account}</strong></> : null}. {t('connect.onlyAccessible')}
-            </div>
+              {pending.account ? <> {t('connect.as')} <span className="font-medium text-ink">{pending.account}</span></> : null}. {t('connect.onlyAccessible')}
+            </p>
             {pending.integrationId && (
-              <div className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900" data-reconnect>
+              <p className="mb-4 text-sm leading-6 text-ink" data-reconnect>
                 {t('connect.reconnectPick')}
-              </div>
+              </p>
             )}
-            {def.connector === 'demo' && (
-              <div className="mb-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                {t('connect.demoNote', { name: def.name })}
-              </div>
+            {error && (
+              <p role="alert" className="mb-4 text-sm text-[var(--down)]">
+                {t('connect.networkError', { error })}
+              </p>
             )}
-            {error && <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{t('connect.couldNotList', { noun: oauth.noun, error })}</div>}
-            {!error && options.length === 0 && <div className="mb-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">{t('connect.noAccessible', { noun: oauth.noun, provider })}</div>}
+            {!error && options.length === 0 && <p className="mb-4 text-sm text-ink-2">{t('connect.noAccessible', { noun: oauth.noun, provider })}</p>}
             <ActionForm
               action={finishOAuthAction}
               submit={t('connect.connectSelected')}
@@ -75,15 +79,19 @@ export default async function PickAccounts({ params }: { params: Promise<{ id: s
             >
               <input type="hidden" name="projectId" value={project.id} />
               <input type="hidden" name="slug" value={slug} />
-              <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+              <ul className="divide-y divide-[var(--line)] border-y border-[var(--line)]">
                 {options.map((o) => (
                   <li key={o.key}>
-                    <label className="flex cursor-pointer items-start gap-3 px-3 py-2.5 hover:bg-slate-50">
-                      <input type="checkbox" name="pick" value={o.key} className="mt-1" />
+                    <label className="flex cursor-pointer items-start gap-3 px-1 py-3 transition-colors hover:bg-[var(--paper)] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--focus)]">
+                      <input type="checkbox" name="pick" value={o.key} className="mt-0.5 h-4 w-4 accent-[var(--brand)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]" />
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-semibold">{o.name}</span>
-                        {o.detail && <span className="block truncate text-xs text-slate-500">{o.detail}</span>}
-                        {existing.has(o.sourceId) && <span className="text-[11px] font-semibold text-amber-700">{t('connect.alreadyConnected')}</span>}
+                        <span className="block truncate text-sm font-medium leading-5">{o.name}</span>
+                        <span className="num flex flex-wrap gap-x-3 text-xs leading-4 text-ink-3">
+                          {detailParts(o.detail, t).map((part, i) => (
+                            <span key={i}>{part}</span>
+                          ))}
+                        </span>
+                        {existing.has(o.sourceId) && <span className="mt-1 block text-xs text-ink-2">{t('connect.inProject')}</span>}
                       </span>
                     </label>
                   </li>

@@ -19,6 +19,11 @@ export interface Pending {
   account?: string;
   /** reconnect: only the account of this integration may be picked */
   integrationId?: number;
+  /** one-consent flow: the networks asked for, and the ones whose permissions were actually granted.
+   *  Only tokens and slugs live here; the account lists are fetched again on the picker and on submit,
+   *  which also keeps the cookie well under the 4 KB limit. */
+  slugs?: string[];
+  granted?: string[];
   exp: number;
 }
 

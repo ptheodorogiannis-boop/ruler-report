@@ -1,0 +1,32 @@
+{
+  "mode": "layout",
+  "original": {
+    "width": 626,
+    "height": 729
+  },
+  "clone": {
+    "width": 720,
+    "height": 626
+  },
+  "compared_at": {
+    "width": 480,
+    "height": 417
+  },
+  "height_delta_pct": -25.4,
+  "score": 23.4,
+  "verdict": "different",
+  "regions": [
+    {
+      "x": 0,
+      "y": 0,
+      "w": 626,
+      "h": 573,
+      "cells": 89,
+      "where": "middle centre"
+    }
+  ],
+  "files": {
+    "original": "replica/screens/reportei/meta-accounts-found.png",
+    "clone": "replica/clone-screens/meta-accounts-found.png"
+  }
+}

@@ -1,6 +1,8 @@
 node_modules
 .next
 .next-v2
+# local click-through of the connect flow against mock providers (scripts/dev-mock.mjs)
+.next-mock
 .env
 prisma/*.db*
 *.log

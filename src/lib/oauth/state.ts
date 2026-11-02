@@ -11,10 +11,13 @@ export interface OAuthState {
   provider: Provider;
   companyId: number;
   projectId: number;
+  /** the integration the user started from; '' when they started from "Connect with Google/Meta" */
   slug: string;
   userId: number | null;
   /** reconnect: the integration whose credentials the callback replaces (spec v3 §1.2) */
   integrationId?: number;
+  /** one consent for every network of the provider (the "accounts found" picker); absent = the single-slug flow */
+  slugs?: string[];
 }
 
 export async function signState(s: OAuthState): Promise<string> {
@@ -25,9 +28,10 @@ export async function verifyState(token: string | null | undefined): Promise<OAu
   if (!token) throw new Error('Missing OAuth state');
   try {
     const { payload } = await jwtVerify(token, key(), { audience: AUD });
-    const { provider, companyId, projectId, slug, userId, integrationId } = payload as any;
+    const { provider, companyId, projectId, slug, userId, integrationId, slugs } = payload as any;
     if ((provider !== 'google' && provider !== 'meta') || !Number.isInteger(companyId) || !Number.isInteger(projectId) || typeof slug !== 'string') throw new Error('malformed');
-    return { provider, companyId, projectId, slug, userId: userId ?? null, ...(Number.isInteger(integrationId) ? { integrationId } : {}) };
+    if (slugs !== undefined && (!Array.isArray(slugs) || !slugs.length || slugs.some((s: unknown) => typeof s !== 'string'))) throw new Error('malformed');
+    return { provider, companyId, projectId, slug, userId: userId ?? null, ...(Number.isInteger(integrationId) ? { integrationId } : {}), ...(slugs ? { slugs } : {}) };
   } catch {
     throw new Error('The connect link expired or is invalid — start again.');
   }

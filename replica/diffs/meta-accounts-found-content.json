@@ -1,0 +1,64 @@
+{
+  "mode": "layout",
+  "original": {
+    "width": 538,
+    "height": 640
+  },
+  "clone": {
+    "width": 720,
+    "height": 626
+  },
+  "compared_at": {
+    "width": 480,
+    "height": 417
+  },
+  "height_delta_pct": -27.0,
+  "score": 35.7,
+  "verdict": "different",
+  "regions": [
+    {
+      "x": 0,
+      "y": 44,
+      "w": 538,
+      "h": 358,
+      "cells": 43,
+      "where": "middle centre"
+    },
+    {
+      "x": 0,
+      "y": 358,
+      "w": 179,
+      "h": 134,
+      "cells": 8,
+      "where": "bottom left"
+    },
+    {
+      "x": 358,
+      "y": 403,
+      "w": 179,
+      "h": 89,
+      "cells": 8,
+      "where": "bottom right"
+    },
+    {
+      "x": 224,
+      "y": 0,
+      "w": 134,
+      "h": 44,
+      "cells": 3,
+      "where": "top centre"
+    },
+    {
+      "x": 493,
+      "y": 0,
+      "w": 44,
+      "h": 44,
+      "cells": 1,
+      "where": "top right"
+    }
+  ],
+  "files": {
+    "original": "replica/screens/reportei/meta-accounts-found-content.png",
+    "clone": "replica/clone-screens/meta-accounts-found.png"
+  }
+}

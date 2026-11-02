@@ -3,8 +3,9 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { assertProject, canWrite, requirePrincipal } from '@/lib/auth';
+import { getIntegrationDef } from '@/lib/catalog/integrations';
 import { PENDING_COOKIE, openPending } from '@/lib/oauth/pending';
-import { finalizeSelection, pendingMatches } from '@/lib/oauth/flow';
+import { bundleMatches, finalizeBundle, finalizeSelection, pendingMatches } from '@/lib/oauth/flow';
 
 /** Picker form submit: create one integration per ticked account, then drop the pending tokens. */
 export async function finishOAuthAction(_: unknown, fd: FormData) {
@@ -23,6 +24,28 @@ export async function finishOAuthAction(_: unknown, fd: FormData) {
     return { error: (e as Error).message };
   }
   redirect(`/projects/${projectId}?tab=integrations`);
+}
+
+/** "Accounts found" submit (one consent, several networks): every ticked account of every network in one go. */
+export async function finishBundleAction(_: unknown, fd: FormData) {
+  const projectId = Number(fd.get('projectId'));
+  const provider = fd.get('provider') === 'meta' ? 'meta' : 'google';
+  let query = '';
+  try {
+    const p = await requirePrincipal();
+    if (!canWrite(p)) throw new Error('Your role is read-only.');
+    await assertProject(p, projectId);
+    const jar = await cookies();
+    const pending = openPending(jar.get(PENDING_COOKIE)?.value);
+    if (!bundleMatches(pending, p, projectId, provider)) throw new Error('The sign-in session expired — start the connection again.');
+    const r = await finalizeBundle(pending, fd.getAll('pick').map(String));
+    jar.delete(PENDING_COOKIE);
+    const failed = r.errors.map((e) => `${getIntegrationDef(e.slug)?.name ?? e.slug}: ${e.message}`).join('; ');
+    query = `&added=${r.created}&refreshed=${r.reconnected}&ids=${r.ids.join(',')}${failed ? `&failed=${encodeURIComponent(failed.slice(0, 400))}` : ''}`;
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  redirect(`/projects/${projectId}?tab=integrations${query}`);
 }
 
 export async function cancelOAuthAction(fd: FormData) {

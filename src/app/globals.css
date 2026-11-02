@@ -1,3 +1,7 @@
+/* Hallmark · checked: 2026-11-02 · genre: modern-minimal (inferred) · shape: app screen
+ * floor: 0 FAIL on the connect screens · fixed: 9, 10, 11, 26a, 54 · structural: 0 printed
+ * built: the project · redesign: polish · v2.0.0 */
+/* Hallmark · waive 26b · .btn-primary:active and the disabled styles of .btn and .btn-primary are defined in this file · the connect screens press and disable through the shared button classes, not TSX class strings */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -89,6 +93,11 @@ body {
     font-family: var(--font-display, var(--font-sans, ui-sans-serif, system-ui, sans-serif));
     letter-spacing: -0.01em;
     font-feature-settings: 'tnum', 'cv11';
+  }
+  /* Bricolage has no Greek glyphs: in Greek a title would mix two faces in one line, so display text is Inter there */
+  :lang(el) .display {
+    font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+    letter-spacing: -0.015em;
   }
   .num {
     font-variant-numeric: tabular-nums;

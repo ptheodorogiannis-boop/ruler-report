@@ -11,6 +11,7 @@ import { WEBHOOK_EVENTS, WEBHOOK_SOURCES } from '@/lib/services/webhooks';
 import { smtpConfigured } from '@/lib/services/messaging';
 import { aiConfigured } from '@/lib/ai/insights';
 import { UserAvatar } from '@/components/avatar';
+import { SignInSetup } from '@/components/signin-setup';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,17 +101,16 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       {tab === 'outbox' && <OutboxTab companyId={p.companyId} />}
       {tab === 'system' && (
         <div className="grid gap-3 md:grid-cols-2">
+          <SignInSetup />
           {[
             [t('settings.sysAi'), aiConfigured(), t('settings.sysAiHint')],
             [t('settings.sysEmail'), smtpConfigured(), t('settings.sysEmailHint')],
-            [t('settings.sysGoogle'), !!process.env.GOOGLE_CLIENT_ID, t('settings.sysGoogleHint')],
-            [t('settings.sysMeta'), !!process.env.META_APP_ID, t('settings.sysMetaHint')],
             [t('settings.sysScheduler'), process.env.ENABLE_SCHEDULER !== '0', t('settings.sysSchedulerHint')],
           ].map(([l, on, h]) => (
             <div key={String(l)} className="card p-4">
               <div className="flex items-center justify-between">
                 <div className="font-medium">{l as string}</div>
-                <span className={`badge ${on ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{on ? t('settings.configured') : t('settings.notSet')}</span>
+                <span className={`text-xs ${on ? 'font-medium text-ink' : 'text-ink-3'}`}>{on ? t('settings.configured') : t('settings.notSet')}</span>
               </div>
               <div className="mt-1 text-xs text-slate-500">{h as string}</div>
             </div>

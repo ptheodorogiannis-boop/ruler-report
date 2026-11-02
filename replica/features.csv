@@ -104,12 +104,12 @@ Cross-project KPI table with comparison,Overview,must,yes,yes,
 Multiple pages with chosen metrics,Overview,should,yes,no,fixed KPI set
 Real-time polling,Overview,could,yes,no,
 Per-project filters and saved presets,Overview,could,yes,no,
-One-click OAuth connect with account picker,Integrations,must,yes,partial,Google and Meta only; others paste tokens
-Breadth of live integrations (about 58 platforms),Integrations,must,yes,partial,67 slugs but 8 live connectors; the rest run on synthetic data
+One-click OAuth connect with account picker,Integrations,must,yes,partial,"Google (now incl. Google Ads) and Meta, one consent per provider, nothing to copy (src/lib/oauth); TikTok, LinkedIn and the other platforms still paste tokens"
+Breadth of live integrations (about 58 platforms),Integrations,must,yes,partial,"67 slugs, 17 live connectors (Google Ads added 2026-11-02, incl. client accounts under a manager; mock-tested only); the rest show sample data"
 Google Sheets as a data source with column mapping,Integrations,should,yes,yes,columns auto-detected
-Expired-integration notifications with reconnect link,Integrations,should,yes,partial,error shown on the project page only
+Expired-integration notifications with reconnect link,Integrations,should,yes,yes,"v3 health: failing / expiring alerts in the bell and by e-mail with a Reconnect link that keeps the integration (services/health.ts)"
 Plan-gated integrations,Integrations,could,yes,skip,self-hosted; no plans
-Campaign-level selection for ads integrations,Integrations,should,yes,no,
+Campaign-level selection for ads integrations,Integrations,should,yes,yes,"v3 campaigns: per-integration default scope and per-block scope (pick or by rule); Meta Ads and now Google Ads pass campaign ids to the API"
 Project settings (logo language date decimal timezone),Projects & account,must,yes,yes,
 Team roles with per-project access,Projects & account,must,yes,yes,
 Owner transfer,Projects & account,could,yes,no,
@@ -133,3 +133,8 @@ HMAC-signed webhooks with a delivery log,API & automation,should,no,yes,
 Self-hosted with no plan limits (Docker),Projects & account,should,no,yes,
 Extra integrations: Snapchat Reddit Amazon Apple Ads Matomo Plausible Omnisend Brevo Salesforce Zoho Stripe BigCommerce PrestaShop Ruler Attribution Ruler Click-to-Call CSV REST,Integrations,could,no,partial,all on synthetic data
 Synthetic demo-data mode per integration,Integrations,could,no,yes,
+One sign-in lists every network of the provider,Integrations,must,yes,yes,"accounts-found page (connect/accounts). Seen in Reportei for Meta (""Meta accounts found"": Meta Ads, Facebook, Instagram); whether Reportei does the same for Google was not observed. Mock-tested, tests/oauth-bundle.test.ts"
+Search across found accounts,Integrations,should,yes,yes,"search filters every network in place, ticked accounts survive filtering; select-all per network is ours (not seen in Reportei)"
+Declined permissions dropped per network with a sign-in-again link,Integrations,could,no,yes,"not seen in Reportei; Google scopes and Meta /me/permissions"
+One failing network (e.g. Business Profile before approval) does not blank the picker,Integrations,could,no,yes,"each network listed separately (Promise.allSettled)"
+Integration rows say which accounts show live data and which show sample data,Integrations,could,no,yes,"fixes a row that said 'live connector' while the account ran on synthetic data"

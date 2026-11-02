@@ -2,16 +2,19 @@ import Link from 'next/link';
 import { getT } from '@/lib/i18n/server';
 import { LOCALES, LOCALE_LABEL, presetLabel } from '@/lib/i18n';
 import { notFound } from 'next/navigation';
-import { AlertTriangle, CheckCircle2, ExternalLink, Pause, Play, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ExternalLink, MoreHorizontal, Pause, Play, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { AppShell, Empty, PageHeader, Tabs } from '@/components/shell';
 import { ActionForm, ConfirmButton, CopyButton } from '@/components/action-form';
 import { MediaField } from '@/components/media-picker';
 import { MediaImage } from '@/components/media-image';
 import { HealthChip } from '@/components/health-chip';
 import { reconnectUrl } from '@/lib/services/health';
+import { QuickConnect } from '@/components/quick-connect';
 import { oauthAvailable } from '@/lib/oauth/providers';
 import { GoalForm, type GoalOption } from '@/components/goal-form';
-import { Delta, PlatformBadge } from '@/components/widgets';
+import { Delta } from '@/components/widgets';
+import { PlatformTile } from '@/components/platform-tile';
+import { decryptJson } from '@/lib/crypto';
 import { addTimelineAction, checkIntegrationAction, updateIntegrationCampaignsAction, sendHeldRunAction, deleteAutomationAction, updateProjectAction, deleteGoalAction, deleteProjectAction, deleteTimelineAction, refreshColumnsAction, removeIntegrationAction, runAutomationAction, saveAutomationAction, saveGoalAction, shareGoalsAction, toggleAutomationAction, toggleIntegrationAction } from '@/app/actions/app';
 import { assertProject, canAdmin, canWrite, requirePrincipal } from '@/lib/auth';
 import { getCatalog } from '@/lib/catalog/build';
@@ -31,7 +34,7 @@ export const dynamic = 'force-dynamic';
 
 const TABS = ['overview', 'integrations', 'reports', 'dashboards', 'automations', 'goals', 'timeline', 'settings'];
 
-export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; new?: string; campaigns?: string }> }) {
+export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; new?: string; campaigns?: string; added?: string; refreshed?: string; failed?: string; ids?: string }> }) {
   const { t, locale } = await getT();
   const p = await requirePrincipal();
   const { id } = await params;
@@ -41,6 +44,8 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   const tab = TABS.includes(sp.tab ?? '') ? sp.tab! : 'overview';
   // ?campaigns=<integrationId> opens the campaign scope editor under that row (spec v3 §2.2)
   const editingCampaignsId = Number(sp.campaigns) || 0;
+  // ?ids= from the accounts-found submit: name those rows in the banner and list them first
+  const justAdded = new Set(String(sp.ids ?? '').split(',').map(Number).filter((n) => Number.isInteger(n) && n > 0));
   const write = canWrite(p);
   const editingRow = editingCampaignsId ? await db.integration.findFirst({ where: { id: editingCampaignsId, projectId: project.id } }) : null;
   const editingCampaigns = editingRow ? await listCampaignsFor(editingRow, project).catch(() => null) : null;
@@ -102,6 +107,20 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
 
       {tab === 'integrations' && (
         <div className="space-y-4">
+          {(sp.added || sp.refreshed || sp.failed) && (
+            <div role="status" className="rounded-lg border border-[var(--line)] bg-[var(--card)] px-4 py-3 text-sm" data-connect-result>
+              {Number(sp.added) > 0 && (
+                <p className="font-medium">
+                  {justAdded.size
+                    ? t('projects.accountsAddedNames', { names: integrations.filter((i) => justAdded.has(i.id)).map((i) => i.name).join(', ') })
+                    : t('projects.accountsAdded', { count: Number(sp.added) })}
+                </p>
+              )}
+              {Number(sp.refreshed) > 0 && <p className="text-ink-2">{t('projects.accountsRefreshed', { count: Number(sp.refreshed) })}</p>}
+              {sp.failed && <p className="mt-1 text-[var(--down)]">{t('projects.accountsNotAdded', { detail: sp.failed })}</p>}
+            </div>
+          )}
+          {write && integrations.length === 0 && <QuickConnect projectId={project.id} admin={canAdmin(p)} />}
           {write && (
             <div>
               <Link href={`/projects/${project.id}/connect`} className="btn-primary">
@@ -110,35 +129,41 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
             </div>
           )}
           {integrations.length === 0 ? (
-            <Empty title={t('projects.noIntegrationsTitle')} hint={t('projects.integrationsHint')} />
+            !write && <Empty title={t('projects.noIntegrationsTitle')} hint={t('projects.integrationsHint')} />
           ) : (
             <div className="card divide-y divide-[var(--line)]">
-              {integrations.map((i) => {
-                const def = getIntegrationDef(i.slug);
-                const demo = i.credentials && def && ['demo'].includes(def.connector);
+              {integrations
+                .map((i) => {
+                  const def = getIntegrationDef(i.slug);
+                  // sample data: a platform without a live connector, or an account connected with "use synthetic data"
+                  const sample = !def || def.connector === 'demo' || !!decryptJson<{ demo?: boolean }>(i.credentials)?.demo;
+                  return { i, def, sample };
+                })
+                // just added first, then live before sample; the sort is stable, so platform order stays within each group
+                .sort((a, b) => Number(justAdded.has(b.i.id)) - Number(justAdded.has(a.i.id)) || Number(a.sample) - Number(b.sample))
+                .map(({ i, def, sample }) => {
                 return (
                   <div key={i.id}>
-                  <div className="flex flex-wrap items-center gap-3 px-4 py-3">
-                    <div className="w-44 shrink-0">
-                      <PlatformBadge slug={i.slug} name={def?.name ?? i.slug} />
+                  <div className="flex flex-wrap items-center gap-3 px-4 py-3" data-integration-row={i.slug} data-sample={sample ? '1' : '0'}>
+                    <div className="flex w-52 shrink-0 items-center gap-2.5">
+                      <PlatformTile slug={i.slug} size="sm" />
+                      <span className="truncate text-sm text-ink-2">{def?.name ?? i.slug}</span>
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium">{i.name}</div>
-                      <div className="truncate text-xs text-slate-400">
-                        {i.sourceId}
-                        {def && def.connector === 'demo' && <span className="ml-2 rounded bg-slate-100 px-1 text-[11px] font-semibold text-slate-500">synthetic data</span>}
-                        {def && def.connector !== 'demo' && <span className="ml-2 rounded bg-emerald-50 px-1 text-[11px] font-semibold text-emerald-700">live connector</span>}
+                      <div className="flex flex-wrap gap-x-3 text-xs text-ink-3">
+                        <span className="num truncate">{i.sourceId}</span>
+                        <span>{sample ? t('connect.sampleData') : t('connect.liveData')}</span>
+                        {i.status !== 'active' && <span className="font-medium text-ink-2">{t('projects.pausedState')}</span>}
+                        {justAdded.has(i.id) && <span className="font-medium text-ink">{t('projects.justAdded')}</span>}
                       </div>
                       {isAdsSlug(i.slug) && (
-                        <div className="text-xs text-slate-500" data-campaigns-line>
-                          Campaigns: {scopeSummary(campaignScopeOf(i))}
+                        <div className="flex flex-wrap gap-x-3 text-xs text-ink-2" data-campaigns-line>
+                          <span>Campaigns: {scopeSummary(campaignScopeOf(i))}</span>
                           {write && (
-                            <>
-                              {' · '}
-                              <Link href={`/projects/${project.id}?tab=integrations&campaigns=${editingCampaignsId === i.id ? '' : i.id}`} className="link">
-                                {editingCampaignsId === i.id ? t('common.close') : t('campaigns.edit')}
-                              </Link>
-                            </>
+                            <Link href={`/projects/${project.id}?tab=integrations&campaigns=${editingCampaignsId === i.id ? '' : i.id}`} className="link">
+                              {editingCampaignsId === i.id ? t('common.close') : t('campaigns.edit')}
+                            </Link>
                           )}
                         </div>
                       )}
@@ -146,44 +171,61 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                     <div className="text-xs">
                       <HealthChip health={i.health} tokenExpiresAt={i.tokenExpiresAt} healthCheckedAt={i.healthCheckedAt} error={i.healthError} lastError={i.lastError} lastSyncAt={i.lastSyncAt} />
                     </div>
-                    <span className={`badge ${i.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{i.status}</span>
-                    {write && (
-                      <div className="flex gap-1">
-                        {def && def.connector !== 'demo' && (
-                          <Link href={reconnectUrl(i)} className={`btn ${i.health === 'failing' || i.health === 'expiring' ? 'btn-attention' : ''}`} title={oauthAvailable(i.slug) ? 'Sign in again and keep this integration' : 'Paste new credentials and keep this integration'}>
-                            {oauthAvailable(i.slug) ? t('projects.reconnect') : t('projects.replaceCredentials')}
-                          </Link>
-                        )}
-                        <form action={checkIntegrationAction}>
-                          <input type="hidden" name="integrationId" value={i.id} />
-                          <input type="hidden" name="projectId" value={project.id} />
-                          <button className="btn" title={t('projects.checkTitle')}>
-                            {t('projects.checkNow')}
-                          </button>
-                        </form>
-                        {def?.archetype === 'custom' && (
-                          <form action={refreshColumnsAction}>
-                            <input type="hidden" name="id" value={i.id} />
-                            <button className="btn" title="Re-detect columns">
-                              <RefrechIcon />
+                    {write && (() => {
+                      const canReconnect = !!def && def.connector !== 'demo';
+                      const attention = i.health === 'failing' || i.health === 'expiring';
+                      const reconnectLabel = oauthAvailable(i.slug) ? t('projects.reconnect') : t('projects.replaceCredentials');
+                      const item = 'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink transition-colors hover:bg-[var(--paper)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]';
+                      return (
+                        <div className="flex items-center gap-1">
+                          {canReconnect && attention && (
+                            <Link href={reconnectUrl(i)} className="btn btn-attention">
+                              {reconnectLabel}
+                            </Link>
+                          )}
+                          <form action={checkIntegrationAction}>
+                            <input type="hidden" name="integrationId" value={i.id} />
+                            <input type="hidden" name="projectId" value={project.id} />
+                            <button className="btn" title={t('projects.checkTitle')}>
+                              {t('projects.checkNow')}
                             </button>
                           </form>
-                        )}
-                        <form action={toggleIntegrationAction}>
-                          <input type="hidden" name="id" value={i.id} />
-                          <button className="btn" title={i.status === 'active' ? t('projects.pause') : t('projects.activate')}>
-                            {i.status === 'active' ? <Pause size={14} /> : <Play size={14} />}
-                          </button>
-                        </form>
-                        <form action={removeIntegrationAction}>
-                          <input type="hidden" name="id" value={i.id} />
-                          <ConfirmButton message={`Remove ${i.name}? Reports already generated keep their data.`}>
-                            <Trash2 size={14} />
-                          </ConfirmButton>
-                        </form>
-                      </div>
-                    )}
-                    {demo && null}
+                          <details className="relative" data-row-menu>
+                            <summary className="btn cursor-pointer list-none px-2 [&::-webkit-details-marker]:hidden" aria-label={t('projects.moreActions', { name: i.name })} title={t('projects.moreActions', { name: i.name })}>
+                              <MoreHorizontal size={16} strokeWidth={1.75} aria-hidden="true" />
+                            </summary>
+                            <div className="absolute right-0 z-20 mt-1 w-56 rounded-lg border border-[var(--line)] bg-[var(--card)] p-1 shadow-sm">
+                              {canReconnect && !attention && (
+                                <Link href={reconnectUrl(i)} className={item}>
+                                  {reconnectLabel}
+                                </Link>
+                              )}
+                              {def?.archetype === 'custom' && (
+                                <form action={refreshColumnsAction}>
+                                  <input type="hidden" name="id" value={i.id} />
+                                  <button className={item}>
+                                    <RefrechIcon /> {t('integrations.columnsAuto')}
+                                  </button>
+                                </form>
+                              )}
+                              <form action={toggleIntegrationAction}>
+                                <input type="hidden" name="id" value={i.id} />
+                                <button className={item}>
+                                  {i.status === 'active' ? <Pause size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
+                                  {i.status === 'active' ? t('projects.pause') : t('projects.activate')}
+                                </button>
+                              </form>
+                              <form action={removeIntegrationAction}>
+                                <input type="hidden" name="id" value={i.id} />
+                                <ConfirmButton className={`${item} text-[var(--down)]`} message={`Remove ${i.name}? Reports already generated keep their data.`}>
+                                  <Trash2 size={14} aria-hidden="true" /> {t('projects.remove')}
+                                </ConfirmButton>
+                              </form>
+                            </div>
+                          </details>
+                        </div>
+                      );
+                    })()}
                   </div>
                   {write && editingCampaignsId === i.id && isAdsSlug(i.slug) && (
                     <div className="px-4 pb-4" data-campaign-editor>

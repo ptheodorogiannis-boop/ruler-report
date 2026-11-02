@@ -2,6 +2,7 @@
 // exchange, and "which accounts can this user access" for each integration kind.
 // Written against the public Google / Graph API docs and exercised against local mock servers only
 // (tests/oauth.test.ts) — not verified with live Google or Meta accounts.
+import { adsSearch, developerToken, formatCustomerId, listAccessibleCustomers, pick } from '@/lib/connectors/gads';
 import { fetchJson } from '@/lib/connectors/http';
 import { endpoints } from './endpoints';
 import type { Provider } from './state';
@@ -16,6 +17,7 @@ export interface OAuthSlug {
 
 const G = 'https://www.googleapis.com/auth/';
 export const OAUTH_SLUGS: Record<string, OAuthSlug> = {
+  google_adwords: { provider: 'google', scopes: [`${G}adwords`], noun: 'Google Ads accounts' },
   google_analytics_4: { provider: 'google', scopes: [`${G}analytics.readonly`], noun: 'GA4 properties' },
   search_console: { provider: 'google', scopes: [`${G}webmasters.readonly`], noun: 'Search Console sites' },
   google_my_business: { provider: 'google', scopes: [`${G}business.manage`], noun: 'Business Profile locations' },
@@ -30,11 +32,22 @@ export const PROVIDER_NAME: Record<Provider, string> = { google: 'Google', meta:
 export function providerConfigured(p: Provider): boolean {
   return p === 'google' ? !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) : !!(process.env.META_APP_ID && process.env.META_APP_SECRET);
 }
-/** The one-click button is shown only when this returns a provider; the paste-token form is always available. */
-export const oauthAvailable = (slug: string): Provider | null => {
+/** Google Ads also needs the agency's developer token before any account can be listed or read. */
+export const adsTokenConfigured = () => !!process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+const slugReady = (slug: string): boolean => {
   const d = OAUTH_SLUGS[slug];
-  return d && providerConfigured(d.provider) ? d.provider : null;
+  return !!d && providerConfigured(d.provider) && (slug !== 'google_adwords' || adsTokenConfigured());
 };
+/** The one-click button is shown only when this returns a provider; the paste-token form is always available. */
+export const oauthAvailable = (slug: string): Provider | null => (slugReady(slug) ? OAUTH_SLUGS[slug].provider : null);
+
+/** Every network one sign-in covers, in the order the "accounts found" picker shows them. */
+export const PROVIDER_SLUGS: Record<Provider, string[]> = {
+  google: ['google_adwords', 'google_analytics_4', 'search_console', 'youtube', 'google_my_business'],
+  meta: ['facebook_ads', 'facebook', 'instagram_business'],
+};
+/** The networks one consent asks for right now (Google Ads drops out until a developer token is set). */
+export const bundleSlugs = (p: Provider): string[] => PROVIDER_SLUGS[p].filter(slugReady);
 
 export interface AccountOption {
   /** unique within the slug; what the picker form posts back */
@@ -42,6 +55,8 @@ export interface AccountOption {
   sourceId: string;
   name: string;
   detail?: string;
+  /** an account that exists but cannot run (a disabled or closed ad account): listed last and muted */
+  inactive?: boolean;
   /** merged over the base credentials (e.g. a Page access token) */
   credentials?: Record<string, any>;
   config?: Record<string, any>;
@@ -49,24 +64,31 @@ export interface AccountOption {
 export interface Tokens {
   credentials: Record<string, any>;
   account?: string;
+  /** one-consent flow: the networks whose permissions were all granted */
+  granted?: string[];
 }
 
 const qs = (o: Record<string, string | undefined>) => new URLSearchParams(Object.entries(o).filter(([, v]) => v != null) as [string, string][]);
 
-export function authUrl(provider: Provider, slug: string, state: string, redirectUri: string): string {
-  const def = OAUTH_SLUGS[slug];
+export const scopesFor = (slugs: string[]): string[] => [...new Set(slugs.flatMap((s) => OAUTH_SLUGS[s]?.scopes ?? []))];
+
+export function authUrl(provider: Provider, slug: string | string[], state: string, redirectUri: string): string {
+  const scopes = scopesFor(Array.isArray(slug) ? slug : [slug]);
   if (provider === 'google') {
     return `${endpoints.google.auth}?${qs({
       client_id: process.env.GOOGLE_CLIENT_ID,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: ['openid', 'email', ...def.scopes].join(' '),
+      scope: ['openid', 'email', ...scopes].join(' '),
       access_type: 'offline', // we need a refresh token
       prompt: 'consent', // Google only returns the refresh token on a consent screen
+      include_granted_scopes: 'true', // keep what this user granted before, so a second network adds to the first
       state,
     })}`;
   }
-  return `${endpoints.meta.dialog}?${qs({ client_id: process.env.META_APP_ID, redirect_uri: redirectUri, response_type: 'code', scope: def.scopes.join(','), state })}`;
+  // Facebook Login for Business apps define their permissions in a configuration instead of `scope`
+  const config = process.env.META_LOGIN_CONFIG_ID;
+  return `${endpoints.meta.dialog}?${qs({ client_id: process.env.META_APP_ID, redirect_uri: redirectUri, response_type: 'code', ...(config ? { config_id: config } : { scope: scopes.join(',') }), state })}`;
 }
 
 const form = (o: Record<string, string | undefined>) => ({ method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: qs(o) });
@@ -80,7 +102,8 @@ function jwtEmail(idToken?: string): string | undefined {
   }
 }
 
-export async function exchangeCode(provider: Provider, slug: string, code: string, redirectUri: string): Promise<Tokens> {
+/** `slugs` = the one-consent flow: an unticked permission drops that network instead of failing the whole sign-in. */
+export async function exchangeCode(provider: Provider, slug: string, code: string, redirectUri: string, slugs?: string[]): Promise<Tokens> {
   if (provider === 'google') {
     const j = await fetchJson<any>(
       endpoints.google.token,
@@ -89,10 +112,15 @@ export async function exchangeCode(provider: Provider, slug: string, code: strin
     if (!j.access_token) throw new Error('Google did not return an access token');
     // consent screens can be granular: the user may untick a permission
     const granted = String(j.scope ?? '').split(/\s+/);
-    const missing = OAUTH_SLUGS[slug].scopes.filter((s) => !granted.includes(s));
+    let grantedSlugs: string[] | undefined;
+    if (slugs) {
+      grantedSlugs = slugs.filter((s) => OAUTH_SLUGS[s].scopes.every((sc) => granted.includes(sc)));
+      if (!grantedSlugs.length) throw new Error('No permission was granted. Sign in again and tick the networks you want to connect on the Google consent screen.');
+    }
+    const missing = slugs ? [] : OAUTH_SLUGS[slug].scopes.filter((s) => !granted.includes(s));
     if (missing.length) throw new Error(`Permission not granted: ${missing.map((s) => s.split('/').pop()).join(', ')}. Tick every requested permission on the Google consent screen.`);
     if (!j.refresh_token) throw new Error('Google did not return a refresh token. Remove this app at myaccount.google.com/permissions and connect again.');
-    return { credentials: { accessToken: j.access_token, refreshToken: j.refresh_token, expiresAt: Date.now() + Number(j.expires_in ?? 3600) * 1000 }, account: jwtEmail(j.id_token) };
+    return { credentials: { accessToken: j.access_token, refreshToken: j.refresh_token, expiresAt: Date.now() + Number(j.expires_in ?? 3600) * 1000 }, account: jwtEmail(j.id_token), ...(grantedSlugs ? { granted: grantedSlugs } : {}) };
   }
   const short = await fetchJson<any>(`${endpoints.meta.graph}/oauth/access_token`, form({ client_id: process.env.META_APP_ID, client_secret: process.env.META_APP_SECRET, redirect_uri: redirectUri, code }));
   if (!short.access_token) throw new Error('Meta did not return an access token');
@@ -106,7 +134,20 @@ export async function exchangeCode(provider: Provider, slug: string, code: strin
   } catch {
     /* label only */
   }
-  return { credentials: { accessToken: token, ...(expiresIn ? { expiresAt: Date.now() + expiresIn * 1000 } : {}) }, account };
+  let grantedSlugs: string[] | undefined;
+  if (slugs) {
+    grantedSlugs = slugs;
+    try {
+      // the Login dialog lets people decline single permissions; /me/permissions says which survived
+      const perms = await fetchJson<any>(`${endpoints.meta.graph}/me/permissions`, bearer(token));
+      const ok = new Set((perms.data ?? []).filter((p: any) => p.status === 'granted').map((p: any) => p.permission));
+      if (ok.size) grantedSlugs = slugs.filter((s) => OAUTH_SLUGS[s].scopes.every((sc) => ok.has(sc)));
+    } catch {
+      /* unknown: list everything and let each network report its own error */
+    }
+    if (!grantedSlugs.length) throw new Error('No permission was granted. Sign in again and keep the permissions Meta asks for.');
+  }
+  return { credentials: { accessToken: token, ...(expiresIn ? { expiresAt: Date.now() + expiresIn * 1000 } : {}) }, account, ...(grantedSlugs ? { granted: grantedSlugs } : {}) };
 }
 
 // ───────────── account listing ─────────────
@@ -116,6 +157,7 @@ const MAX_PAGES = 20;
 async function googleList(slug: string, token: string): Promise<AccountOption[]> {
   const g = endpoints.google;
   const out: AccountOption[] = [];
+  if (slug === 'google_adwords') return adsAccounts(token);
   if (slug === 'google_analytics_4') {
     let pageToken: string | undefined;
     for (let i = 0; i < MAX_PAGES; i++) {
@@ -157,6 +199,54 @@ async function googleList(slug: string, token: string): Promise<AccountOption[]>
   return out;
 }
 
+/**
+ * Google Ads accounts the signed-in user can reach: the ones they have direct access to, plus every client
+ * account under a manager (MCC) they can access. Client accounts found through a manager carry its id as
+ * `loginCustomerId`, which every later call sends in the login-customer-id header.
+ */
+const MAX_CUSTOMERS = 40;
+async function adsAccounts(token: string): Promise<AccountOption[]> {
+  const dev = developerToken();
+  const ids = (await listAccessibleCustomers(token, dev)).slice(0, MAX_CUSTOMERS);
+  const direct = new Map<string, AccountOption>();
+  const viaManager = new Map<string, AccountOption>();
+  let firstError: Error | undefined;
+  for (const id of ids) {
+    let row: any;
+    try {
+      [row] = await adsSearch(token, dev, id, 'SELECT customer.id, customer.descriptive_name, customer.currency_code, customer.manager, customer.status FROM customer LIMIT 1');
+    } catch (e) {
+      firstError ??= e as Error; // a cancelled or suspended account refuses queries; skip it
+      continue;
+    }
+    if (!row) continue;
+    const name = pick(row, 'customer.descriptive_name') || formatCustomerId(id);
+    if (pick(row, 'customer.manager')) {
+      let clients: any[] = [];
+      try {
+        clients = await adsSearch(token, dev, id, "SELECT customer_client.id, customer_client.descriptive_name, customer_client.currency_code, customer_client.manager, customer_client.status FROM customer_client WHERE customer_client.manager = false AND customer_client.status = 'ENABLED'", id);
+      } catch (e) {
+        firstError ??= e as Error;
+      }
+      for (const c of clients) {
+        const cid = String(pick(c, 'customer_client.id'));
+        const currency = pick(c, 'customer_client.currency_code');
+        if (!viaManager.has(cid))
+          viaManager.set(cid, { key: cid, sourceId: cid, name: pick(c, 'customer_client.descriptive_name') || formatCustomerId(cid), detail: `${formatCustomerId(cid)} · ${currency ?? '?'} · via ${name}`, config: { loginCustomerId: id, ...(currency ? { currency } : {}) } });
+      }
+      continue;
+    }
+    const status = pick(row, 'customer.status');
+    if (status && status !== 'ENABLED') continue;
+    const currency = pick(row, 'customer.currency_code');
+    direct.set(id, { key: id, sourceId: id, name, detail: `${formatCustomerId(id)} · ${currency ?? '?'}`, config: currency ? { currency } : undefined });
+  }
+  // direct access needs no manager header, so it wins when an account is reachable both ways
+  const out = [...direct.values(), ...[...viaManager.values()].filter((o) => !direct.has(o.key))];
+  if (!out.length && firstError) throw firstError;
+  return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 /** Graph API list endpoint with cursor paging; `paging.next` already carries the cursor. */
 async function graphList(path: string, params: Record<string, string>, token: string): Promise<any[]> {
   let url: string | undefined = `${endpoints.meta.graph}${path}?${qs({ ...params, limit: '100' })}`;
@@ -175,17 +265,18 @@ async function metaList(slug: string, token: string): Promise<AccountOption[]> {
     const rows = await graphList('/me/adaccounts', { fields: 'account_id,name,currency,account_status' }, token);
     return rows.map((a) => {
       const id = String(a.id ?? `act_${a.account_id}`);
-      return { key: id, sourceId: id, name: a.name || id, detail: `${id} · ${a.currency ?? '?'} · ${AD_STATUS[a.account_status] ?? 'status ' + a.account_status}`, config: a.currency ? { currency: a.currency } : undefined };
+      const active = Number(a.account_status) === 1;
+      return { key: id, sourceId: id, name: a.name || id, detail: `${id} · ${a.currency ?? '?'}${active ? '' : ` · ${AD_STATUS[a.account_status] ?? 'status ' + a.account_status}`}`, ...(active ? {} : { inactive: true }), config: a.currency ? { currency: a.currency } : undefined };
     });
   }
   const pages = await graphList('/me/accounts', { fields: 'id,name,category,access_token,instagram_business_account{id,username,name}' }, token);
   const out: AccountOption[] = [];
   for (const p of pages) {
     const cred = p.access_token ? { accessToken: p.access_token } : undefined; // Page token: does not expire when derived from a long-lived user token
-    if (slug === 'facebook') out.push({ key: p.id, sourceId: p.id, name: p.name, detail: p.category, credentials: cred });
+    if (slug === 'facebook') out.push({ key: p.id, sourceId: p.id, name: p.name, detail: String(p.id), credentials: cred });
     else if (p.instagram_business_account) {
       const ig = p.instagram_business_account;
-      out.push({ key: ig.id, sourceId: ig.id, name: ig.username ? `@${ig.username}` : ig.name || ig.id, detail: `via Page ${p.name}`, credentials: cred, config: { pageId: p.id } });
+      out.push({ key: ig.id, sourceId: ig.id, name: ig.username ? `@${ig.username}` : ig.name || ig.id, detail: `${ig.id} · via Page ${p.name}`, credentials: cred, config: { pageId: p.id } });
     }
   }
   return out;
@@ -199,6 +290,26 @@ export async function listAccounts(slug: string, credentials: Record<string, any
   const token = credentials.accessToken as string | undefined;
   if (!token) throw new Error('No access token');
   return def.provider === 'google' ? googleList(slug, token) : metaList(slug, token);
+}
+
+export interface NetworkAccounts {
+  slug: string;
+  options: AccountOption[];
+  /** listing failed for this network only (quota, missing approval, no developer token…) */
+  error?: string;
+  /** the user declined this network's permissions on the consent screen */
+  notGranted?: boolean;
+}
+/** The "accounts found" picker: every network of one consent, listed side by side. One network failing (Business
+ *  Profile before Google approves API access, say) never blanks the others. */
+export async function listBundle(slugs: string[], granted: string[], credentials: Record<string, any>, deps: { listAccounts?: typeof listAccounts } = {}): Promise<NetworkAccounts[]> {
+  const list = deps.listAccounts ?? listAccounts;
+  const settled = await Promise.allSettled(slugs.map((s) => (granted.includes(s) ? list(s, credentials) : Promise.resolve([] as AccountOption[]))));
+  return slugs.map((slug, i) => {
+    if (!granted.includes(slug)) return { slug, options: [], notGranted: true };
+    const r = settled[i];
+    return r.status === 'fulfilled' ? { slug, options: r.value } : { slug, options: [], error: (r.reason as Error)?.message ?? String(r.reason) };
+  });
 }
 
 /** What gets stored on the integration (no short-lived Google access token — it is refreshed on use). */

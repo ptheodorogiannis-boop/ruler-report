@@ -1,11 +1,11 @@
 // Integration catalog. Slugs that exist in Reportei keep the same slug (docs/EVIDENCE.md §9) so
 // templates, API clients and Make/Zapier scenarios written for Reportei map 1:1.
 // `connector` says how data is fetched:
-//   meta | ga4 | gsc | woo | sheets | csv | rest | ingest | facebook | instagram | youtube | gbp  → real connector code in src/lib/connectors
+//   meta | gads | ga4 | gsc | woo | sheets | csv | rest | ingest | facebook | instagram | youtube | gbp  → real connector code in src/lib/connectors
 //   demo                                                   → deterministic synthetic data until a real connector is written
 
 export type Category = 'social' | 'ads' | 'analytics' | 'seo' | 'crm' | 'email' | 'ecommerce' | 'local' | 'calls' | 'custom';
-export type ConnectorId = 'demo' | 'meta' | 'ga4' | 'gsc' | 'woo' | 'sheets' | 'csv' | 'rest' | 'ingest' | 'facebook' | 'instagram' | 'youtube' | 'gbp';
+export type ConnectorId = 'demo' | 'meta' | 'gads' | 'ga4' | 'gsc' | 'woo' | 'sheets' | 'csv' | 'rest' | 'ingest' | 'facebook' | 'instagram' | 'youtube' | 'gbp';
 export type AuthKind = 'oauth_google' | 'oauth_meta' | 'api_key' | 'basic' | 'token' | 'url' | 'none';
 
 export interface IntegrationDef {
@@ -67,7 +67,11 @@ export const INTEGRATIONS: IntegrationDef[] = [
     currency: true,
     fields: [{ name: 'accessToken', label: 'Marketing API access token', secret: true, help: 'System-user token with ads_read' }],
   }),
-  d('google_adwords', 'Google Ads', 'ads', 'ads', 'gads', 'demo', 'oauth_google', '#4285f4', true, { sourceIdLabel: 'Customer ID', currency: true }),
+  d('google_adwords', 'Google Ads', 'ads', 'ads', 'gads', 'gads', 'oauth_google', '#4285f4', true, {
+    sourceIdLabel: 'Customer ID (123-456-7890)',
+    currency: true,
+    fields: [{ name: 'loginCustomerId', label: 'Manager account ID (optional)', help: 'Only when the account is reached through a manager (MCC) account' }],
+  }),
   d('tiktok_ads', 'TikTok Ads', 'ads', 'ads', 'tt_ads', 'demo', 'token', '#010101', true, { currency: true, fields: TOKEN }),
   d('linkedin_ads', 'LinkedIn Ads', 'ads', 'ads', 'li_ads', 'demo', 'token', '#0a66c2', true, { currency: true, fields: TOKEN }),
   d('pinterest_ads', 'Pinterest Ads', 'ads', 'ads', 'pin_ads', 'demo', 'token', '#e60023', true, { currency: true, fields: TOKEN }),

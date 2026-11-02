@@ -3,6 +3,7 @@ import { getIntegrationDef } from '@/lib/catalog/integrations';
 import { customConnector } from './custom';
 import { demoConnector } from './demo';
 import { facebookConnector } from './facebook';
+import { gadsConnector } from './gads';
 import { gbpConnector } from './gbp';
 import { ga4Connector } from './ga4';
 import { gscConnector } from './gsc';
@@ -15,6 +16,7 @@ const REGISTRY: Record<string, Connector> = {
   demo: demoConnector,
   meta: metaConnector,
   ga4: ga4Connector,
+  gads: gadsConnector,
   gsc: gscConnector,
   woo: wooConnector,
   facebook: facebookConnector,
@@ -39,4 +41,4 @@ export function connectorFor(integration: { slug: string; credentials: Record<st
   if (integration.credentials?.demo) return demoConnector;
   return getConnector(getIntegrationDef(integration.slug)?.connector ?? 'demo');
 }
-export const REAL_CONNECTORS = ['meta', 'ga4', 'gsc', 'woo', 'facebook', 'instagram', 'youtube', 'gbp', 'sheets', 'csv', 'rest', 'ingest'];
+export const REAL_CONNECTORS = ['meta', 'gads', 'ga4', 'gsc', 'woo', 'facebook', 'instagram', 'youtube', 'gbp', 'sheets', 'csv', 'rest', 'ingest'];

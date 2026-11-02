@@ -18,6 +18,15 @@
         "3199"
       ],
       "port": 3199
+    },
+    {
+      "name": "ruler-reports-v2-mock",
+      "runtimeExecutable": "C:/Program Files/nodejs/node.exe",
+      "runtimeArgs": [
+        "E:/Claude/ruler-reports-v2/scripts/dev-mock.mjs",
+        "3106"
+      ],
+      "port": 3106
     }
   ]
 }
