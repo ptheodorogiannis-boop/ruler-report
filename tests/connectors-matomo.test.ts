@@ -38,9 +38,13 @@ function answer(q: URLSearchParams): unknown {
     case 'Referrers.getReferrerType':
       return [{ label: 'Search Engines', nb_visits: 20, nb_uniq_visitors: 15, nb_conversions: 2, revenue: 0 }, { label: 'Direct Entry', nb_visits: '10', nb_uniq_visitors: 9 }];
     case 'UserCountry.getCountry':
-      return [{ label: 'Greece', code: 'gr', nb_visits: 30 }];
+      // as Matomo answers over a range: unique visitors only as the sum of daily ones (range processing is off by default)
+      return [{ label: 'Greece', code: 'gr', nb_visits: 30, sum_daily_nb_uniq_visitors: 25, nb_conversions: 3, revenue: 12.5 }];
     case 'Actions.getPageTitles':
-      return [{ label: ' Home', nb_hits: 50, nb_visits: 40 }, { label: 'Contact - Mina Kaouni', nb_hits: '12', nb_visits: 9 }];
+      // page reports have hits, visits and entry columns, but no conversions, revenue or bounces of their own
+      return [{ label: ' Home', nb_hits: 50, nb_visits: 40, sum_daily_nb_uniq_visitors: 33, entry_nb_visits: 20, entry_bounce_count: 8 }, { label: 'Contact - Mina Kaouni', nb_hits: '12', nb_visits: 9, sum_daily_nb_uniq_visitors: 8 }];
+    case 'Actions.getEntryPageUrls':
+      return [{ label: '/offer', nb_visits: 70, nb_hits: 90, entry_nb_visits: 30, entry_bounce_count: 12, entry_nb_actions: 75, sum_daily_entry_nb_uniq_visitors: 27, goals: { 'idgoal=1': { nb_conversions: 9, nb_conversions_entry: 4, revenue: 0, revenue_entry: 0 }, 'idgoal=ecommerceOrder': { nb_conversions: 3, nb_conversions_entry: 2, revenue: 150, revenue_entry: 100 }, 'idgoal=ecommerceAbandonedCart': { nb_conversions: 5, nb_conversions_entry: 5, revenue: 300, revenue_entry: 300 } } }];
     case 'X.forbidden':
       return { result: 'error', message: "You can't access this resource as it requires view access for the website id = 9." };
     default:
@@ -175,4 +179,38 @@ test('GA4 pages by title ask for the pageTitle dimension', async () => {
     globalThis.fetch = saved;
   }
   assert.equal(seen[0]?.dimensions?.[0]?.name, 'pageTitle');
+});
+
+test('tables read the columns each Matomo report has; a column a report lacks is missing ("—"), never 0 (final review)', async () => {
+  const { matomoConnector } = await import('../src/lib/connectors/matomo');
+  const [gr] = await matomoConnector.breakdown(ctxFor(), 'country', ['sessions', 'users', 'conversions', 'revenue'], range);
+  assert.deepEqual(gr.values, { sessions: 30, users: 25, conversions: 3, revenue: 12.5 });
+  const titles = await matomoConnector.breakdown(ctxFor(), 'page_title', ['pageviews', 'users', 'conversions', 'engaged_sessions'], range);
+  const home = titles.find((r) => r.label === 'Home')!;
+  assert.equal(home.values.pageviews, 50);
+  assert.equal(home.values.users, 33);
+  assert.ok(Number.isNaN(home.values.conversions), 'a page has no conversions of its own');
+  assert.ok(Number.isNaN(home.values.engaged_sessions), 'nor bounces');
+  const [offer] = await matomoConnector.breakdown(ctxFor(), 'landing_page', ['sessions', 'engaged_sessions', 'users', 'conversions', 'revenue'], range);
+  // a landing page: the visits that started there, and the conversions of those visits (abandoned carts are not conversions)
+  assert.deepEqual(offer.values, { sessions: 30, engaged_sessions: 18, users: 27, conversions: 6, revenue: 100 });
+});
+
+test('the Top pages table shows "—" for what Matomo does not report, and Source / medium is not offered for Matomo', async () => {
+  const { resolveWidget, FetchSession } = await import('../src/lib/engine/resolve');
+  const { findWidget, getCatalog } = await import('../src/lib/catalog/build');
+  const { pickableMetrics } = await import('../src/lib/catalog/pickable');
+  const { WidgetCard } = await import('../src/components/widgets');
+  const { createElement } = await import('react');
+  const { renderToStaticMarkup } = await import('react-dom/server');
+  const integ = { ...ctxFor().integration, currency: 'EUR' } as any;
+  const value = await resolveWidget({ integration: integ, widget: findWidget('matomo', 'top_page_titles')!, range, session: new FetchSession() });
+  assert.equal(value.type, 'table');
+  const stored = JSON.parse(JSON.stringify(value)); // as a snapshot keeps it
+  const html = renderToStaticMarkup(createElement(WidgetCard, { b: { integrationId: 1, platform: 'Matomo', slug: 'matomo', account_name: 'Mina', widget: { reference_key: 'matomo:top_page_titles', key: 'top_page_titles', label: 'Top pages by title', format: 'number', diff_type: 'neutral', value: stored } } as any, fmt: {} }));
+  const home = /<tr[^>]*>(?:(?!<\/tr>).)*Home(?:(?!<\/tr>).)*<\/tr>/s.exec(html)?.[0] ?? '';
+  assert.match(home, />—</, 'conversions show a dash');
+  assert.doesNotMatch(home, />0</);
+  assert.equal(pickableMetrics('matomo', getCatalog('matomo')).some((w) => w.key === 'source_medium'), false);
+  assert.equal(pickableMetrics('google_analytics_4', getCatalog('google_analytics_4')).some((w) => w.key === 'source_medium'), true);
 });

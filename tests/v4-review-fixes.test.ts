@@ -183,3 +183,17 @@ test('a checkout-optimised ad set counts offsite_conversion.fb_pixel_initiate_ch
   assert.equal(resultLabel(type, (k: string) => t('en', k)), 'Checkout started');
   assert.equal(resultLabel(type, (k: string) => t('el', k)), 'Έναρξη ολοκλήρωσης αγοράς');
 });
+
+// ── Greek labels for the new metrics and table columns (final review)
+test('Greek client pages name the new metrics and table columns in Greek', async () => {
+  const { metricLabel, DIMENSION_LABELS_EL } = await import('../src/lib/catalog/labels');
+  const el = (reference_key: string, title: string) => metricLabel({ reference_key, title }, 'el');
+  assert.equal(el('fb_ads:results', 'Results'), 'Αποτελέσματα');
+  assert.equal(el('fb_ads:cost_per_result', 'Cost per result'), 'Κόστος ανά αποτέλεσμα');
+  assert.equal(el('ga4:top_page_titles', 'Top pages by title'), 'Κορυφαίες σελίδες ανά τίτλο');
+  assert.equal(el('matomo:top_page_titles', 'Top pages by title'), 'Κορυφαίες σελίδες ανά τίτλο');
+  assert.equal(el('matomo:sessions', 'Sessions'), el('ga4:sessions', 'Sessions'), 'Matomo speaks like GA4');
+  assert.equal(el('matomo:conversions_by_goal', 'Conversions by goal'), 'Μετατροπές ανά στόχο');
+  assert.equal(DIMENSION_LABELS_EL.page_title, 'Τίτλος σελίδας');
+  assert.equal(DIMENSION_LABELS_EL.goal, 'Στόχος');
+});

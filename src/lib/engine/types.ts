@@ -257,6 +257,8 @@ export interface Connector {
   totals?(ctx: ConnectorContext, prims: string[], range: DateRange, campaignIds?: string[]): Promise<Record<string, number>>;
   /** primitives this connector cannot provide; widgets that need them render a clear "not available" state */
   unsupported?: string[];
+  /** breakdown dimensions this connector has no report for; the picker leaves their tables and charts out */
+  unsupportedDimensions?: string[];
   /** optional connection test; throws with a human message */
   validate?(ctx: ConnectorContext): Promise<{ name?: string; config?: Record<string, any> } | void>;
   /** ads accounts: the campaigns a scope can pick from (spec v3 §2.1) */

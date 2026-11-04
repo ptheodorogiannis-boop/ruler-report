@@ -75,6 +75,7 @@ const SOCIAL = {
 };
 const WEB = {
   sessions: 'Συνεδρίες',
+  top_page_titles: 'Κορυφαίες σελίδες ανά τίτλο',
   users: 'Ενεργοί χρήστες',
   new_users: 'Νέοι χρήστες',
   pageviews: 'Προβολές',
@@ -186,11 +187,13 @@ const LOCAL = {
 const withPrefix = (prefix: string, m: Record<string, string>) => Object.fromEntries(Object.entries(m).map(([k, v]) => [`${prefix}:${k}`, v]));
 
 export const METRIC_LABELS_EL: Record<string, string> = {
-  ...withPrefix('fb_ads', ADS),
+  // Meta Ads alone has Results and Cost per result (the ad set's own event)
+  ...withPrefix('fb_ads', { ...ADS, results: 'Αποτελέσματα', cost_per_result: 'Κόστος ανά αποτέλεσμα' }),
   ...withPrefix('gads', ADS),
   ...withPrefix('fb', SOCIAL),
   ...withPrefix('ig', SOCIAL),
   ...withPrefix('ga4', WEB),
+  ...withPrefix('matomo', WEB),
   ...withPrefix('gsc', SEO),
   ...withPrefix('shop', ECOM),
   ...withPrefix('woo', ECOM),
@@ -206,6 +209,8 @@ export const DIMENSION_LABELS_EL: Record<string, string> = {
   post: 'Δημοσίευση',
   page: 'Σελίδα',
   landing_page: 'Σελίδα προορισμού',
+  page_title: 'Τίτλος σελίδας',
+  goal: 'Στόχος',
   source_medium: 'Πηγή / μέσο',
   country: 'Χώρα',
   city: 'Πόλη',
@@ -221,7 +226,9 @@ export const DIMENSION_LABELS_EL: Record<string, string> = {
   search_term: 'Όρος αναζήτησης',
 };
 
-const LABELS: Record<Locale, Record<string, string>> = { en: {}, el: METRIC_LABELS_EL };
+/** Widgets that exist only with an account's config (Matomo goals): kept apart from the catalog-checked map above. */
+const CONFIG_LABELS_EL: Record<string, string> = { 'matomo:conversions_by_goal': 'Μετατροπές ανά στόχο' };
+const LABELS: Record<Locale, Record<string, string>> = { en: {}, el: { ...METRIC_LABELS_EL, ...CONFIG_LABELS_EL } };
 const DIMENSIONS: Record<Locale, Record<string, string>> = { en: {}, el: DIMENSION_LABELS_EL };
 
 /** The label of a metric in `locale`: the Greek entry when there is one, else the catalog title (never empty when the title is not). */

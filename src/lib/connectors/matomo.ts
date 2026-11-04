@@ -134,18 +134,31 @@ const REPORT: Record<string, Call> = {
   campaign: { method: 'Referrers.getCampaigns', params: {} },
   product: { method: 'Goals.getItemsName', params: {} },
 };
-/** A breakdown row's columns as the archetype's primitives. */
-function rowValues(r: any, prims: string[]): Record<string, number> {
+/**
+ * A breakdown row's columns as the archetype's primitives, per report as Matomo answers over a range (checked against its
+ * public demo): unique visitors only as the sum of daily ones; page reports have hits and entry columns but no conversions,
+ * revenue or bounces of their own; a landing page counts the visits that started there and their conversions (per goal,
+ * abandoned carts left out). A column a report does not have is NaN, which tables show as "—" (a snapshot stores it as null).
+ */
+function rowValues(r: any, prims: string[], dimension: string): Record<string, number> {
+  const has = (c: string) => r[c] !== undefined && r[c] !== null && r[c] !== '';
+  const col = (...cols: string[]) => {
+    const c = cols.find(has);
+    return c ? num(r[c]) : Number.NaN;
+  };
+  const goals = (c: string) =>
+    r.goals && typeof r.goals === 'object' ? Object.entries(r.goals as Record<string, any>).filter(([k]) => !/abandonedcart/i.test(k)).reduce((t, [, g]) => t + num(g?.[c]), 0) : Number.NaN;
+  const entry = dimension === 'landing_page';
   const v: Record<string, number> = {};
   for (const p of prims) {
-    if (p === 'sessions') v[p] = num(r.nb_visits);
-    else if (p === 'users') v[p] = num(r.nb_uniq_visitors);
-    else if (p === 'pageviews') v[p] = num(r.nb_hits ?? r.nb_pageviews);
-    else if (p === 'engaged_sessions') v[p] = Math.max(0, num(r.nb_visits) - num(r.bounce_count));
-    else if (p === 'conversions') v[p] = num(r.nb_conversions);
-    else if (p === 'revenue') v[p] = num(r.revenue);
-    else if (p === 'transactions') v[p] = num(r.orders ?? r.nb_conversions);
-    else v[p] = 0;
+    if (p === 'sessions') v[p] = entry ? col('entry_nb_visits') : col('nb_visits');
+    else if (p === 'users') v[p] = entry ? col('entry_nb_uniq_visitors', 'sum_daily_entry_nb_uniq_visitors') : col('nb_uniq_visitors', 'sum_daily_nb_uniq_visitors');
+    else if (p === 'pageviews') v[p] = col('nb_hits', 'nb_pageviews');
+    else if (p === 'engaged_sessions') v[p] = Math.max(0, entry ? col('entry_nb_visits') - col('entry_bounce_count') : col('nb_visits') - col('bounce_count'));
+    else if (p === 'conversions') v[p] = entry ? goals('nb_conversions_entry') : col('nb_conversions');
+    else if (p === 'revenue') v[p] = entry ? goals('revenue_entry') : col('revenue');
+    else if (p === 'transactions') v[p] = col('orders', 'nb_conversions');
+    else v[p] = Number.NaN;
   }
   return v;
 }
@@ -153,6 +166,8 @@ function rowValues(r: any, prims: string[]): Record<string, number> {
 export const matomoConnector: Connector = {
   id: 'matomo',
   unsupported: ['new_users', 'events', 'view_item', 'add_to_cart', 'begin_checkout'],
+  // Matomo has no source / medium pair; its channels and campaigns tables cover the same ground
+  unsupportedDimensions: ['source_medium'],
 
   async daily(ctx, prims, range): Promise<DailyData> {
     const plan = dailyPlan(prims);
@@ -188,13 +203,15 @@ export const matomoConnector: Connector = {
         const label = String(r.label ?? '').trim();
         if (dimension === 'country' && r.code) {
           const code = String(r.code).toUpperCase();
-          return { key: code, label: countryName(code, 'en') || label, values: rowValues(r, prims) };
+          return { key: code, label: countryName(code, 'en') || label, values: rowValues(r, prims, dimension) };
         }
-        return { key: label, label, values: rowValues(r, prims) };
+        return { key: label, label, values: rowValues(r, prims, dimension) };
       });
     }
     const sortBy = opts?.sortBy && prims.includes(opts.sortBy) ? opts.sortBy : prims[0];
-    rows.sort((a, b) => (b.values[sortBy] ?? 0) - (a.values[sortBy] ?? 0));
+    // a value Matomo does not report (NaN) sorts last
+    const rank = (r: BreakdownRow) => (Number.isFinite(r.values[sortBy]) ? r.values[sortBy] : -Number.MAX_VALUE);
+    rows.sort((a, b) => rank(b) - rank(a));
     return opts?.limit ? rows.slice(0, opts.limit) : rows;
   },
 
