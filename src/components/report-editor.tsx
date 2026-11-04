@@ -18,7 +18,10 @@ import { ImageSettings } from './widget-settings/image';
 import { ContainerSettings } from './widget-settings/container';
 import { CampaignScopeEditor } from './campaign-scope-editor';
 import { scopeSummary, type CampaignScope } from '@/lib/engine/campaigns';
-import { listCampaignsAction } from '@/app/actions/app';
+import { changeReportPeriodAction, listCampaignsAction } from '@/app/actions/app';
+import { useRouter } from 'next/navigation';
+import { PeriodControl } from './period-control';
+import { withoutStale, type ComparisonChoice } from '@/lib/services/period-rules';
 import { AnalyseAllButton, BlockAnalyseMenu } from './block-analyse';
 import { ICONS, ICON_NAMES } from './infographic';
 import { DEFAULT_ACCENT, GREY_FALLBACK, blockColorOf, blockVars, paletteFor, themeVars, withBlockColor } from '@/lib/layout/theme';
@@ -56,6 +59,8 @@ export interface EditorProps {
   customMetrics: { id: number; name: string; formula: string }[];
   /** analysis cards; the per-block ones render right after their block, in the editor as on the client link (spec v3 §4.4) */
   cards?: BodyCard[];
+  /** the project's time zone, for the period control's presets */
+  timezone?: string;
 }
 
 interface MetricDef {
@@ -129,10 +134,12 @@ export function ReportEditor(props: EditorProps) {
   const inflight = useRef(false);
   const queued = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const doSave = useCallback(async () => {
+  /** the layout the server has, so a flush knows whether anything is left to save */
+  const savedLayout = useRef(props.initialLayout);
+  const doSave = useCallback(async (): Promise<boolean> => {
     if (inflight.current) {
       queued.current = true;
-      return;
+      return true;
     }
     inflight.current = true;
     setSaveState('saving');
@@ -142,15 +149,35 @@ export function ReportEditor(props: EditorProps) {
     if (!r.ok) {
       setSaveState('error');
       setError(r.error);
-      return;
+      return false;
     }
+    savedLayout.current = snapshot;
     setError(null);
     setData(r.data);
     if (queued.current || latest.current !== snapshot) {
       queued.current = false;
       void doSave();
     } else setSaveState('saved');
+    return true;
   }, [reportId]);
+  /** Save now and wait until the server has the current layout (before a period change re-pulls from it). */
+  const flush = useCallback(async (): Promise<boolean> => {
+    clearTimeout(timer.current);
+    for (let i = 0; i < 600; i++) {
+      if (inflight.current) await new Promise((res) => setTimeout(res, 50));
+      else if (latest.current === savedLayout.current) return true;
+      else if (!(await doSave())) return false;
+    }
+    return latest.current === savedLayout.current;
+  }, [doSave]);
+  const router = useRouter();
+  const applyPeriod = async (input: { start: string; end: string; comparison: ComparisonChoice }): Promise<string | null> => {
+    if (!(await flush())) return t('editor.saveFailed');
+    const r = await changeReportPeriodAction({ reportId, ...input });
+    if (!r.ok) return r.error;
+    router.refresh();
+    return null;
+  };
   const schedule = useCallback(
     (delay: number) => {
       setSaveState((s) => (s === 'saving' ? s : 'dirty'));
@@ -323,7 +350,8 @@ export function ReportEditor(props: EditorProps) {
     const periodChanged = 'period' in patch && JSON.stringify(patch.period) !== JSON.stringify(w.custom?.period);
     const formulaChanged = 'formula' in patch;
     mutate((l) => mapWidget(l, id, (x) => {
-      const custom: WidgetCustom = { ...(x.custom ?? {}), ...patch };
+      // editing a text makes it current again: its "written for" note goes
+      const custom: WidgetCustom = { ...('html' in patch ? withoutStale(x.custom ?? {}) : (x.custom ?? {})), ...patch };
       for (const k of Object.keys(custom) as (keyof WidgetCustom)[]) if (custom[k] === undefined) delete custom[k];
       return { ...x, custom: Object.keys(custom).length ? custom : undefined };
     }), { coalesce: coalesce ? `${id}:${coalesce}` : undefined, immediate: periodChanged || formulaChanged });
@@ -382,6 +410,7 @@ export function ReportEditor(props: EditorProps) {
           <Redo2 size={14} />
         </button>
         <span className="mx-1 h-5 w-px bg-[var(--line)]" />
+        {kind === 'report' && !preview && <PeriodControl range={range} comparison={comparison} timezone={props.timezone ?? 'UTC'} onApply={applyPeriod} />}
         <AddBlockMenu sources={sources} onAdd={addBlock} />
         <button className="btn" onClick={() => setTemplateDialog((v) => !v)}>
           <LayoutTemplate size={14} /> {t('editor.saveAsTemplate')}
@@ -555,6 +584,11 @@ export function ReportEditor(props: EditorProps) {
                     return (
                       <div className={clsx('relative h-full', selected === w.id && 'ritem-selected', w.custom?.hidden && 'ritem-hidden')} data-kind={kindOf(w.component)} onClick={() => setSelected(w.id)}>
                         {rb ? <WidgetCard b={rb} fmt={fmt} brand={blockColor} palette={palette} grid /> : <div className="card h-full" />}
+                        {w.custom?.staleFor && (
+                          <div className="written-for no-print" data-written-for>
+                            {t('editor.writtenFor', { range: `${w.custom.staleFor.start} → ${w.custom.staleFor.end}` })}
+                          </div>
+                        )}
                         <div className="rtoolbar no-print" onClick={(e) => e.stopPropagation()}>
                           <button {...api.dragHandle} className="rtool-drag" aria-label={t('editor.dragToMove')}>
                             <GripVertical size={14} />

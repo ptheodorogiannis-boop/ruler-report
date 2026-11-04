@@ -19,7 +19,7 @@ import { db } from '@/lib/db';
 import { analyse, analyseBlock, aiConfigured } from '@/lib/ai/insights';
 import { TONE_LABEL, isTone, type Tone } from '@/lib/ai/tones';
 import { connectIntegration, refreshColumns } from '@/lib/services/integrations';
-import { withoutStale } from '@/lib/services/report-period';
+import { changeReportPeriod, withoutStale, type ComparisonChoice } from '@/lib/services/report-period';
 import { archiveReport, convertReport, createReport, deleteArchivedReport, duplicateReport, restoreReport } from '@/lib/services/reports';
 import { snapshotReport, liveDashboardData } from '@/lib/engine/report';
 import { createGoalsShare, setGoalsPassword, stopGoalsShare } from '@/lib/services/goals-share';
@@ -217,6 +217,20 @@ export async function convertReportAction(fd: FormData) {
   const r = await convertReport(Number(fd.get('id')), p.companyId, kind);
   revalidatePath(`/${r.kind === 'report' ? 'reports' : 'dashboards'}/${r.id}`);
   redirect(`/${r.kind === 'report' ? 'reports' : 'dashboards'}/${r.id}`);
+}
+/** The editor's period control (docs/superpowers/specs/2026-11-04-editor-report-management-design.md §2): new dates, re-pulled numbers, rewritten AI text. */
+export async function changeReportPeriodAction(input: { reportId: number; start: string; end: string; comparison: ComparisonChoice }): Promise<Result<{ rewritten: number; failed: number; stale: number }>> {
+  try {
+    const p = await writer();
+    const r = await db.report.findFirst({ where: { id: input.reportId, companyId: p.companyId } });
+    if (!r) throw new Error('Not found');
+    await assertProject(p, r.projectId);
+    const out = await changeReportPeriod(r.id, p.companyId, { start: input.start, end: input.end, comparison: input.comparison });
+    revalidatePath(`/reports/${r.id}`);
+    return { ok: true, ...out };
+  } catch (e) {
+    return fail(e);
+  }
 }
 export async function refreshReportAction(fd: FormData) {
   const p = await writer();

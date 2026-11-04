@@ -433,12 +433,21 @@ export interface BodyCard {
   title: string;
   html: string;
   blockId?: string;
+  author?: 'human' | 'ai';
+  /** writers only (the client link strips it): the period this text was written for */
+  staleFor?: { start: string; end: string };
 }
 export function AnalysisCardView({ c }: { c: BodyCard }) {
   return (
     <article className="card analysis-card p-6 md:p-7" data-analysis-card={c.id}>
       <h2 className="display mb-2 text-lg font-semibold">{c.title}</h2>
       <div className="analysis" dangerouslySetInnerHTML={{ __html: c.html }} />
+      {c.staleFor && (
+        <p className="written-for-inline no-print" data-written-for>
+          {tr('editor.writtenFor', { range: `${c.staleFor.start} → ${c.staleFor.end}` })}
+          {c.author === 'ai' && <> · {tr('editor.rewriteFailed')}</>}
+        </p>
+      )}
     </article>
   );
 }

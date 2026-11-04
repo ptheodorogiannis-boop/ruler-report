@@ -33,7 +33,7 @@ export async function InternalReport({ id, kind }: { id: number; kind: 'report' 
   if (write) await persistSeed(r, view);
   const { data, range, comparison } = view;
   const customMetrics = write ? (await db.customMetric.findMany({ where: { companyId: r.companyId, OR: [{ projectId: null }, { projectId: r.projectId }] }, orderBy: { name: 'asc' } })).map((m) => ({ id: m.id, name: m.name, formula: m.formula })) : [];
-  const cards: CardView[] = (((r.analysis as unknown as AnalysisCard[]) ?? []) as AnalysisCard[]).map((c) => ({ id: c.id, title: c.title, html: sanitizeHtml(c.html), raw: c.html, author: c.author, blockId: c.blockId, tone: c.tone }));
+  const cards: CardView[] = (((r.analysis as unknown as AnalysisCard[]) ?? []) as AnalysisCard[]).map((c) => ({ id: c.id, title: c.title, html: sanitizeHtml(c.html), raw: c.html, author: c.author, blockId: c.blockId, tone: c.tone, ...(write && c.staleFor ? { staleFor: c.staleFor } : {}) }));
   const timeline = await db.timelineEvent.findMany({ where: { projectId: r.projectId, date: { gte: range.start, lte: range.end } }, orderBy: { date: 'asc' } });
   // client questions asked on the shared link (spec §3), newest first
   const ai = aiConfigured();
@@ -226,7 +226,7 @@ export async function InternalReport({ id, kind }: { id: number; kind: 'report' 
           <>
             {/* writers edit in place, so the failed-source controls (spec v3 §1.3) sit above the editor */}
             {kind === 'report' && <SourceStatusList sources={data.sources} actions={{ reportId: r.id, projectId: r.projectId, retry: retrySourceAction }} />}
-          <ReportEditor reportId={r.id} kind={kind} title={r.title} clientName={r.project.name} dateFormat={r.project.dateFormat} brand={r.project.company.brandColor} initialLayout={view.layout} initialData={view.raw} sources={view.projectSources} currency={r.project.currency} range={range} comparison={comparison} fmt={fmt} customMetrics={customMetrics} cards={cards} />
+          <ReportEditor key={r.dataSyncedAt?.toISOString() ?? 'none'} timezone={r.project.timezone} reportId={r.id} kind={kind} title={r.title} clientName={r.project.name} dateFormat={r.project.dateFormat} brand={r.project.company.brandColor} initialLayout={view.layout} initialData={view.raw} sources={view.projectSources} currency={r.project.currency} range={range} comparison={comparison} fmt={fmt} customMetrics={customMetrics} cards={cards} />
           </>
         ) : (
           <div className="report-root" style={themeVars(data.theme, r.project.company.brandColor)}>

@@ -87,7 +87,7 @@ export async function PublicReport({ token, kind, embed, preset, compare, print,
   }
 
   const { data, range, comparison, updatedAt } = await reportView(r, { preset, compare });
-  const cards = ((r.analysis as unknown as AnalysisCard[]) ?? []).map((c) => ({ ...c, html: sanitizeHtml(c.html) }));
+  const cards = ((r.analysis as unknown as AnalysisCard[]) ?? []).map(({ staleFor: _s, ...c }) => ({ ...c, html: sanitizeHtml(c.html) }));
   const timeline = await db.timelineEvent.findMany({ where: { projectId: r.projectId, date: { gte: range.start, lte: range.end } }, orderBy: { date: 'asc' } });
   const df = r.project.dateFormat;
   const sources = data.sources;

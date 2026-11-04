@@ -18,6 +18,8 @@ export interface CardView {
   /** per-block cards (spec v3 §4.4) */
   blockId?: string;
   tone?: string;
+  /** writers only: the period this text was written for, after the report's period changed */
+  staleFor?: { start: string; end: string };
 }
 
 export function AnalysisPanel({ reportId, cards, editable }: { reportId: number; cards: CardView[]; editable: boolean }) {
@@ -112,6 +114,12 @@ export function AnalysisPanel({ reportId, cards, editable }: { reportId: number;
             )}
           </div>
           <div className="analysis" dangerouslySetInnerHTML={{ __html: c.html }} />
+          {editable && c.staleFor && (
+            <p className="written-for-inline no-print" data-written-for>
+              {t('editor.writtenFor', { range: `${c.staleFor.start} → ${c.staleFor.end}` })}
+              {c.author === 'ai' && <> · {t('editor.rewriteFailed')}</>}
+            </p>
+          )}
         </div>
       ))}
       {editing && (
