@@ -113,12 +113,14 @@ function compactFacts(data: ReportData) {
 
 export const aiConfigured = () => !!process.env.ANTHROPIC_API_KEY;
 
-async function claude(system: string, user: string, maxTokens = 1400): Promise<string> {
+/** One Messages call; with `timeoutMs` a slow answer is aborted and throws like any other failure. */
+async function claude(system: string, user: string, maxTokens = 1400, timeoutMs?: number): Promise<string> {
   // ANTHROPIC_BASE_URL lets tests and the mock server answer instead of the real API
   const res = await fetch(`${(process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/$/, '')}/v1/messages`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY!, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5', max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }] }),
+    ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {}),
   });
   if (!res.ok) throw new Error(`Anthropic API ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const j: any = await res.json();
@@ -139,13 +141,15 @@ output clean HTML using only <h3>, <h4>, <p>, <ul>, <li>, <strong>, <em>.`;
 const SYSTEM_ANALYST = `${SYSTEM_BASE} ${TONE_PROMPTS.general}
 Write in the language requested.`;
 
-export async function analyse(data: ReportData, projectName: string, opts: { language?: string; notes?: string; decimalSeparatorFormat?: string } = {}): Promise<{ html: string; ai: boolean }> {
+export async function analyse(data: ReportData, projectName: string, opts: { language?: string; notes?: string; decimalSeparatorFormat?: string; timeoutMs?: number } = {}): Promise<{ html: string; ai: boolean }> {
   numberFormat = opts.decimalSeparatorFormat;
   if (!aiConfigured()) return { html: heuristicAnalysis(data, projectName), ai: false };
   try {
     const html = await claude(
       SYSTEM_ANALYST,
-      `Client: ${projectName}\nPeriod: ${data.range.start} to ${data.range.end}${data.comparison ? ` vs ${data.comparison.start} to ${data.comparison.end}` : ''}\nLanguage: ${opts.language ?? 'English'}\n${opts.notes ? `Agency notes: ${opts.notes}\n` : ''}\nMetrics:\n${compactFacts(data)}`
+      `Client: ${projectName}\nPeriod: ${data.range.start} to ${data.range.end}${data.comparison ? ` vs ${data.comparison.start} to ${data.comparison.end}` : ''}\nLanguage: ${opts.language ?? 'English'}\n${opts.notes ? `Agency notes: ${opts.notes}\n` : ''}\nMetrics:\n${compactFacts(data)}`,
+      undefined,
+      opts.timeoutMs
     );
     return { html: html.replace(/^```html\s*|```$/g, '').trim(), ai: true };
   } catch (e) {
@@ -204,7 +208,7 @@ export function heuristicBlock(data: ReportData, blockId: string, tone: Tone, pr
 }
 
 /** Per-block AI analysis with a tone (spec v3 §4.4): facts of one section only; the heuristic fallback keeps the tone's shape. */
-export async function analyseBlock(data: ReportData, blockId: string, opts: { tone: Tone; language?: string; notes?: string; projectName: string; decimalSeparatorFormat?: string }): Promise<{ html: string; ai: boolean }> {
+export async function analyseBlock(data: ReportData, blockId: string, opts: { tone: Tone; language?: string; notes?: string; projectName: string; decimalSeparatorFormat?: string; timeoutMs?: number }): Promise<{ html: string; ai: boolean }> {
   numberFormat = opts.decimalSeparatorFormat;
   const sec = data.sections.find((s) => s.id === blockId);
   if (!aiConfigured()) return { html: heuristicBlock(data, blockId, opts.tone, opts.projectName), ai: false };
@@ -217,6 +221,7 @@ export async function analyseBlock(data: ReportData, blockId: string, opts: { to
       `${SYSTEM_BASE} ${TONE_PROMPTS[opts.tone]}\nWrite in the language requested.`,
       `Client: ${opts.projectName}\nBlock: ${sec?.title ?? blockId}\nPeriod: ${data.range.start} to ${data.range.end}${data.comparison ? ` vs ${data.comparison.start} to ${data.comparison.end}` : ''}\nLanguage: ${opts.language ?? 'English'}\n${opts.notes ? `Agency notes: ${opts.notes}\n` : ''}\nMetrics of this block only:\n${facts}`,
       900,
+      opts.timeoutMs
     );
     return { html: html.replace(/^\`\`\`html\s*|\`\`\`$/g, '').trim(), ai: true };
   } catch (e) {

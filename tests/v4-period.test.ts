@@ -232,3 +232,21 @@ test('rewritten AI text keeps the language the agency writes in', async () => {
   assert.equal(bodies.length, 2, 'one call per AI card');
   for (const b of bodies) assert.match(b.messages[0].content, /Language: Greek/);
 });
+
+test('a slow AI answer times out and counts as a failed rewrite; the period still changes', async () => {
+  const { changeReportPeriod } = await import('../src/lib/services/report-period');
+  const { company, report } = await setup();
+  delay = 600;
+  const t0 = Date.now();
+  try {
+    const res = await withStub(() => changeReportPeriod(report.id, company.id, { start: '2026-10-01', end: '2026-10-31', comparison: 'previous_period', aiTimeoutMs: 100 }));
+    assert.deepEqual({ rewritten: res.rewritten, failed: res.failed }, { rewritten: 0, failed: 2 });
+  } finally {
+    delay = 0;
+  }
+  assert.ok(Date.now() - t0 < 6000, 'did not wait for the slow answers');
+  const r = await db.report.findUniqueOrThrow({ where: { id: report.id } });
+  assert.equal(r.startDate, '2026-10-01');
+  const cards = r.analysis as unknown as AnalysisCard[];
+  assert.ok(cards.filter((c) => c.author === 'ai').every((c) => c.staleFor), 'kept and marked');
+});

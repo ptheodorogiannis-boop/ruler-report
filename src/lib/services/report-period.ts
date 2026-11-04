@@ -12,6 +12,26 @@ import { comparisonFor, realDay, withoutStale, type ComparisonChoice } from './p
 
 export { inferComparison, withoutStale, type ComparisonChoice } from './period-rules';
 
+/** One AI rewrite may take this long; a slower one keeps its text (with the old period). Four run at a time, so a report
+ *  with several AI cards stays inside the page's time limit (maxDuration on /reports/[id]). */
+const REWRITE_TIMEOUT_MS = 25_000;
+const REWRITE_CONCURRENCY = 4;
+
+/** `fn` over `items` with at most `n` running at once; results in input order. */
+async function mapLimit<T, R>(items: T[], n: number, fn: (t: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(n, items.length) }, async () => {
+      while (next < items.length) {
+        const i = next++;
+        out[i] = await fn(items[i]);
+      }
+    })
+  );
+  return out;
+}
+
 /** Every value of a snapshot, per account: the generated sections and the values added in the editor. */
 function valuesByIntegration(data: ReportData | null): Map<number, WidgetValue[]> {
   const out = new Map<number, WidgetValue[]>();
@@ -21,7 +41,7 @@ function valuesByIntegration(data: ReportData | null): Map<number, WidgetValue[]
   return out;
 }
 
-export async function changeReportPeriod(reportId: number, companyId: number, input: { start: string; end: string; comparison: ComparisonChoice; /** the language the agency writes AI text in (AI_LANGUAGES) */ language?: string }): Promise<{ rewritten: number; failed: number; stale: number }> {
+export async function changeReportPeriod(reportId: number, companyId: number, input: { start: string; end: string; comparison: ComparisonChoice; /** the language the agency writes AI text in (AI_LANGUAGES) */ language?: string; /** per AI call; tests use a short one */ aiTimeoutMs?: number }): Promise<{ rewritten: number; failed: number; stale: number }> {
   const r = await db.report.findFirst({ where: { id: reportId, companyId }, include: { project: true } });
   if (!r) throw new Error('Not found');
   if (r.archivedAt) throw new Error('Restore the report first');
@@ -49,30 +69,33 @@ export async function changeReportPeriod(reportId: number, companyId: number, in
   const view = (await reportView({ ...next, data: snapshot as any })).data;
   // rewritten text keeps the agency's language (a Greek report stays Greek); anything unknown falls back to English
   const language = AI_LANGUAGES.find((l) => l === input.language) ?? 'English';
-  const opts = { projectName: r.project.name, decimalSeparatorFormat: r.project.decimalSeparatorFormat, language };
+  const opts = { projectName: r.project.name, decimalSeparatorFormat: r.project.decimalSeparatorFormat, language, timeoutMs: input.aiTimeoutMs ?? REWRITE_TIMEOUT_MS };
   let rewritten = 0;
   let failed = 0;
   let stale = 0;
-  const cards: AnalysisCard[] = [];
-  for (const c of (r.analysis as unknown as AnalysisCard[] | null) ?? []) {
+  const rewrite = (c: AnalysisCard) =>
+    c.author !== 'ai'
+      ? Promise.resolve(null)
+      : c.blockId
+        ? view.sections.some((sec) => sec.id === c.blockId)
+          ? analyseBlock(view, c.blockId, { tone: c.tone ?? 'general', ...opts })
+          : Promise.resolve(null)
+        : analyse(view, r.project.name, { decimalSeparatorFormat: opts.decimalSeparatorFormat, language, timeoutMs: opts.timeoutMs });
+  const prior = (r.analysis as unknown as AnalysisCard[] | null) ?? [];
+  const answers = await mapLimit(prior, REWRITE_CONCURRENCY, rewrite);
+  const cards: AnalysisCard[] = prior.map((c, i) => {
+    const a = answers[i];
     if (c.author !== 'ai') {
       stale++;
-      cards.push({ ...c, staleFor: c.staleFor ?? old });
-      continue;
+      return { ...c, staleFor: c.staleFor ?? old };
     }
-    const a = c.blockId
-      ? view.sections.some((s) => s.id === c.blockId)
-        ? await analyseBlock(view, c.blockId, { tone: c.tone ?? 'general', ...opts })
-        : null
-      : await analyse(view, r.project.name, { decimalSeparatorFormat: opts.decimalSeparatorFormat, language });
     if (a?.ai) {
       rewritten++;
-      cards.push({ ...withoutStale(c), html: a.html, updatedAt: new Date().toISOString() });
-    } else {
-      failed++;
-      cards.push({ ...c, staleFor: c.staleFor ?? old });
+      return { ...withoutStale(c), html: a.html, updatedAt: new Date().toISOString() };
     }
-  }
+    failed++;
+    return { ...c, staleFor: c.staleFor ?? old };
+  });
 
   // 4. text widgets in the layout are a person's text: kept, marked with the period they were written for
   const layout = r.layout as unknown as ReportLayout | null;
