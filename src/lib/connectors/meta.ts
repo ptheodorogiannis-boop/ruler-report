@@ -131,35 +131,56 @@ function groupMetaRows(rows: any[], field: string, idField: string | undefined, 
   return groupRows(rows, field, idField, prims).map(({ key, label, values }) => ({ key, label, values }));
 }
 
-/** Objects by id, ≤ 50 ids a call; an id that cannot be read (deleted, no access) is simply missing from the answer. */
+/**
+ * Objects by id through the Graph Batch API: one POST of up to 50 reads, each answered on its own, so an id that cannot be
+ * read (deleted, no access) is simply missing from the answer. Graph v26.0 withdrew the ?ids= multi-read. A refused batch
+ * falls back to single reads. Failures are logged with Graph's message only (never an address: it would hold the token).
+ */
 async function byIds(ctx: any, ids: string[], fields: string, extra: Record<string, string> = {}): Promise<Record<string, any>> {
   const token = ctx.integration.credentials?.accessToken;
+  const query = new URLSearchParams({ fields, ...extra }).toString();
   const out: Record<string, any> = {};
   for (let i = 0; i < ids.length; i += 50) {
-    const batch = ids.slice(i, i + 50);
-    const qs = new URLSearchParams({ ids: batch.join(','), fields, ...extra, access_token: token });
+    const chunk = ids.slice(i, i + 50);
+    const body = new URLSearchParams({ access_token: token, include_headers: 'false', batch: JSON.stringify(chunk.map((id) => ({ method: 'GET', relative_url: `${encodeURIComponent(id)}?${query}` }))) });
+    let answers: { code?: number; body?: string }[] | null = null;
     try {
-      Object.assign(out, await fetchJson<Record<string, any>>(`${endpoints.meta.graph}/?${qs}`));
+      answers = await fetchJson<{ code?: number; body?: string }[]>(`${endpoints.meta.graph}/`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body });
     } catch (e) {
-      // the rows keep no type / no image, so say why in the logs (Graph's message only: never the address, which holds the token)
-      const why = String((e as Error)?.message ?? e);
-      console.warn(`meta: reading ${fields} for ${batch.length} id(s) failed: ${why}`);
-      // Graph refuses the whole call when one id cannot be read (a deleted ad set, no access): ask the others one by one
-      if (batch.length < 2 || !/\(#(100|803)\)/.test(why)) continue;
-      let lost = 0;
-      for (let j = 0; j < batch.length; j += 5) {
+      console.warn(`meta: reading ${fields} for ${chunk.length} id(s) as a batch failed: ${String((e as Error)?.message ?? e)}`);
+    }
+    let lost = 0;
+    let why = '';
+    if (Array.isArray(answers)) {
+      chunk.forEach((id, k) => {
+        const a = answers![k];
+        try {
+          if (a?.code === 200 && a.body) {
+            out[id] = JSON.parse(a.body);
+            return;
+          }
+          why ||= JSON.parse(a?.body ?? '{}')?.error?.message ?? '';
+        } catch {
+          /* an unreadable entry counts as lost */
+        }
+        lost++;
+      });
+    } else {
+      // the batch itself was refused: single reads, 5 at a time
+      for (let j = 0; j < chunk.length; j += 5) {
         await Promise.all(
-          batch.slice(j, j + 5).map(async (id) => {
+          chunk.slice(j, j + 5).map(async (id) => {
             try {
-              out[id] = await fetchJson(`${endpoints.meta.graph}/${encodeURIComponent(id)}?${new URLSearchParams({ fields, ...extra, access_token: token })}`);
-            } catch {
+              out[id] = await fetchJson(`${endpoints.meta.graph}/${encodeURIComponent(id)}?${query}&${new URLSearchParams({ access_token: token })}`);
+            } catch (e) {
+              why ||= String((e as Error)?.message ?? e);
               lost++;
             }
           }),
         );
       }
-      if (lost) console.warn(`meta: ${lost} of ${batch.length} id(s) could not be read one by one either (${fields})`);
     }
+    if (lost) console.warn(`meta: ${lost} of ${chunk.length} id(s) could not be read (${fields})${why ? `: ${why}` : ''}`);
   }
   return out;
 }

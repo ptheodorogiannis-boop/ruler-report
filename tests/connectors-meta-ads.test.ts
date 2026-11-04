@@ -13,9 +13,10 @@ import { tFor } from '../src/lib/i18n';
 const savedGraph = endpoints.meta.graph;
 let server: http.Server;
 const idsCalls: { ids: string[]; fields: string; width?: string | null }[] = [];
+let batchFails = false; // the Batch API call itself is refused
 const oneCalls: string[] = [];
 let sizedFails = false; // Meta refuses the creatives call that asks for a sized thumbnail
-let withGone = false; // an ad whose ad set was deleted: Graph refuses a whole ?ids= call that names it
+let withGone = false; // an ad whose ad set was deleted: its batch entry fails, the others answer
 let manyAds = 0; // > 0: the insights answer that many ads instead of the fixture
 const range = { start: '2026-10-01', end: '2026-10-31' };
 const ctx = { integration: { id: 1, slug: 'facebook_ads', name: 'Acme', sourceId: 'act_100200300400', config: {}, credentials: { accessToken: 'EAA-test' } } };
@@ -50,9 +51,7 @@ before(async () => {
   server = http.createServer((req, res) => {
     const u = new URL(req.url!, 'http://x');
     const send = (body: unknown) => res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(body));
-    const fail = () => res.writeHead(400, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { message: '(#100) Some of the aliases you requested do not exist: gone', code: 100 } }));
-    const width = u.searchParams.get('thumbnail_width');
-    const node = (id: string, fields: string): unknown => {
+    const node = (id: string, fields: string, width: string | null): unknown => {
       // the one-call form: an ad's creative with its images expanded
       if (fields.startsWith('creative{')) {
         const a = CREATIVES[id] as { creative?: { id: string } } | undefined;
@@ -66,24 +65,39 @@ before(async () => {
       }
       return manyAds ? ADSETS.s1 : ADSETS[id];
     };
-    if (u.pathname === '/' && u.searchParams.get('ids')) {
-      const ids = u.searchParams.get('ids')!.split(',');
-      const fields = u.searchParams.get('fields') ?? '';
-      idsCalls.push({ ids, fields, width });
-      if (ids.includes('gone')) return fail();
-      if (sizedFails && width) return res.writeHead(400, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { message: '(#100) Param thumbnail_width is not supported here', code: 100 } }));
-      const out: Record<string, unknown> = {};
-      for (const id of ids) {
-        const n = node(id, fields);
-        if (n) out[id] = n;
-      }
-      return send(out);
-    }
+    // Graph v26.0+: the multi-id read is gone, as production answered it
+    if (u.pathname === '/' && u.searchParams.get('ids')) return res.writeHead(500, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { message: 'The ids query parameter is deprecated in v26.0+.', code: 1 } }));
+    // the Batch API: one POST, up to 50 reads, each answered on its own (a deleted object fails only its own entry)
+    if (u.pathname === '/' && req.method === 'POST' && batchFails) return res.writeHead(500, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { message: 'Batch requests are not available', code: 1 } }));
+    // a single object read, which every Graph version keeps
     const one = /^\/([A-Za-z0-9_-]+)$/.exec(u.pathname);
-    if (one && u.searchParams.get('fields') && !u.searchParams.get('level')) {
+    if (one && req.method === 'GET' && u.searchParams.get('fields') && !u.searchParams.get('level')) {
       oneCalls.push(one[1]);
-      const n = one[1] === 'gone' || (sizedFails && width) ? null : node(one[1], u.searchParams.get('fields')!);
-      return n ? send(n) : fail();
+      const n = one[1] === 'gone' ? null : node(one[1], u.searchParams.get('fields')!, u.searchParams.get('thumbnail_width'));
+      return n ? send(n) : res.writeHead(400, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { message: `(#100) Object with ID '${one[1]}' does not exist`, code: 100 } }));
+    }
+    if (u.pathname === '/' && req.method === 'POST') {
+      let raw = '';
+      req.on('data', (c) => (raw += c));
+      req.on('end', () => {
+        const form = new URLSearchParams(raw);
+        if (form.get('access_token') !== 'EAA-test') return res.writeHead(400).end('{}');
+        const items = JSON.parse(form.get('batch') ?? '[]') as { method: string; relative_url: string }[];
+        const reads = items.map((it) => {
+          const r = new URL(`/${it.relative_url}`, 'http://x');
+          return { id: r.pathname.slice(1), fields: r.searchParams.get('fields') ?? '', width: r.searchParams.get('thumbnail_width') };
+        });
+        idsCalls.push({ ids: reads.map((r) => r.id), fields: reads[0]?.fields ?? '', width: reads[0]?.width ?? null });
+        const err = (message: string) => ({ code: 400, body: JSON.stringify({ error: { message, code: 100 } }) });
+        send(
+          reads.map((r) => {
+            if (sizedFails && r.width) return err('(#100) Param thumbnail_width is not supported here');
+            const n = r.id === 'gone' ? null : node(r.id, r.fields, r.width);
+            return n ? { code: 200, body: JSON.stringify(n) } : err(`(#100) Object with ID '${r.id}' does not exist`);
+          }),
+        );
+      });
+      return;
     }
     const level = u.searchParams.get('level');
     if (level === 'ad') {
@@ -185,9 +199,9 @@ test('campaign level is unchanged: no id lookups', async () => {
   assert.equal(idsCalls.length, 0);
 });
 
-test('one deleted ad set: Graph refuses the whole batch, the other ids are asked one by one and keep their result type', async () => {
+test('one deleted ad set: only its own batch entry fails; the other ad sets keep their result type', async () => {
   withGone = true;
-  oneCalls.length = 0;
+  idsCalls.length = 0;
   try {
     const rows = await metaConnector.breakdown(ctx, 'ad', ['spend', 'results'], range);
     const by = Object.fromEntries(rows.map((r) => [r.key, r]));
@@ -195,7 +209,9 @@ test('one deleted ad set: Graph refuses the whole batch, the other ids are asked
     assert.equal(by.a1.values.results, 12);
     assert.equal(by.a3.resultType, 'offsite_conversion.fb_pixel_purchase');
     assert.equal(by.a5.resultType, null, 'the deleted one has none');
-    assert.ok(oneCalls.includes('s1') && oneCalls.includes('gone'));
+    const sets = idsCalls.filter((c) => c.fields === 'optimization_goal,promoted_object');
+    assert.equal(sets.length, 1, 'one batch for the ad sets, the deleted one included');
+    assert.ok(sets[0].ids.includes('gone') && sets[0].ids.includes('s1'));
   } finally {
     withGone = false;
   }
@@ -218,5 +234,29 @@ test('when Meta refuses the sized thumbnail call, the images come from the one-c
   } finally {
     console.warn = warn;
     sizedFails = false;
+  }
+});
+
+test('Graph v26 has no ?ids= read: lookups go through one Batch API call per 50 ids, and one by one if a batch is refused', async () => {
+  idsCalls.length = 0;
+  const rows = await metaConnector.breakdown(ctx, 'ad', ['spend', 'results'], range);
+  assert.ok(idsCalls.length >= 3, 'ad sets, ads, creatives: one batch each');
+  assert.equal(rows.find((r) => r.key === 'a1')!.thumb, 'https://cdn.example/a1-thumb.jpg?w=240');
+  batchFails = true;
+  oneCalls.length = 0;
+  const warned: string[] = [];
+  const warn = console.warn;
+  console.warn = (...a: unknown[]) => void warned.push(a.map(String).join(' '));
+  try {
+    const again = await metaConnector.breakdown(ctx, 'ad', ['spend', 'results'], range);
+    const by = Object.fromEntries(again.map((r) => [r.key, r]));
+    assert.equal(by.a1.thumb, 'https://cdn.example/a1-thumb.jpg?w=240');
+    assert.equal(by.a1.resultType, 'offsite_conversion.fb_pixel_add_to_cart');
+    assert.ok(oneCalls.includes('a1') && oneCalls.includes('c1') && oneCalls.includes('s1'));
+    assert.ok(warned.some((w) => /Batch requests are not available/.test(w)), warned.join(' | '));
+    assert.ok(warned.every((w) => !/EAA-test/.test(w)));
+  } finally {
+    console.warn = warn;
+    batchFails = false;
   }
 });
