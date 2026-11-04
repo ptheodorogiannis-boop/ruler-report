@@ -17,6 +17,7 @@ import { compareNeeds } from '@/lib/layout/compare';
 import { mapRefs } from '@/lib/layout/map';
 import { tokenRefs } from '@/lib/layout/tokens';
 import { resolveContainer } from '@/lib/layout/container';
+import { keepThumbnails } from '@/lib/media/thumbs';
 import { connectorFor } from '@/lib/connectors';
 
 export function toCtx(row: Integration, project: Pick<Project, 'currency'>): IntegrationCtx {
@@ -446,8 +447,9 @@ export async function snapshotReport(report: ReportFull): Promise<ReportData> {
   const range = { start: report.startDate, end: report.endDate };
   const data = await generateReportData({ project: report.project, integrations, sections, range, comparison, customMetrics, campaignScopes });
   const layout = layoutOf(report);
-  if (!layout) return data;
-  return (await ensureWidgetValues({ layout, data, project: report.project, integrations, customMetrics, range, comparison })).data;
+  const full = layout ? (await ensureWidgetValues({ layout, data, project: report.project, integrations, customMetrics, range, comparison })).data : data;
+  // a frozen report keeps its own copy of ad and post images (their platform links expire); live dashboards do not
+  return keepThumbnails(full, report.companyId);
 }
 
 const liveCache = new Map<string, { at: number; data: ReportData }>();

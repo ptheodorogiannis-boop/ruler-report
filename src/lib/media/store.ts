@@ -85,6 +85,7 @@ export async function deleteMedia(id: string, companyId: number): Promise<boolea
 
 /** The company's recent uploads; `kind` keeps the image pickers to images and the PDF picker to PDFs. */
 export async function listMedia(companyId: number, take = 24, kind: 'image' | 'pdf' = 'image') {
-  const rows = await db.media.findMany({ where: { companyId, mime: kind === 'pdf' ? 'application/pdf' : { not: 'application/pdf' } }, orderBy: { createdAt: 'desc' }, take, omit: { data: true } });
+  // row images kept for report snapshots (src/lib/media/thumbs.ts) are not the agency's uploads
+  const rows = await db.media.findMany({ where: { companyId, mime: kind === 'pdf' ? 'application/pdf' : { not: 'application/pdf' }, NOT: { name: { startsWith: 'creative-thumb:' } } }, orderBy: { createdAt: 'desc' }, take, omit: { data: true } });
   return rows.map((r) => ({ id: r.id, url: mediaUrl(r.id), name: r.name, mime: r.mime, size: r.size, width: r.width, height: r.height, createdAt: r.createdAt.toISOString() }));
 }
