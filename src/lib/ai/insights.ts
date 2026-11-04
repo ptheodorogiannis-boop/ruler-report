@@ -5,6 +5,7 @@ import { formatValue } from '@/lib/util/format';
 import { type Tone } from './tones';
 import { t, type Locale } from '@/lib/i18n';
 import { countryName } from '@/lib/geo/countries';
+import { isAdsSlug } from '@/lib/catalog/integrations';
 export { TONES, TONE_LABEL, type Tone } from './tones';
 
 interface Fact {
@@ -324,8 +325,12 @@ export async function askClient(data: ReportData, projectName: string, question:
   }
 }
 
-/** Up to three questions the report can answer, built from its own metrics (no AI), in the link's language. */
-export function suggestedQuestions(data: ReportData, locale: Locale): string[] {
+/**
+ * Up to three questions the report can answer, built from its own metrics (no AI), in the reader's language. The client
+ * link asks about results; the agency ("Ask your data" in the editor) first gets the best ad, when there is an ads source,
+ * and what to tell the client (docs/superpowers/specs/2026-11-04-editor-report-management-design.md §6).
+ */
+export function suggestedQuestions(data: ReportData, locale: Locale, audience: 'client' | 'agency' = 'client'): string[] {
   const blocks = (data.sections ?? []).flatMap((s) => s.blocks);
   const has = (kind: 'number' | 'chart', re: RegExp) => blocks.some((b) => b.widget.value.type === kind && re.test(`${b.widget.key} ${b.widget.label}`));
   const out: string[] = [];
@@ -334,6 +339,8 @@ export function suggestedQuestions(data: ReportData, locale: Locale): string[] {
   if (has('chart', /(sessions|visits|users)_by_channel/i)) out.push(t(locale, 'ask.qChannel'));
   else if (has('chart', /(sessions|visits|users)_by_country/i) || blocks.some((b) => b.widget.value.type === 'map')) out.push(t(locale, 'ask.qCountry'));
   out.push(t(locale, 'ask.qChanged'));
-  return out.slice(0, 3);
+  if (audience === 'client') return out.slice(0, 3);
+  const agency = [...(blocks.some((b) => isAdsSlug(b.slug)) ? [t(locale, 'ask.qBestAd')] : []), t(locale, 'ask.qTellClient')];
+  return [...new Set([...agency, ...out])].slice(0, 3);
 }
 

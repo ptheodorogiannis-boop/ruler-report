@@ -10,7 +10,7 @@ import { ReportEditor } from '@/components/report-editor';
 import { RulerBand } from '@/components/ruler-band';
 import { AnalysisPanel, type CardView } from '@/components/analysis-panel';
 import { AskBox } from '@/components/ask-box';
-import { aiConfigured } from '@/lib/ai/insights';
+import { aiConfigured, suggestedQuestions } from '@/lib/ai/insights';
 import { ConfirmButton, CopyButton, PrintButton } from '@/components/action-form';
 import { archiveReportAction, convertReportAction, duplicateReportAction, restoreReportAction, emailReportAction, refreshReportAction, retrySourceAction, updateDashboardPresetAction, updateShareAction } from '@/app/actions/app';
 import { canWrite, requirePrincipal } from '@/lib/auth';
@@ -23,7 +23,7 @@ import { PRESET_LABEL, formatDisplayDate, today, type Preset } from '@/lib/util/
 import { sanitizeHtml } from '@/lib/util/sanitize';
 
 export async function InternalReport({ id, kind }: { id: number; kind: 'report' | 'dashboard' }) {
-  const { t } = await getT();
+  const { t, locale } = await getT();
   const p = await requirePrincipal();
   const r = await db.report.findFirst({ where: { id, kind, companyId: p.companyId, ...(p.projectIds ? { projectId: { in: p.projectIds } } : {}) }, include: { project: { include: { company: true } }, template: true } });
   if (!r) notFound();
@@ -249,7 +249,7 @@ export async function InternalReport({ id, kind }: { id: number; kind: 'report' 
             </ol>
           </section>
         )}
-        <AskBox reportId={r.id} />
+        <AskBox reportId={r.id} suggestions={suggestedQuestions(data, locale, 'agency')} />
       </div>
     </AppShell>
   );

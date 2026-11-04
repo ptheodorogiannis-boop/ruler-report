@@ -119,6 +119,18 @@ test('suggested questions: built from the report\'s own metrics, at most three, 
   assert.deepEqual(suggestedQuestions(reportData([]), 'en'), ['What changed most since the last period?']);
 });
 
+test("suggested questions for the agency (Ask your data): the best ad when there is an ads source, what to tell the client, then the client's own", async () => {
+  const { suggestedQuestions } = await import('../src/lib/ai/insights');
+  const ads: RenderedBlock = { ...num('spend', 'Spend', 120), slug: 'facebook_ads', platform: 'Meta Ads' };
+  const withAds = reportData([ads, num('leads', 'Leads', 42)]);
+  assert.deepEqual(suggestedQuestions(withAds, 'en', 'agency'), ['Which ad performed best?', 'What should I tell the client this month?', 'How many leads did I get?']);
+  assert.deepEqual(suggestedQuestions(reportData([num('leads', 'Leads', 42)]), 'en', 'agency'), ['What should I tell the client this month?', 'How many leads did I get?', 'What changed most since the last period?']);
+  assert.ok(suggestedQuestions(withAds, 'el', 'agency').every((q) => /[α-ω]/i.test(q)), 'Greek');
+  // the client's list is unchanged by the agency set
+  assert.deepEqual(suggestedQuestions(withAds, 'en'), suggestedQuestions(withAds, 'en', 'client'));
+  assert.deepEqual(suggestedQuestions(withAds, 'en'), ['How many leads did I get?', 'What changed most since the last period?']);
+});
+
 test('client Ask tile: shown only when the report switches it on and the server has a key; it carries the suggested questions', async () => {
   const { clientAskTile } = await import('../src/lib/services/client-ask');
   const data = reportData([num('leads', 'Leads', 42)]);
