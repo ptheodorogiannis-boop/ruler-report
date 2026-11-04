@@ -59,6 +59,22 @@
   --scrim-mid: rgba(14, 14, 14, 0.38);
   --print-paper: #ffffff;
   --print-line: #d8d8d6;
+  /* inside grey and dark tiles (Quantix tones): feedback, lines and muted bars that read on dark */
+  --on-dark-up: #6fbf8b;
+  --on-dark-down: #ff8a84;
+  --on-dark-grid: rgba(255, 255, 255, 0.08);
+  --on-dark-line-strong: rgba(255, 255, 255, 0.28);
+  --on-dark-bar: rgba(255, 255, 255, 0.22);
+  /* the light values again, for printing a dark tile on paper */
+  --light-ink: #0e0e0e;
+  --light-ink-2: #333332;
+  --light-ink-3: #575756;
+  --light-paper: rgba(14, 14, 14, 0.05);
+  --light-up: #166534;
+  --light-down: #a80100;
+  --light-grid: rgba(14, 14, 14, 0.07);
+  --light-bar: #c5c5c3;
+  --bar-muted: var(--light-bar);
   /* legacy names, re-pointed */
   --paper: rgba(14, 14, 14, 0.05); /* a quiet fill inside a tile: chips, tracks, hover rows */
   --card: var(--glass);
@@ -2884,6 +2900,10 @@ html[data-rr-drag] .newblock-drop {
   padding: 12px 12px 12px 16px;
   border-bottom: 1px solid var(--line);
 }
+/* the dialog has its own close button; the browser's clear cross would be a second one */
+.search-input::-webkit-search-cancel-button {
+  display: none;
+}
 .search-input {
   flex: 1;
   min-width: 0;
@@ -2942,11 +2962,11 @@ html[data-rr-drag] .newblock-drop {
  * they stay readable on the dark ground; the sticky table head takes the tile's own colour. */
 .tone-smoke,
 .tone-solid {
-  --up: #6fbf8b;
-  --down: #ff8a84;
-  --grid-line: rgba(255, 255, 255, 0.08);
-  --line-strong: rgba(255, 255, 255, 0.28);
-  --bar-muted: rgba(255, 255, 255, 0.22);
+  --up: var(--on-dark-up);
+  --down: var(--on-dark-down);
+  --grid-line: var(--on-dark-grid);
+  --line-strong: var(--on-dark-line-strong);
+  --bar-muted: var(--on-dark-bar);
 }
 .tone-smoke {
   --card: var(--smoke-solid);
@@ -2954,11 +2974,11 @@ html[data-rr-drag] .newblock-drop {
 .tone-solid {
   --card: var(--solid);
 }
-:root {
-  --bar-muted: #c5c5c3;
-}
 .bar-muted {
   fill: var(--bar-muted);
+}
+.bar-lead-light {
+  fill: var(--ink);
 }
 .tone-smoke .caliper-prev,
 .tone-solid .caliper-prev {
@@ -2975,16 +2995,16 @@ html[data-rr-drag] .newblock-drop {
     background: var(--print-paper) !important;
     border-color: var(--print-line) !important;
     color: var(--ink) !important;
-    --ink: #0e0e0e;
-    --ink-2: #333332;
-    --ink-3: #575756;
+    --ink: var(--light-ink);
+    --ink-2: var(--light-ink-2);
+    --ink-3: var(--light-ink-3);
     --line: var(--print-line);
-    --paper: rgba(14, 14, 14, 0.05);
+    --paper: var(--light-paper);
     --card: var(--print-paper);
-    --up: #166534;
-    --down: #a80100;
-    --grid-line: rgba(14, 14, 14, 0.07);
-    --bar-muted: #c5c5c3;
+    --up: var(--light-up);
+    --down: var(--light-down);
+    --grid-line: var(--light-grid);
+    --bar-muted: var(--light-bar);
   }
 }
 

@@ -36,7 +36,8 @@ test('map: the editor offers a Map block with "by country" metrics; on the clien
     await panel.waitFor();
     await panel.locator('select[aria-label="Account"]').first().selectOption(String(ga4.id));
     const metric = panel.locator('select[aria-label="Metric"]').first();
-    await page.waitForFunction((el) => (el as HTMLSelectElement).options.length > 1, await metric.elementHandle());
+    // the list reloads for the picked account: wait for GA4's own entries, not the previous account's
+    await page.waitForFunction((el) => [...(el as HTMLSelectElement).options].some((o) => o.textContent === 'Sessions by country'), await metric.elementHandle());
     const options = await metric.locator('option').allTextContents();
     assert.ok(options.includes('Sessions by country') && options.includes('Conversions by country'), options.join(', '));
     assert.ok(!options.includes('Sessions'), 'only "by country" metrics');

@@ -6,7 +6,7 @@ import type { WidgetCustom } from '@/lib/layout/types';
 import { formatValue, type FormatOpts } from '@/lib/util/format';
 import { getIntegrationDef } from '@/lib/catalog/integrations';
 import { PlatformIcon } from './platform-icon';
-import { GREY_FALLBACK, blockColorOf, blockVars, paletteFor } from '@/lib/layout/theme';
+import { GREY_FALLBACK, blockColorOf, blockVars, luminance, paletteFor } from '@/lib/layout/theme';
 import type { ReportTheme } from '@/lib/layout/types';
 import { CategoryChart, TimeChart } from './charts-lazy';
 import { ImageCard } from './image-card';
@@ -127,6 +127,8 @@ function ChartCard({ b, fmt, brand, grid, palette, events, tone }: CardProps) {
   const kind = c.chartType === 'bar' || c.chartType === 'stacked' || c.chartType === 'area' ? c.chartType : 'line';
   const colors = seriesColors(c.series, palette); // colours chosen per series in the panel, else the report palette
   const first = c.series?.[0]?.color ?? brand;
+  // on a dark tile a near-black block colour would hide the leading bar: it takes the tile's light ink instead
+  const leadOnDark = tone === 'solid' && luminance(colors?.[0] ?? first ?? '#000000') < 0.06;
   return (
     <div className={clsx('card flex flex-col p-4', tone && TONE_CLASS[tone], grid && 'h-full overflow-hidden')} title={w.description}>
       <div className="mb-2 flex items-baseline justify-between gap-2">
@@ -137,9 +139,9 @@ function ChartCard({ b, fmt, brand, grid, palette, events, tone }: CardProps) {
         {v.labels.length === 0 ? (
           <div className="py-10 text-center text-sm text-slate-400">{tr('public.noData')}</div>
         ) : isTime ? (
-          <TimeChart labels={v.labels} series={v.series} seriesLabels={v.seriesLabels ?? []} format={w.format} opts={o} comparison={v.comparison?.series} color={first} fill={grid} kind={kind} palette={colors} events={events} highlight={tone === 'solid' ? (c.groupBy === 'month' ? 'last' : 'max') : undefined} />
+          <TimeChart labels={v.labels} series={v.series} seriesLabels={v.seriesLabels ?? []} format={w.format} opts={o} comparison={v.comparison?.series} color={first} fill={grid} kind={kind} palette={colors} events={events} highlight={tone === 'solid' ? (c.groupBy === 'month' ? 'last' : 'max') : undefined} leadOnDark={leadOnDark} />
         ) : (
-          <CategoryChart labels={v.labels} series={v.series} seriesLabels={v.seriesLabels ?? []} format={w.format} opts={o} pie={pie} donut={c.chartType === 'donut'} stacked={c.chartType === 'stacked'} fill={grid} palette={colors} highlight={tone === 'solid' ? 'max' : undefined} />
+          <CategoryChart labels={v.labels} series={v.series} seriesLabels={v.seriesLabels ?? []} format={w.format} opts={o} pie={pie} donut={c.chartType === 'donut'} stacked={c.chartType === 'stacked'} fill={grid} palette={colors} highlight={tone === 'solid' ? 'max' : undefined} leadOnDark={leadOnDark} />
         )}
       </div>
     </div>

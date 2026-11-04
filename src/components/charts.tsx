@@ -34,6 +34,8 @@ interface Props {
   events?: { date: string; title: string }[];
   /** dark (solid) tiles: one bar in the series colour, the rest neutral; the largest, or the last month */
   highlight?: 'max' | 'last';
+  /** the series colour is too dark for a dark tile: the leading bar takes the tile's light ink instead */
+  leadOnDark?: boolean;
 }
 
 /** The bar that takes the colour: the last bucket of a chart grouped by month, else the largest value; -1 when empty. */
@@ -47,7 +49,7 @@ export function leadingIndex(values: number[], labels: string[], groupBy?: strin
   return at;
 }
 /** One cell per bar: the leading one coloured, the rest muted (fill is overridden by .bar-muted in globals.css). */
-const leadCells = (values: number[], lead: number, color: string) => values.map((_, j) => <Cell key={j} fill={color} className={j === lead ? undefined : 'bar-muted'} />);
+const leadCells = (values: number[], lead: number, color: string, onDark?: boolean) => values.map((_, j) => <Cell key={j} fill={color} className={j === lead ? (onDark ? 'bar-lead-light' : undefined) : 'bar-muted'} />);
 
 /** The label an event falls on: its own date, or the bucket it belongs to when the chart is grouped by week or month. */
 export function eventLabel(labels: string[], date: string): string | null {
@@ -63,7 +65,7 @@ export function eventLabel(labels: string[], date: string): string | null {
 const shortDate = (l: string) => (/^\d{4}-\d{2}-\d{2}$/.test(l) ? `${l.slice(8, 10)}/${l.slice(5, 7)}` : l);
 const box = (fill?: boolean) => (fill ? { width: '100%', height: '100%', minHeight: 120 } : { width: '100%', height: 220 });
 
-export function TimeChart({ labels, series, seriesLabels, format, opts, comparison, color, fill, kind, palette, events, highlight }: Props) {
+export function TimeChart({ labels, series, seriesLabels, format, opts, comparison, color, fill, kind, palette, events, highlight, leadOnDark }: Props) {
   const anim = !still();
   const pal = palette ?? PALETTE;
   const data = labels.map((l, i) => {
@@ -98,7 +100,7 @@ export function TimeChart({ labels, series, seriesLabels, format, opts, comparis
             {comparison && !multi && <Bar isAnimationActive={anim} dataKey="c0" name="Previous period" fill={COMPARE} radius={[3, 3, 0, 0]} />}
             {series.map((_, i) => (
               <Bar isAnimationActive={anim} key={i} dataKey={`s${i}`} name={seriesLabels[i]} stackId={kind === 'stacked' ? 's' : undefined} fill={multi ? pal[i % pal.length] : brand} radius={kind === 'stacked' && i < series.length - 1 ? 0 : [3, 3, 0, 0]}>
-                {highlight && !multi && kind === 'bar' ? leadCells(series[i], leadingIndex(series[i], labels, highlight === 'last' ? 'month' : undefined), brand) : null}
+                {highlight && !multi && kind === 'bar' ? leadCells(series[i], leadingIndex(series[i], labels, highlight === 'last' ? 'month' : undefined), brand, leadOnDark) : null}
               </Bar>
             ))}
           </BarChart>
@@ -136,7 +138,7 @@ export function TimeChart({ labels, series, seriesLabels, format, opts, comparis
   );
 }
 
-export function CategoryChart({ labels, series, seriesLabels, format, opts, pie, donut, stacked, fill, palette, highlight }: Props & { pie?: boolean; donut?: boolean; stacked?: boolean }) {
+export function CategoryChart({ labels, series, seriesLabels, format, opts, pie, donut, stacked, fill, palette, highlight, leadOnDark }: Props & { pie?: boolean; donut?: boolean; stacked?: boolean }) {
   const anim = !still();
   const pal = palette ?? PALETTE;
   const data = labels.map((l, i) => {
@@ -175,7 +177,7 @@ export function CategoryChart({ labels, series, seriesLabels, format, opts, pie,
           {series.length > 1 && <Legend wrapperStyle={{ fontSize: 12 }} />}
           {series.map((_, i) => (
             <Bar isAnimationActive={anim} key={i} dataKey={`s${i}`} name={seriesLabels[i]} stackId={stacked ? 's' : undefined} fill={pal[i % pal.length]} radius={stacked && i < series.length - 1 ? 0 : [3, 3, 0, 0]}>
-              {highlight && series.length === 1 && !stacked ? leadCells(series[i], leadingIndex(series[i], labels), pal[0]) : null}
+              {highlight && series.length === 1 && !stacked ? leadCells(series[i], leadingIndex(series[i], labels), pal[0], leadOnDark) : null}
             </Bar>
           ))}
         </BarChart>

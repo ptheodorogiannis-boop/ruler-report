@@ -790,3 +790,40 @@ the text card (`{client}`, `{period}`, `{fb_ads:spend.change}` …) and project 
 record in the stamp (round glass icon buttons, pills for navigation and toolbars, glass overlays; the Tailwind palette
 names are re-pointed at the Ruler tokens). The render tier did not run (no `puppeteer-core`); screenshots at 1440 and
 390 were checked instead.
+
+# Map, search and client Ask (2026-11-04)
+
+Spec `docs/superpowers/specs/2026-11-04-map-search-ask-layout-design.md`, plan `docs/superpowers/plans/2026-11-04-map-search-ask-layout.md`.
+
+**Map (`map_v1`).** One "by country" metric colours the countries in five steps of the block colour mixed into the card
+ground (quantile steps, so one big country does not wash the rest out); countries without data are the quiet fill. The
+view zooms to the countries with data, using each country's largest landmass (French Guiana, Alaska and Hawaii do not
+stretch it). The top three get a callout above them. The panel is a smoke tile beside the map (under it in a narrow
+card) with the picked country's numbers for up to six metrics; Escape clears. A ranked list with each country's share
+sits under the map, rendered on the server: it reads without JavaScript and is what prints. Shapes come from Natural
+Earth 1:110m, projected once (`scripts/build-world-map.mjs`, Equal Earth, 118 KB), so the app ships no map library;
+the map loads on demand. The catalog gained the country breakdowns a client asks about: GA4 users, conversions and
+revenue by country; Meta clicks and conversions by country.
+
+**Search.** A filter on every account list (reconnect list, Integrations tab, global Integrations page): accent- and
+case-insensitive, rows hidden (never removed, so a ticked account still submits), "x of y" and "No matches". App-wide:
+a Search pill in the top bar and Ctrl+K / ⌘K; groups clients, reports, dashboards, connected accounts and, inside a
+project, platforms to connect; matching in code over the company's own rows (SQLite's LIKE folds ASCII only and treats
+`%` and `_` as wildcards).
+
+**Client Ask.** Off by default; "Client questions" in Sharing & delivery switches it on (only with `ANTHROPIC_API_KEY`).
+On the link: a glass tile with up to three questions built from the report's own metrics (no AI), a 300-character field
+and the answer in plain words in the link's language, written from that report's numbers only; the question travels in
+its own block after the facts, as the client's words, never as instructions. 30 questions per report per rolling day;
+every question and answer is stored and listed for the agency. `ANTHROPIC_BASE_URL` lets tests and the mock server
+answer instead of the API.
+
+**Quantix tones.** On client pages the KPI tiles of the first block that has KPIs are smoke (grey) and read as the
+overview; tables and bar charts are solid (dark); inside them feedback colours, gridlines and the caliper switch to their
+on-dark values, and the leading bar (largest, or the last month) takes the block colour, or the tile's light ink when the
+block colour is too dark to show. Print turns them back to paper. Look option "Contrast tiles" turns the tones off. The
+header carries a round Copy link button beside Download PDF; no Refresh button (live dashboards refresh every two
+minutes, and a cache-bypassing button on a public page would let anyone trigger API calls).
+
+**Gotcha found on the way.** Tailwind drops a component class it cannot find written out in the source: a tone built as
+`` `tone-${tone}` `` silently lost `.tone-solid`. Class names that come from data go through a literal map (`TONE_CLASS`).
