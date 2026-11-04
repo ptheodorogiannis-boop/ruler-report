@@ -16,7 +16,7 @@ import { findWidget } from '@/lib/catalog/build';
 import { getIntegrationDef } from '@/lib/catalog/integrations';
 import { randomToken, sha256 } from '@/lib/crypto';
 import { db } from '@/lib/db';
-import { analyse, analyseBlock } from '@/lib/ai/insights';
+import { analyse, analyseBlock, aiConfigured } from '@/lib/ai/insights';
 import { TONE_LABEL, isTone, type Tone } from '@/lib/ai/tones';
 import { connectIntegration, refreshColumns } from '@/lib/services/integrations';
 import { convertReport, createReport, duplicateReport } from '@/lib/services/reports';
@@ -212,6 +212,8 @@ export async function updateShareAction(fd: FormData) {
   const op = String(fd.get('op'));
   if (op === 'toggle') await db.report.update({ where: { id: r.id }, data: { shareEnabled: !r.shareEnabled } });
   if (op === 'rotate') await db.report.update({ where: { id: r.id }, data: { shareToken: randomToken(24) } });
+  // client questions on the link: switching off always works, switching on needs the server's Anthropic key
+  if (op === 'clientAsk' && (r.clientAsk || aiConfigured())) await db.report.update({ where: { id: r.id }, data: { clientAsk: !r.clientAsk } });
   if (op === 'password') {
     const pw = String(fd.get('password') ?? '');
     await db.report.update({ where: { id: r.id }, data: { password: pw ? sha256(pw) : null } });

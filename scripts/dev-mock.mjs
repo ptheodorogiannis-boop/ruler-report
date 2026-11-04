@@ -33,6 +33,9 @@ const env = {
   DATABASE_URL: 'file:./mock.db',
   APP_URL: `http://localhost:${port}`,
   ENABLE_SCHEDULER: '0',
+  // AI calls (client Ask, analysis) go to the mock too; a key is needed for the app to offer them
+  ANTHROPIC_BASE_URL: `http://127.0.0.1:${mockPort}`,
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || 'mock-key',
 };
 const child = spawn(process.execPath, [path.join(root, 'node_modules/next/dist/bin/next'), 'dev', root, '-p', port], { env, stdio: 'inherit', cwd: root });
 const stop = () => {

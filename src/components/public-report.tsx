@@ -6,6 +6,8 @@ import { DataFootnotes } from '@/components/data-note';
 import { themeVars } from '@/lib/layout/theme';
 import { PlatformIcon } from '@/components/platform-icon';
 import { ReportBody } from '@/components/widgets';
+import { ClientAsk } from '@/components/client-ask';
+import { clientAskTile } from '@/lib/services/client-ask';
 import { PrintButton } from '@/components/action-form';
 import { ReportCover, coverLayoutOf } from '@/components/report-cover';
 import { unlockCookie } from '@/lib/share';
@@ -148,6 +150,8 @@ export async function PublicReport({ token, kind, embed, preset, compare, print,
     </>
   );
 
+  // the client's questions (spec §3): only when the agency switched them on and the server has a key; never in print
+  const askTile = print ? null : clientAskTile(r, data, locale);
   return (
     <div style={{ ...style, ...themeVars(data.theme, company.brandColor) }} className="report-root ground min-h-screen" lang={locale} data-cover-layout={coverLayout} {...printAttrs({ print, layout })}>
       <a href="#document" className="skip-link">
@@ -182,6 +186,7 @@ export async function PublicReport({ token, kind, embed, preset, compare, print,
         {/* ── document ── */}
         <div id="document" className="dossier-body space-y-12">
           {coverLayout === 'none' && <div className="cover-head cover-head-inline">{head}</div>}
+          {askTile && <ClientAsk token={askTile.token} lang={lang} suggestions={askTile.suggestions} labels={{ title: tr('ask.title'), placeholder: tr('ask.placeholder'), ask: tr('ask.button'), note: tr('ask.note'), error: tr('ask.error'), thinking: tr('ask.thinking') }} />}
           <ReportBody data={{ ...data, events: timeline.map((ev) => ({ date: ev.date, title: ev.title })) }} fmt={{ decimalSeparatorFormat: r.project.decimalSeparatorFormat }} brand={company.brandColor} dataNotes={company.showDataNotes} cards={cards} />
           {coverLayout === 'none' && <section className="dossier-foot">{meta}</section>}
         </div>

@@ -118,3 +118,18 @@ test('suggested questions: built from the report\'s own metrics, at most three, 
   assert.deepEqual(suggestedQuestions(conversions, 'en'), ['How many conversions did I get?', 'What changed most since the last period?']);
   assert.deepEqual(suggestedQuestions(reportData([]), 'en'), ['What changed most since the last period?']);
 });
+
+test('client Ask tile: shown only when the report switches it on and the server has a key; it carries the suggested questions', async () => {
+  const { clientAskTile } = await import('../src/lib/services/client-ask');
+  const data = reportData([num('leads', 'Leads', 42)]);
+  const prev = process.env.ANTHROPIC_API_KEY;
+  try {
+    process.env.ANTHROPIC_API_KEY = 'test';
+    assert.equal(clientAskTile({ clientAsk: false, shareToken: 'tok' }, data, 'en'), null, 'switched off');
+    assert.deepEqual(clientAskTile({ clientAsk: true, shareToken: 'tok' }, data, 'en'), { token: 'tok', suggestions: ['How many leads did I get?', 'What changed most since the last period?'] });
+    process.env.ANTHROPIC_API_KEY = '';
+    assert.equal(clientAskTile({ clientAsk: true, shareToken: 'tok' }, data, 'en'), null, 'no key on the server');
+  } finally {
+    process.env.ANTHROPIC_API_KEY = prev ?? '';
+  }
+});

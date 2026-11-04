@@ -152,6 +152,9 @@ export function createMockProviders(opts = {}) {
     const tokenScopes = bearer.startsWith('mock-at.') ? (unb64(bearer.slice(8))?.scopes ?? []) : null;
     const has = (s) => Array.isArray(tokenScopes) && tokenScopes.includes(s);
 
+    // ── Anthropic Messages API: the client Ask and AI analysis get a fixed answer, so browser tests can rely on it
+    if (u.pathname === '/v1/messages' && req.method === 'POST') return reply(res, 200, { id: 'msg_mock', type: 'message', role: 'assistant', content: [{ type: 'text', text: 'You got 42 leads.' }] });
+
     // ── Google consent + token
     if (u.pathname === '/g/auth') {
       if (q.get('decision')) {

@@ -10,6 +10,7 @@ import { ReportEditor } from '@/components/report-editor';
 import { RulerBand } from '@/components/ruler-band';
 import { AnalysisPanel, type CardView } from '@/components/analysis-panel';
 import { AskBox } from '@/components/ask-box';
+import { aiConfigured } from '@/lib/ai/insights';
 import { ConfirmButton, CopyButton, PrintButton } from '@/components/action-form';
 import { convertReportAction, deleteReportAction, duplicateReportAction, emailReportAction, refreshReportAction, retrySourceAction, updateDashboardPresetAction, updateShareAction } from '@/app/actions/app';
 import { canWrite, requirePrincipal } from '@/lib/auth';
@@ -34,6 +35,9 @@ export async function InternalReport({ id, kind }: { id: number; kind: 'report' 
   const customMetrics = write ? (await db.customMetric.findMany({ where: { companyId: r.companyId, OR: [{ projectId: null }, { projectId: r.projectId }] }, orderBy: { name: 'asc' } })).map((m) => ({ id: m.id, name: m.name, formula: m.formula })) : [];
   const cards: CardView[] = (((r.analysis as unknown as AnalysisCard[]) ?? []) as AnalysisCard[]).map((c) => ({ id: c.id, title: c.title, html: sanitizeHtml(c.html), raw: c.html, author: c.author, blockId: c.blockId, tone: c.tone }));
   const timeline = await db.timelineEvent.findMany({ where: { projectId: r.projectId, date: { gte: range.start, lte: range.end } }, orderBy: { date: 'asc' } });
+  // client questions asked on the shared link (spec §3), newest first
+  const ai = aiConfigured();
+  const questions = write ? await db.clientQuestion.findMany({ where: { reportId: r.id }, orderBy: { createdAt: 'desc' }, take: 20 }) : [];
   const fmt = { decimalSeparatorFormat: r.project.decimalSeparatorFormat };
   const url = `${await requestBaseUrl()}/${kind === 'report' ? 'r' : 'd'}/${r.shareToken}`;
   const base = kind === 'report' ? '/reports' : '/dashboards';
@@ -134,6 +138,37 @@ export async function InternalReport({ id, kind }: { id: number; kind: 'report' 
                 <input name="password" type="password" className="input" placeholder={r.password ? t('share.passwordSet') : t('share.optionalPassword')} />
                 <button className="btn">{t('common.save')}</button>
               </form>
+              <div className="space-y-2 border-t border-[var(--line)] pt-3" data-client-ask>
+                <div className="label">{t('share.clientAsk')}</div>
+                <p className="text-xs text-ink-3">{ai ? t('share.clientAskHint') : t('share.clientAskNoKey')}</p>
+                {ai && (
+                  <form action={updateShareAction}>
+                    <input type="hidden" name="id" value={r.id} />
+                    <input type="hidden" name="op" value="clientAsk" />
+                    <button className="btn" aria-pressed={r.clientAsk}>
+                      {r.clientAsk ? t('share.clientAskOff') : t('share.clientAskOn')}
+                    </button>
+                  </form>
+                )}
+                {questions.length > 0 && (
+                  <div data-client-questions>
+                    <div className="label mt-3">{t('share.clientQuestions')}</div>
+                    <ul className="mt-1 divide-y divide-[var(--line)]">
+                      {questions.map((q) => (
+                        <li key={q.id}>
+                          <details className="py-2">
+                            <summary className="flex cursor-pointer justify-between gap-3 text-sm">
+                              <span className="min-w-0 truncate">{q.question}</span>
+                              <span className="num shrink-0 text-xs text-ink-3">{q.createdAt.toISOString().slice(0, 10)}</span>
+                            </summary>
+                            <p className="mt-1 text-sm text-ink-2">{q.answer}</p>
+                          </details>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
               <div className="text-xs text-slate-400">Embed: <code>{`<iframe src="${url}?embed=1" width="100%" height="900"></iframe>`}</code></div>
             </div>
             <div className="space-y-2">

@@ -2930,3 +2930,10 @@ html[data-rr-drag] .newblock-drop {
   color: var(--ink-3);
 }
 
+/* ───────────── client Ask on the shared link (src/components/client-ask.tsx) ───────────── */
+.client-ask-answer {
+  padding: 12px 16px;
+  border-radius: var(--r-input);
+  background: var(--inset);
+}
+

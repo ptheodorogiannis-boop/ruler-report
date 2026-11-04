@@ -116,7 +116,7 @@ export default function PrivacyPage() {
             <li>The people the workspace chooses to share a report or dashboard with, by link or by email.</li>
             <li>
               Service providers that run {LEGAL.product} for us under contract: hosting and database providers, the email provider that sends scheduled
-              reports and, only where AI analysis is switched on, Anthropic, which receives the report’s figures and labels to write commentary. They
+              reports and, only where AI analysis is switched on, Anthropic, which receives the report’s figures and labels to write commentary and, where the workspace lets a client ask questions on a shared link, the question, so it can answer it from those figures. Those questions and answers are stored with the report. They
               receive no account passwords or Google or Meta tokens.
             </li>
           </ul>
