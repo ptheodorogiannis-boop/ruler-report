@@ -15,7 +15,7 @@ export interface ClientAskLabels {
   thinking: string;
 }
 
-export function ClientAsk({ token, lang, suggestions, labels }: { token: string; lang?: string; suggestions: string[]; labels: ClientAskLabels }) {
+export function ClientAsk({ token, lang, preset, compare, suggestions, labels }: { token: string; lang?: string; /** dashboards: the period and comparison the client is viewing */ preset?: string; compare?: boolean; suggestions: string[]; labels: ClientAskLabels }) {
   const [q, setQ] = useState('');
   const [asked, setAsked] = useState<string | null>(null);
   const [answer, setAnswer] = useState<string | null>(null);
@@ -30,7 +30,7 @@ export function ClientAsk({ token, lang, suggestions, labels }: { token: string;
     setAnswer(null);
     setAsked(text);
     try {
-      const res = await fetch(`/api/public/ask/${encodeURIComponent(token)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ question: text, ...(lang ? { lang } : {}) }) });
+      const res = await fetch(`/api/public/ask/${encodeURIComponent(token)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ question: text, ...(lang ? { lang } : {}), ...(preset ? { preset } : {}), ...(compare != null ? { compare } : {}) }) });
       const j = (await res.json().catch(() => ({}))) as { answer?: string; message?: string };
       if (res.ok && j.answer) setAnswer(j.answer);
       else setError(res.status === 429 && j.message ? j.message : labels.error);

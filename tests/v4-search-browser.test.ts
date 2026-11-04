@@ -52,6 +52,10 @@ test('list search: the Integrations tab and the reconnect list filter as you typ
     const name = ((await first.getAttribute('data-search')) ?? '').split(' ')[0];
     await first.locator('input[type=checkbox]').check();
     await pickBox.fill('zzzz');
+    // Enter in the search box filters; it never submits the account form around it
+    await pickBox.press('Enter');
+    await page.waitForTimeout(800);
+    assert.match(page.url(), /\/connect\/facebook_ads\/pick/, 'still on the list after Enter');
     assert.equal(await first.isHidden(), true, 'filtered out');
     const picked = await first.locator('input[type=checkbox]').evaluate((el) => {
       const box = el as HTMLInputElement;

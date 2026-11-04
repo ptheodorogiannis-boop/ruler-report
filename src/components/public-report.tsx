@@ -190,7 +190,7 @@ export async function PublicReport({ token, kind, embed, preset, compare, print,
         {/* ── document ── */}
         <div id="document" className="dossier-body space-y-12">
           {coverLayout === 'none' && <div className="cover-head cover-head-inline">{head}</div>}
-          {askTile && <ClientAsk token={askTile.token} lang={lang} suggestions={askTile.suggestions} labels={{ title: tr('ask.title'), placeholder: tr('ask.placeholder'), ask: tr('ask.button'), note: tr('ask.note'), error: tr('ask.error'), thinking: tr('ask.thinking') }} />}
+          {askTile && <ClientAsk token={askTile.token} lang={lang} preset={kind === 'dashboard' ? clientPreset(r, preset) : undefined} compare={kind === 'dashboard' ? !!comparison : undefined} suggestions={askTile.suggestions} labels={{ title: tr('ask.title'), placeholder: tr('ask.placeholder'), ask: tr('ask.button'), note: tr('ask.note'), error: tr('ask.error'), thinking: tr('ask.thinking') }} />}
           <ReportBody data={{ ...data, events: timeline.map((ev) => ({ date: ev.date, title: ev.title })) }} fmt={{ decimalSeparatorFormat: r.project.decimalSeparatorFormat }} brand={company.brandColor} dataNotes={company.showDataNotes} cards={cards} />
           {coverLayout === 'none' && <section className="dossier-foot">{meta}</section>}
         </div>

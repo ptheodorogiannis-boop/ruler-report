@@ -295,6 +295,8 @@ export function askPrompt(data: ReportData, projectName: string, question: strin
     `Reply in ${LANGUAGE[locale]}.`,
   ].join(' ');
   const countries = countryFacts(data);
+  // the client cannot close the block early or open a second one: any question tag inside the text is dropped
+  const asked = question.replace(/<\s*\/?\s*question\b[^>]*>/gi, ' ').trim();
   const user = [
     `Client: ${projectName}`,
     `Period: ${data.range.start} to ${data.range.end}${data.comparison ? ` (compared with ${data.comparison.start} to ${data.comparison.end})` : ''}`,
@@ -305,7 +307,7 @@ export function askPrompt(data: ReportData, projectName: string, question: strin
     '',
     "The client's question:",
     '<question>',
-    question,
+    asked,
     '</question>',
   ].join('\n');
   return { system, user };

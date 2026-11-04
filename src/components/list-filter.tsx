@@ -36,7 +36,11 @@ export function ListFilter({ label, placeholder, countLabel, emptyLabel, childre
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative w-full sm:w-72">
           <Search size={16} strokeWidth={1.5} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" aria-hidden="true" />
-          <input type="search" role="searchbox" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQ('')} placeholder={placeholder} aria-label={label} autoComplete="off" className="input pl-9" />
+          <input type="search" role="searchbox" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => {
+              if (e.key === 'Escape') setQ('');
+              // Enter filters; inside a form (the reconnect list) it must not submit the accounts ticked so far
+              if (e.key === 'Enter') e.preventDefault();
+            }} placeholder={placeholder} aria-label={label} autoComplete="off" className="input pl-9" />
         </div>
         {counts && (
           <span className="num text-xs text-ink-3" data-search-count aria-live="polite">
