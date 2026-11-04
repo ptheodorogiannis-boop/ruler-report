@@ -19,6 +19,7 @@ import { db } from '@/lib/db';
 import { analyse, analyseBlock, aiConfigured } from '@/lib/ai/insights';
 import { TONE_LABEL, isTone, type Tone } from '@/lib/ai/tones';
 import { connectIntegration, refreshColumns } from '@/lib/services/integrations';
+import { withoutStale } from '@/lib/services/report-period';
 import { archiveReport, convertReport, createReport, deleteArchivedReport, duplicateReport, restoreReport } from '@/lib/services/reports';
 import { snapshotReport, liveDashboardData } from '@/lib/engine/report';
 import { createGoalsShare, setGoalsPassword, stopGoalsShare } from '@/lib/services/goals-share';
@@ -285,7 +286,7 @@ export async function saveAnalysisAction(input: { reportId: number; cardId?: str
     const p = await writer();
     const { r, cards } = await loadCards(input.reportId, p);
     const now = new Date().toISOString();
-    const next = input.cardId ? cards.map((c) => (c.id === input.cardId ? { ...c, title: input.title, html: textToHtml(input.html), author: 'human' as const, updatedAt: now } : c)) : [...cards, { id: randomToken(6), title: input.title, html: textToHtml(input.html), author: 'human' as const, updatedAt: now }];
+    const next = input.cardId ? cards.map((c) => (c.id === input.cardId ? { ...withoutStale(c), title: input.title, html: textToHtml(input.html), author: 'human' as const, updatedAt: now } : c)) : [...cards, { id: randomToken(6), title: input.title, html: textToHtml(input.html), author: 'human' as const, updatedAt: now }];
     await db.report.update({ where: { id: r.id }, data: { analysis: next as any } });
     revalidatePath(`/${r.kind === 'report' ? 'reports' : 'dashboards'}/${r.id}`);
     return { ok: true };

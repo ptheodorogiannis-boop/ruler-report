@@ -57,6 +57,8 @@ export interface WidgetCustom {
   decimals?: number;
   // analysis_v1
   html?: string;
+  /** the report's period changed after this text was written: the range it was written for (cleared on the next edit) */
+  staleFor?: DateRange;
   // calculated_v1
   formula?: string;
   // custom_chart_v1: series from chart metrics of any account, or typed data (spec §6)

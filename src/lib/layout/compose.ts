@@ -556,6 +556,8 @@ export const customSchema = z
     fit: z.enum(['cover', 'contain']).optional(),
     caption: z.string().max(300).optional(),
     alt: z.string().max(200).optional(),
+    // analysis_v1 text kept through a period change: the range it was written for (cleared on the next edit)
+    staleFor: z.object({ start: z.string().max(10), end: z.string().max(10) }).strict().optional(),
   })
   .strict();
 

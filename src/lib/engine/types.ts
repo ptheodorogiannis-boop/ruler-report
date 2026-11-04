@@ -345,4 +345,6 @@ export interface AnalysisCard {
   /** per-block AI (spec v3 §4.4): the card sits right after this block; absent = the top of the report */
   blockId?: string;
   tone?: Tone;
+  /** the report's period changed and this text was not rewritten: the range it was written for (cleared on the next edit) */
+  staleFor?: DateRange;
 }
