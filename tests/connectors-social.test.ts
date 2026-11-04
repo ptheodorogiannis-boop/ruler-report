@@ -25,7 +25,7 @@ const idx = (d: string) => diffDays('2026-01-01', d);
 const dayOf = (unixSec: string | null) => new Date(Number(unixSec) * 1000).toISOString().slice(0, 10);
 
 const seen: { path: string; q: URLSearchParams; auth?: string }[] = [];
-const flags = { rejectProfileViews: false, reviewsDown: false, noUserContent: false };
+const flags = { rejectProfileViews: false, reviewsDown: false, noUserContent: false, noPictures: false };
 let server: http.Server;
 let base = '';
 
@@ -94,7 +94,7 @@ before(async () => {
       if (id === 'PAGE1' && edge === 'published_posts')
         return reply(res, 200, {
           data: [
-            { id: 'p1', created_time: `${addDays(end, -1)}T10:00:00+0000`, message: 'Spring launch', reactions: { summary: { total_count: 20 } }, comments: { summary: { total_count: 3 } }, shares: { count: 2 } },
+            { id: 'p1', created_time: `${addDays(end, -1)}T10:00:00+0000`, message: 'Spring launch', reactions: { summary: { total_count: 20 } }, comments: { summary: { total_count: 3 } }, shares: { count: 2 }, ...(flags.noPictures ? {} : { full_picture: 'https://scontent.example/p1.jpg', permalink_url: 'https://www.facebook.com/acme/posts/p1' }) },
             { id: 'p2', created_time: `${addDays(end, -3)}T10:00:00+0000`, message: 'Behind the scenes', reactions: { summary: { total_count: 5 } }, comments: { summary: { total_count: 1 } } },
           ],
         });
@@ -116,8 +116,8 @@ before(async () => {
       if (id === 'IG1' && edge === 'media')
         return reply(res, 200, {
           data: [
-            { id: 'm1', caption: 'Reel one', media_type: 'VIDEO', media_product_type: 'REELS', timestamp: `${addDays(end, -2)}T12:00:00+0000`, like_count: 30, comments_count: 4 },
-            { id: 'm2', media_type: 'IMAGE', media_product_type: 'FEED', timestamp: `${addDays(end, -4)}T12:00:00+0000`, like_count: 8, comments_count: 1 },
+            { id: 'm1', caption: 'Reel one', media_type: 'VIDEO', media_product_type: 'REELS', timestamp: `${addDays(end, -2)}T12:00:00+0000`, like_count: 30, comments_count: 4, media_url: 'https://video.example/m1.mp4', thumbnail_url: 'https://cdn.example/m1-thumb.jpg', permalink: 'https://www.instagram.com/p/m1/' },
+            { id: 'm2', media_type: 'IMAGE', media_product_type: 'FEED', timestamp: `${addDays(end, -4)}T12:00:00+0000`, like_count: 8, comments_count: 1, media_url: 'https://cdn.example/m2.jpg', permalink: 'https://www.instagram.com/p/m2/' },
           ],
         });
       if (id === 'IG1') return reply(res, 200, { username: 'acme', followers_count: 5000 });
@@ -470,4 +470,37 @@ test('Business Profile: a location without an account in its id still reads perf
 
 test('end_time of an insights value names the day that ended', () => {
   assert.equal(dayOfEnd('2026-09-02T07:00:00+0000'), '2026-09-01');
+});
+
+test('Facebook top posts: the post image and a link to the post (docs/superpowers/specs/2026-11-04-ads-previews-sources-matomo-design.md §1)', async () => {
+  const { get } = await connect('facebook', 'PAGE1', 'tok');
+  const t = await get('top_posts');
+  assert.equal(t.type, 'table');
+  const i = t.rows.findIndex((r: any[]) => r[0] === 'Spring launch');
+  assert.equal(t.thumbs[i], 'https://scontent.example/p1.jpg');
+  assert.equal(t.links[i], 'https://www.facebook.com/acme/posts/p1');
+  const j = t.rows.findIndex((r: any[]) => r[0] === 'Behind the scenes');
+  assert.equal(t.thumbs[j], null);
+});
+
+test('Instagram top posts: a video shows its thumbnail, an image its media; each links to the post', async () => {
+  const { get } = await connect('instagram_business', 'IG1', 'tok');
+  const t = await get('top_posts');
+  const reel = t.rows.findIndex((r: any[]) => r[0] === 'Reel one');
+  assert.equal(t.thumbs[reel], 'https://cdn.example/m1-thumb.jpg');
+  assert.equal(t.links[reel], 'https://www.instagram.com/p/m1/');
+  const img = reel === 0 ? 1 : 0;
+  assert.equal(t.thumbs[img], 'https://cdn.example/m2.jpg');
+});
+
+test('a post table whose rows have no images has no thumbs at all', async () => {
+  flags.noPictures = true;
+  try {
+    const { get } = await connect('facebook', 'PAGE1', 'tok');
+    const t = await get('top_posts');
+    assert.equal('thumbs' in t, false);
+    assert.equal('links' in t, false);
+  } finally {
+    flags.noPictures = false;
+  }
 });

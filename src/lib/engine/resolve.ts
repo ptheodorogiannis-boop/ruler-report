@@ -316,6 +316,9 @@ export async function resolveWidget(inp: ResolveInput): Promise<WidgetValue> {
           columnFormats: ['text', ...cols.map(formatForPrim)],
           rows: limited.map((x) => [x.r.label ?? x.r.key, ...x.vals]),
           total_rows: computed.length,
+          // post tables: each row's image and link, only when some row has one
+          ...(limited.some((x) => x.r.thumb) ? { thumbs: limited.map((x) => x.r.thumb ?? null) } : {}),
+          ...(limited.some((x) => x.r.link) ? { links: limited.map((x) => x.r.link ?? null) } : {}),
         } satisfies TableValue;
       }
       case 'funnel': {

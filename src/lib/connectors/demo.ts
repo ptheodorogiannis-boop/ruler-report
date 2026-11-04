@@ -227,6 +227,7 @@ export const demoConnector: Connector = {
     });
     // ads and ad sets: a result type and count like Meta's (from the conversions share), creatives for ads; every fifth ad
     // has none, so the placeholder shows too (docs/superpowers/specs/2026-11-04-ads-previews-sources-matomo-design.md §1)
+    if (dimension === 'post') rows.forEach((r, i) => (r.thumb = i % 3 === 2 ? null : `/demo/creative-${((i + 2) % 4) + 1}.svg`));
     if (isAdsSlug(ctx.integration.slug) && (dimension === 'ad' || dimension === 'adset')) {
       let conv = 0;
       for (const date of eachDay(range)) conv += primValue(ctx, arch.prims, 'conversions', date, memo, scale);

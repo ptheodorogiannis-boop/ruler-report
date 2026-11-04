@@ -81,9 +81,12 @@ interface Media {
   timestamp: string;
   like_count?: number;
   comments_count?: number;
+  media_url?: string;
+  thumbnail_url?: string;
+  permalink?: string;
 }
 const media = (ctx: any, range: DateRange) =>
-  graphPaged<Media>(ctx, `/${id(ctx)}/media`, { fields: 'id,caption,media_type,media_product_type,timestamp,like_count,comments_count', limit: '50', ...window(range) }, 20);
+  graphPaged<Media>(ctx, `/${id(ctx)}/media`, { fields: 'id,caption,media_type,media_product_type,timestamp,like_count,comments_count,media_url,thumbnail_url,permalink', limit: '50', ...window(range) }, 20);
 
 export const instagramConnector: Connector = {
   id: 'instagram',
@@ -192,6 +195,9 @@ export const instagramConnector: Connector = {
           key: m.id,
           label: (m.caption ?? `${m.media_product_type ?? m.media_type ?? 'Post'} · ${m.timestamp.slice(0, 10)}`).replace(/\s+/g, ' ').slice(0, 70),
           values: { likes, comments, engagements: likes + comments, shares: 0, saves: 0, reach: 0, impressions: 0 },
+          // a video's media_url is the video: its thumbnail is the picture (spec 2026-11-04 ads §1)
+          thumb: (m.media_type === 'VIDEO' ? m.thumbnail_url : m.media_url) ?? null,
+          link: m.permalink ?? null,
         };
       });
       rows.sort((a, b) => b.values.engagements - a.values.engagements);

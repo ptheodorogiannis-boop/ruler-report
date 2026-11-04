@@ -54,8 +54,11 @@ interface Post {
   reactions?: number;
   comments: number;
   shares: number;
+  picture?: string;
+  permalink?: string;
 }
-const POST_FIELDS = 'id,created_time,message,story,shares,reactions.summary(true).limit(0)';
+// full_picture / permalink_url: the post's image and link for the posts table (spec 2026-11-04 ads §1)
+const POST_FIELDS = 'id,created_time,message,story,shares,full_picture,permalink_url,reactions.summary(true).limit(0)';
 /** Meta's answer when the token lacks pages_read_user_content (the comments field asks for user content). */
 const refusesUserContent = (e: unknown) => /pages_read_user_content|\(#10\)/.test(String((e as Error)?.message ?? e));
 export const COMMENTS_NEED_PERMISSION = 'Meta did not allow reading comments: this connection needs the pages_read_user_content permission. Reconnect the Page to grant it.';
@@ -80,6 +83,8 @@ async function posts(ctx: any, range: DateRange): Promise<{ list: Post[]; commen
     reactions: Number(r.reactions?.summary?.total_count ?? 0),
     comments: Number(r.comments?.summary?.total_count ?? 0),
     shares: Number(r.shares?.count ?? 0),
+    ...(r.full_picture ? { picture: String(r.full_picture) } : {}),
+    ...(r.permalink_url ? { permalink: String(r.permalink_url) } : {}),
   })) };
 }
 
@@ -136,6 +141,8 @@ export const facebookConnector: Connector = {
         key: p.id,
         label: (p.message ?? p.id).replace(/\s+/g, ' ').slice(0, 70),
         values: { likes, comments: p.comments, shares: p.shares, engagements: likes + p.comments + p.shares, saves: 0, reach: 0, impressions: 0 },
+        thumb: p.picture ?? null,
+        link: p.permalink ?? null,
       };
     });
     rows.sort((a, b) => b.values.engagements - a.values.engagements);
