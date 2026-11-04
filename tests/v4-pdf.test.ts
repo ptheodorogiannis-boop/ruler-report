@@ -28,7 +28,7 @@ test('uploads: a PDF is recognised by its first bytes; a renamed file is not', (
 });
 
 test('PDF download on a serverless host: renders from the address the visitor used, only when it is one of ours', () => {
-  const vercel = { VERCEL: '1', APP_URL: 'https://reports.ruler.agency', VERCEL_PROJECT_PRODUCTION_URL: 'reports.ruler.agency' } as NodeJS.ProcessEnv;
+  const vercel = { VERCEL: '1', APP_URL: 'https://reports.ruler.agency', VERCEL_PROJECT_PRODUCTION_URL: 'reports.ruler.agency' } as unknown as NodeJS.ProcessEnv;
   assert.equal(isServerless(vercel), true);
   assert.equal(pdfBaseFor('https://ruler-report-pi.vercel.app', vercel), 'https://ruler-report-pi.vercel.app', 'the vercel.app address works before the domain is live');
   assert.equal(pdfBaseFor('https://reports.ruler.agency', vercel), 'https://reports.ruler.agency');
@@ -36,7 +36,7 @@ test('PDF download on a serverless host: renders from the address the visitor us
   assert.equal(renderHostAllowed('file:///etc/passwd', vercel), false);
   assert.equal(renderHostAllowed('https://api.vercel.app.evil.com', vercel), false);
   assert.equal(pdfBaseFor('https://ruler-report-pi.vercel.app', { ...vercel, PDF_BASE_URL: 'http://internal:3000/' }), 'http://internal:3000', 'PDF_BASE_URL always wins');
-  assert.equal(pdfBaseFor('https://ruler-report-pi.vercel.app', { APP_URL: 'http://localhost:3100' } as NodeJS.ProcessEnv), process.env.PDF_BASE_URL || process.env.APP_URL || 'http://localhost:3100', 'a server with Chromium installed keeps its configured address');
+  assert.equal(pdfBaseFor('https://ruler-report-pi.vercel.app', { APP_URL: 'http://localhost:3100' } as unknown as NodeJS.ProcessEnv), process.env.PDF_BASE_URL || process.env.APP_URL || 'http://localhost:3100', 'a server with Chromium installed keeps its configured address');
   assert.equal(pdfPageUrl('report', 'tok', { layout: 'pages', lang: 'el' }, 'https://x.vercel.app'), 'https://x.vercel.app/r/tok?print=1&layout=pages&lang=el');
   assert.equal(pdfAllowed({ VERCEL: '1' }), true, 'on by default on Vercel (the serverless Chromium)');
 });

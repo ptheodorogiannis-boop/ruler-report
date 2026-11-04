@@ -12,9 +12,55 @@ export default async function AutomationsPage() {
   const p = await requirePrincipal();
   const items = await db.automation.findMany({ where: { project: { companyId: p.companyId, ...(p.projectIds ? { id: { in: p.projectIds } } : {}) } }, include: { project: true, runs: { orderBy: { startedAt: 'desc' }, take: 3 } }, orderBy: { nextRunAt: 'asc' } });
   const write = canWrite(p);
+  // every run still held (approval before send, or failed sources): the reports the client has not received yet
+  const waiting = await db.automationRun.findMany({
+    where: { status: 'held', automation: { project: { companyId: p.companyId, ...(p.projectIds ? { id: { in: p.projectIds } } : {}) } } },
+    include: { automation: { include: { project: true } } },
+    orderBy: { startedAt: 'desc' },
+    take: 50,
+  });
+  const reports = waiting.length ? await db.report.findMany({ where: { id: { in: waiting.map((r) => r.reportId).filter((x): x is number => !!x) } }, select: { id: true, title: true } }) : [];
   return (
     <AppShell active="/automations">
       <PageHeader title={t('nav.automations')} subtitle={t('automations.indexSubtitle')} />
+      {waiting.length > 0 && (
+        <section className="card mb-6 p-5" aria-labelledby="waiting-title" data-waiting>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="waiting-title" className="block-title">
+              {t('automations.waitingTitle')} <span className="num text-ink-3">{waiting.length}</span>
+            </h2>
+            <p className="text-sm text-ink-2">{t('automations.waitingIntro', { count: waiting.length })}</p>
+          </div>
+          <ul className="mt-4 divide-y divide-[var(--line)]">
+            {waiting.map((r) => {
+              const d = (r.detail ?? {}) as { review?: boolean; held?: string[] };
+              const rep = reports.find((x) => x.id === r.reportId);
+              return (
+                <li key={r.id} className="flex flex-wrap items-center gap-3 py-3" data-waiting-run={r.id}>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">{rep?.title ?? r.automation.title}</div>
+                    <div className="text-xs text-ink-3">
+                      {r.automation.project.name}, {r.automation.title}, {r.startedAt.toISOString().slice(0, 10)}
+                    </div>
+                  </div>
+                  <span className="badge bg-amber-50 text-amber-800">{d.review ? t('automations.waitingApproval') : t('automations.heldFailing')}</span>
+                  {r.reportId && (
+                    <Link href={`/reports/${r.reportId}`} className="btn">
+                      {t('automations.openReport')}
+                    </Link>
+                  )}
+                  {write && (
+                    <form action={sendHeldRunAction}>
+                      <input type="hidden" name="runId" value={r.id} />
+                      <button className="btn-primary">{d.review && !d.held?.length ? t('automations.approveAndSend') : t('automations.sendNow')}</button>
+                    </form>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
       {items.length === 0 ? (
         <Empty title={t('automations.noneYet')} hint={t('automations.indexHint')} action={<Link href="/projects" className="btn-primary">{t('overview.goToProjects')}</Link>} />
       ) : (

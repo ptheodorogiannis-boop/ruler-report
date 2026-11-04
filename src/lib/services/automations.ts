@@ -195,6 +195,18 @@ async function failureAlert(a: AutomationFull, report: Report, failed: SourceSta
   if (to.length) await sendEmail(to, `[Ruler Reports] ${title}`, html, { companyId: project.companyId });
 }
 
+/** "Approve before sending": owners and admins hear that a report is ready for their check, with a link to it. */
+async function reviewAlert(a: AutomationFull, report: Report) {
+  const project = a.project;
+  const base = process.env.APP_URL || 'http://localhost:3100';
+  const loc = localeForPublic(project);
+  const title = t(loc, 'email.reviewSubject', { title: report.title });
+  const html = `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:auto"><h2 style="margin:0 0 8px">${esc(t(loc, 'email.reviewTitle'))}</h2><p style="color:#475569">${esc(project.name)} · ${esc(report.title)}</p><p>${esc(t(loc, 'email.reviewIntro'))}</p><p><a href="${base}/reports/${report.id}">${t(loc, 'email.openReport')}</a> · <a href="${base}/automations">${esc(t(loc, 'email.reviewApprove'))}</a></p></div>`;
+  await notify(project.companyId, project.id, title, a.title, `/automations`);
+  const to = await alertRecipients(project.companyId);
+  if (to.length) await sendEmail(to, `[Ruler Reports] ${title}`, html, { companyId: project.companyId });
+}
+
 export async function runAutomation(id: number, opts: { manual?: boolean } = {}) {
   const a = await db.automation.findUnique({ where: { id }, include: { project: true } });
   if (!a) throw new Error('Automation not found');
@@ -221,11 +233,14 @@ export async function runAutomation(id: number, opts: { manual?: boolean } = {})
       automationId: a.id,
       withAi: a.attachAnalysis,
     });
-    // a report with failed sources is held (spec v3 §3.2): the agency is told, the client waits for "Send now"
+    // a report with failed sources is held (spec v3 §3.2), and with "approve before sending" every report is: the agency
+    // is told, the client waits for "Send now" / "Approve and send"
     const failed = failedSources(report.data as unknown as ReportData);
-    const hold = failed.length > 0 && a.holdOnFailure;
-    const detail: Record<string, unknown> = hold ? { held: failed.map((s) => `${s.platform} · ${s.account_name}`) } : await deliverChannels(a, report);
+    const review = a.reviewBeforeSend;
+    const hold = (failed.length > 0 && a.holdOnFailure) || review;
+    const detail: Record<string, unknown> = hold ? { ...(failed.length ? { held: failed.map((s) => `${s.platform} · ${s.account_name}`) } : {}), ...(review ? { review: true } : {}) } : await deliverChannels(a, report);
     if (failed.length) await failureAlert(a, report, failed, hold);
+    else if (review) await reviewAlert(a, report);
 
     const now = new Date();
     const next = nextRunAfter(a, project.timezone, now, now);

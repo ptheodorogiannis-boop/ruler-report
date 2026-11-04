@@ -301,6 +301,8 @@ export interface SourceStatus {
   campaignsUnresolved?: boolean;
 }
 export interface ReportData {
+  /** the project's timeline events in the period, added by the page before rendering (never stored) */
+  events?: { date: string; title: string }[];
   range: DateRange;
   comparison?: DateRange | null;
   sections: RenderedSection[];

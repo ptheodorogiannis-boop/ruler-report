@@ -182,7 +182,7 @@ export async function PublicReport({ token, kind, embed, preset, compare, print,
         {/* ── document ── */}
         <div id="document" className="dossier-body space-y-12">
           {coverLayout === 'none' && <div className="cover-head cover-head-inline">{head}</div>}
-          <ReportBody data={data} fmt={{ decimalSeparatorFormat: r.project.decimalSeparatorFormat }} brand={company.brandColor} dataNotes={company.showDataNotes} cards={cards} />
+          <ReportBody data={{ ...data, events: timeline.map((ev) => ({ date: ev.date, title: ev.title })) }} fmt={{ decimalSeparatorFormat: r.project.decimalSeparatorFormat }} brand={company.brandColor} dataNotes={company.showDataNotes} cards={cards} />
           {coverLayout === 'none' && <section className="dossier-foot">{meta}</section>}
         </div>
       </main>

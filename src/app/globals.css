@@ -2610,3 +2610,17 @@ html[data-rr-drag] .newblock-drop {
     grid-column: 1 / -1;
   }
 }
+/* a variable token in the text card's editor: code set in mono, as a chip */
+.var-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--inset);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.var-chip:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}

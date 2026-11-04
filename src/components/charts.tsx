@@ -1,6 +1,6 @@
 'use client';
 
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { compact, formatValue, type FormatOpts } from '@/lib/util/format';
 import type { Format } from '@/lib/engine/types';
 
@@ -30,12 +30,25 @@ interface Props {
   kind?: 'line' | 'bar' | 'pie' | 'area' | 'stacked';
   /** series colours (the report's palette); defaults to the built-in one */
   palette?: string[];
+  /** the project's timeline events in the period, drawn as markers on a time chart (competitor research: AgencyAnalytics) */
+  events?: { date: string; title: string }[];
+}
+
+/** The label an event falls on: its own date, or the bucket it belongs to when the chart is grouped by week or month. */
+export function eventLabel(labels: string[], date: string): string | null {
+  if (!labels.length || date < labels[0]) return null;
+  let at: string | null = null;
+  for (const l of labels) {
+    if (l <= date) at = l;
+    else break;
+  }
+  return at;
 }
 
 const shortDate = (l: string) => (/^\d{4}-\d{2}-\d{2}$/.test(l) ? `${l.slice(8, 10)}/${l.slice(5, 7)}` : l);
 const box = (fill?: boolean) => (fill ? { width: '100%', height: '100%', minHeight: 120 } : { width: '100%', height: 220 });
 
-export function TimeChart({ labels, series, seriesLabels, format, opts, comparison, color, fill, kind, palette }: Props) {
+export function TimeChart({ labels, series, seriesLabels, format, opts, comparison, color, fill, kind, palette, events }: Props) {
   const anim = !still();
   const pal = palette ?? PALETTE;
   const data = labels.map((l, i) => {
@@ -52,6 +65,13 @@ export function TimeChart({ labels, series, seriesLabels, format, opts, comparis
     <XAxis key="x" dataKey="label" tickFormatter={shortDate} tick={TICK} tickLine={{ stroke: GRID }} axisLine={{ stroke: '#cfd4ce' }} minTickGap={24} tickMargin={6} />,
     <YAxis key="y" tickFormatter={(v) => compact(v)} tick={TICK} tickLine={false} axisLine={false} width={44} />,
     <Tooltip key="t" formatter={(v: number) => formatValue(v, format, opts)} labelFormatter={(l) => String(l)} cursor={{ stroke: '#cfd4ce' }} />,
+    // timeline events: a dashed marker with the event's title, so a spike is explained inside the chart
+    ...(events ?? []).flatMap((e, i) => {
+      const x = eventLabel(labels, e.date);
+      if (!x) return [];
+      const title = e.title.length > 28 ? e.title.slice(0, 27) + '…' : e.title;
+      return [<ReferenceLine key={`ev${i}`} x={x} stroke="#7c7c7a" strokeDasharray="2 3" label={{ value: title, position: 'insideTopLeft', fontSize: 10, fill: '#575756' }} />];
+    }),
   ];
   return (
     <div style={box(fill)}>

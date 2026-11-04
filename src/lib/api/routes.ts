@@ -97,7 +97,7 @@ const sReport = (r: Report) => ({
 const sTemplate = (t: Template, detail = false) => ({ id: t.id, title: t.title, description: t.description, kind: t.kind, is_default: t.isDefault, used_count: t.usedCount, created_at: iso(t.createdAt), updated_at: iso(t.updatedAt), ...(detail ? { sections: (t.sections as unknown as TemplateSection[]).map((s) => ({ id: s.id, title: s.title, widgets: s.widgets })) } : {}) });
 const sWebhook = (w: Webhook) => ({ id: w.id, url: w.url, event_type: w.eventType, source: w.source, company_id: w.companyId, project_id: w.projectId, status: w.status, created_at: iso(w.createdAt), updated_at: iso(w.updatedAt) });
 const sTimeline = (t: TimelineEvent) => ({ id: t.id, title: t.title, content: t.content, project_id: t.projectId, report_id: t.reportId, date: t.date, image: t.image ?? null, created_at: iso(t.createdAt), updated_at: iso(t.updatedAt) });
-const sAutomation = (a: Automation) => ({ id: a.id, project_id: a.projectId, title: a.title, status: a.enabled ? 'enabled' : 'disabled', frequency: a.frequency, notification_channels: a.channels, emails: a.emails, whatsapp_url: a.whatsappUrl, template_id: a.templateId, integration_ids: a.integrationIds, comparison: a.comparison, day_of_week: a.dayOfWeek, day_of_month: a.dayOfMonth, hour: a.hour, weekdays_only: a.weekdaysOnly, monthly_rule: a.monthlyRule, hold_on_failure: a.holdOnFailure, attach_pdf: a.attachPdf, next_run_at: iso(a.nextRunAt), last_run_at: iso(a.lastRunAt), last_report_id: a.lastReportId, last_error: a.lastError });
+const sAutomation = (a: Automation) => ({ id: a.id, project_id: a.projectId, title: a.title, status: a.enabled ? 'enabled' : 'disabled', frequency: a.frequency, notification_channels: a.channels, emails: a.emails, whatsapp_url: a.whatsappUrl, template_id: a.templateId, integration_ids: a.integrationIds, comparison: a.comparison, day_of_week: a.dayOfWeek, day_of_month: a.dayOfMonth, hour: a.hour, weekdays_only: a.weekdaysOnly, monthly_rule: a.monthlyRule, hold_on_failure: a.holdOnFailure, review_before_send: a.reviewBeforeSend, attach_pdf: a.attachPdf, next_run_at: iso(a.nextRunAt), last_run_at: iso(a.lastRunAt), last_report_id: a.lastReportId, last_error: a.lastError });
 const sCustomMetric = (m: CustomMetric) => ({ id: m.id, name: m.name, formula: m.formula, format: m.format, diff_type: m.diff, project_id: m.projectId });
 
 const orderBy = (sortBy: string | undefined, desc: boolean, map: Record<string, string>) => ({ [map[sortBy ?? ''] ?? 'createdAt']: desc ? 'desc' : 'asc' }) as any;
@@ -482,6 +482,7 @@ const autoSchema = z.object({
   weekdays_only: z.boolean().default(false),
   monthly_rule: z.string().regex(/^(day|(first|last):[0-6])$/, 'day, first:<0-6> or last:<0-6>').default('day'),
   hold_on_failure: z.boolean().default(true),
+  review_before_send: z.boolean().default(false),
   attach_pdf: z.boolean().default(false),
   day_of_week: z.number().int().min(0).max(6).default(1),
   day_of_month: z.number().int().min(1).max(28).default(1),
@@ -516,7 +517,7 @@ add('POST', '/automations', async ({ p, body }) => {
   const b = parse(autoSchema, body);
   const proj = await assertProject(p, b.project_id).catch(() => { throw notFound('Project'); });
   if (b.channels.includes('email') && !b.emails?.length) throw invalid({ emails: ['At least one recipient is required for the email channel.'] });
-  const a = await db.automation.create({ data: { projectId: b.project_id, title: b.title, enabled: b.enabled, frequency: b.frequency, dayOfWeek: b.day_of_week, dayOfMonth: b.day_of_month, hour: b.hour, weekdaysOnly: b.weekdays_only, monthlyRule: b.monthly_rule, holdOnFailure: b.hold_on_failure, attachPdf: b.attach_pdf, templateId: b.template_id ?? null, integrationIds: b.integration_ids, comparison: b.comparison, channels: b.channels, emails: b.emails ?? [], whatsappUrl: b.whatsapp_url, whatsappType: b.whatsapp_type, slackUrl: b.slack_url, teamsUrl: b.teams_url, discordUrl: b.discord_url, telegramBotToken: b.telegram_bot_token, telegramChatId: b.telegram_chat_id, attachAnalysis: b.attach_analysis } });
+  const a = await db.automation.create({ data: { projectId: b.project_id, title: b.title, enabled: b.enabled, frequency: b.frequency, dayOfWeek: b.day_of_week, dayOfMonth: b.day_of_month, hour: b.hour, weekdaysOnly: b.weekdays_only, monthlyRule: b.monthly_rule, holdOnFailure: b.hold_on_failure, reviewBeforeSend: b.review_before_send, attachPdf: b.attach_pdf, templateId: b.template_id ?? null, integrationIds: b.integration_ids, comparison: b.comparison, channels: b.channels, emails: b.emails ?? [], whatsappUrl: b.whatsapp_url, whatsappType: b.whatsapp_type, slackUrl: b.slack_url, teamsUrl: b.teams_url, discordUrl: b.discord_url, telegramBotToken: b.telegram_bot_token, telegramChatId: b.telegram_chat_id, attachAnalysis: b.attach_analysis } });
   return status(201, { data: sAutomation(await scheduleNext(a, proj.timezone)) });
 });
 add('PUT', '/automations/:id', async ({ p, params, body }) => {
@@ -524,7 +525,7 @@ add('PUT', '/automations/:id', async ({ p, params, body }) => {
   const a = await db.automation.findFirst({ where: { id: num(params.id), project: projectOf(p) }, include: { project: true } });
   if (!a) throw notFound('Automation');
   const b = parse(autoSchema.partial(), body);
-  const r = await db.automation.update({ where: { id: a.id }, data: { title: b.title, enabled: b.enabled, frequency: b.frequency, dayOfWeek: b.day_of_week, dayOfMonth: b.day_of_month, hour: b.hour, weekdaysOnly: b.weekdays_only, monthlyRule: b.monthly_rule, holdOnFailure: b.hold_on_failure, attachPdf: b.attach_pdf, templateId: b.template_id, integrationIds: b.integration_ids, comparison: b.comparison, channels: b.channels, emails: b.emails, whatsappUrl: b.whatsapp_url, whatsappType: b.whatsapp_type, slackUrl: b.slack_url, teamsUrl: b.teams_url, discordUrl: b.discord_url, telegramBotToken: b.telegram_bot_token, telegramChatId: b.telegram_chat_id, attachAnalysis: b.attach_analysis } });
+  const r = await db.automation.update({ where: { id: a.id }, data: { title: b.title, enabled: b.enabled, frequency: b.frequency, dayOfWeek: b.day_of_week, dayOfMonth: b.day_of_month, hour: b.hour, weekdaysOnly: b.weekdays_only, monthlyRule: b.monthly_rule, holdOnFailure: b.hold_on_failure, reviewBeforeSend: b.review_before_send, attachPdf: b.attach_pdf, templateId: b.template_id, integrationIds: b.integration_ids, comparison: b.comparison, channels: b.channels, emails: b.emails, whatsappUrl: b.whatsapp_url, whatsappType: b.whatsapp_type, slackUrl: b.slack_url, teamsUrl: b.teams_url, discordUrl: b.discord_url, telegramBotToken: b.telegram_bot_token, telegramChatId: b.telegram_chat_id, attachAnalysis: b.attach_analysis } });
   return { data: sAutomation(await scheduleNext(r, a.project.timezone)) };
 });
 add('POST', '/automations/:id/toggle', async ({ p, params }) => {

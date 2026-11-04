@@ -180,11 +180,11 @@ export async function InternalReport({ id, kind }: { id: number; kind: 'report' 
           <>
             {/* writers edit in place, so the failed-source controls (spec v3 §1.3) sit above the editor */}
             {kind === 'report' && <SourceStatusList sources={data.sources} actions={{ reportId: r.id, projectId: r.projectId, retry: retrySourceAction }} />}
-          <ReportEditor reportId={r.id} kind={kind} title={r.title} brand={r.project.company.brandColor} initialLayout={view.layout} initialData={view.raw} sources={view.projectSources} currency={r.project.currency} range={range} comparison={comparison} fmt={fmt} customMetrics={customMetrics} cards={cards} />
+          <ReportEditor reportId={r.id} kind={kind} title={r.title} clientName={r.project.name} dateFormat={r.project.dateFormat} brand={r.project.company.brandColor} initialLayout={view.layout} initialData={view.raw} sources={view.projectSources} currency={r.project.currency} range={range} comparison={comparison} fmt={fmt} customMetrics={customMetrics} cards={cards} />
           </>
         ) : (
           <div className="report-root" style={themeVars(data.theme, r.project.company.brandColor)}>
-            <ReportBody data={data} fmt={fmt} brand={r.project.company.brandColor} dataNotes={r.project.company.showDataNotes} cards={cards} />
+            <ReportBody data={{ ...data, events: timeline.map((ev) => ({ date: ev.date, title: ev.title })) }} fmt={fmt} brand={r.project.company.brandColor} dataNotes={r.project.company.showDataNotes} cards={cards} />
           </div>
         )}
         {timeline.length > 0 && (

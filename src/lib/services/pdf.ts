@@ -4,7 +4,6 @@
 // On Vercel (and other serverless hosts) Playwright's own Chromium is not installed: @sparticuz/chromium ships a Chromium
 // built for those hosts, which Playwright drives the same way (docs/DEPLOY-VERCEL.md › PDFs).
 import { existsSync } from 'node:fs';
-import path from 'node:path';
 import { chromium, type Browser } from 'playwright';
 import { pdfAllowed } from '@/lib/platform';
 
@@ -98,15 +97,14 @@ function chromiumPath(): string | null {
   }
 }
 
-/** The serverless Chromium's packed binary, traced into the function by next.config (outputFileTracingIncludes). */
-const serverlessChromium = () => path.join(process.cwd(), 'node_modules', '@sparticuz', 'chromium', 'bin', 'chromium.br');
-
 /** False when `PDF_ENABLED=off` or no Chromium can be found (Playwright's, or the serverless one on Vercel); cached per process. */
 export function pdfAvailable(): boolean {
   if (!pdfAllowed()) return false;
   if (override) return true;
   if (cached == null) {
-    if (isServerless()) cached = existsSync(serverlessChromium());
+    // on a serverless host the Chromium file is traced into the PDF routes only (next.config), so the pages that offer the
+    // download cannot see it: they trust the route, which answers with an error if the binary is missing
+    if (isServerless()) cached = true;
     else {
       const p = chromiumPath();
       cached = !!p && existsSync(p);

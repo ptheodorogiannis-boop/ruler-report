@@ -197,6 +197,8 @@ model Automation {
   weekdaysOnly         Boolean   @default(false)
   monthlyRule          String    @default("day")     // day | first:<0-6> | last:<0-6>
   holdOnFailure        Boolean   @default(true)
+  // approval before send (docs/DESIGN.md › competitor features): every generated report waits for "Approve and send"
+  reviewBeforeSend     Boolean   @default(false)
   attachPdf            Boolean   @default(false)
   templateId           Int?
   integrationIds       Json      // number[]

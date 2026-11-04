@@ -9,13 +9,15 @@ import { applyContainerCustom } from './container-custom';
 import { ICON_NAMES, type IconName } from './icon-names';
 import { getIntegrationDef } from '@/lib/catalog/integrations';
 import { sanitizeHtml } from '@/lib/util/sanitize';
-import { parseDate, fmtDate, previousPeriod } from '@/lib/util/dates';
+import { parseDate, fmtDate, previousPeriod, formatDisplayDate } from '@/lib/util/dates';
 import { compact, flow, resolve } from './grid';
 import { customChartFormat, customChartValue } from './custom-chart';
 import { isMediaOrHttps } from '@/lib/media/url';
 import { hashText, scopeHash, scopeSchema, type CampaignScope } from '@/lib/engine/campaigns';
 import { tileValue } from './tiles';
 import { MAX_COMPARE_PERIODS, MAX_COMPARE_REFS, compareValue } from './compare';
+import { applyTokens, type MetricToken, type TextVar } from './tokens';
+import { formatValue } from '@/lib/util/format';
 import { DEFAULT_SIZE, GRID_COLS, GRID_GAP, GRID_ROW_HEIGHT, HEX, PALETTE_NAMES, isSpecialSlug, type GroupBy, type LayoutBlock, type LayoutWidget, type MetricRef, type ReportLayout, type ReportTheme, type SourceInfo, type WidgetCustom } from './types';
 
 // ───────────── ids & keys ─────────────
@@ -282,6 +284,10 @@ export interface ComposeCtx {
   currency: string;
   range: DateRange;
   comparison?: DateRange | null;
+  /** text-card variables (src/lib/layout/tokens.ts): the client's and the report's names, the project's formats */
+  names?: { client?: string; report?: string };
+  decimal?: string;
+  dateFormat?: string;
 }
 export interface ComposeOpts {
   /** editor: keep hidden widgets so they can be un-hidden */
@@ -381,7 +387,9 @@ function renderWidget(w: LayoutWidget, idx: Map<string, RenderedBlock>, ctx: Com
       widget: { reference_key: 'number', key: w.key, label: c.title ?? 'Manual metric', description: c.description ?? 'Value typed in the editor', format: c.format ?? 'number', diff_type: 'positive_good', currency: ctx.currency, value: { type: 'number', value, comparison: previous != null ? { value: previous, change_pct: pct(value, previous), absolute: value != null ? value - previous : null } : undefined } },
     };
   } else if (w.slug === 'analysis') {
-    block = { integrationId: 0, platform: 'Analysis', slug: 'analysis', account_name: '', widget: { reference_key: 'wysiwyg', key: w.key, label: c.title ?? 'Analysis', description: c.description, format: 'text', diff_type: 'neutral', value: { type: 'text', html: sanitizeHtml(c.html ?? '') } } };
+    // variables are filled before sanitising ({client}, {period}, {fb_ads:spend} …); their values are HTML-escaped
+    const html = applyTokens(c.html ?? '', (tok) => resolveToken(tok, idx, ctx));
+    block = { integrationId: 0, platform: 'Analysis', slug: 'analysis', account_name: '', widget: { reference_key: 'wysiwyg', key: w.key, label: c.title ?? 'Analysis', description: c.description, format: 'text', diff_type: 'neutral', value: { type: 'text', html: sanitizeHtml(html) } } };
   } else if (w.slug === 'calculated') {
     block = { integrationId: 0, platform: 'Calculated', slug: 'calculated', account_name: '', widget: { reference_key: `calculated:${w.id}`, key: w.key, label: c.title ?? 'Calculated metric', description: c.description ?? c.formula, format: c.format ?? 'decimal', diff_type: 'positive_good', currency: ctx.currency, value: calculatedValue(w, idx, ctx, scope, blockIntegrationId) } };
   } else if (w.slug === 'custom_chart') {
@@ -446,6 +454,35 @@ export function parsePageList(s: string | undefined): number[] | undefined {
     for (let p = Math.min(a, b); p <= Math.max(a, b) && out.length < 200; p++) if (p >= 1 && !out.includes(p)) out.push(p);
   }
   return out.length ? out : undefined;
+}
+
+/** A text-card variable's value: names and dates from the context, metrics summed over the accounts of a platform like
+ * formulas (a rate or a ratio is never summed: with several accounts it reads the first one). Null leaves the token as typed. */
+export function resolveToken(tok: TextVar | MetricToken, idx: Map<string, RenderedBlock>, ctx: ComposeCtx): string | null {
+  const d = (s: string) => formatDisplayDate(s, ctx.dateFormat ?? 'DD/MM/YYYY');
+  if (typeof tok === 'string') {
+    if (tok === 'client') return ctx.names?.client ?? null;
+    if (tok === 'report') return ctx.names?.report ?? null;
+    if (tok === 'period') return `${d(ctx.range.start)} – ${d(ctx.range.end)}`;
+    if (tok === 'period_start') return d(ctx.range.start);
+    if (tok === 'period_end') return d(ctx.range.end);
+    return ctx.comparison ? `${d(ctx.comparison.start)} – ${d(ctx.comparison.end)}` : null;
+  }
+  const ids = /^\d+$/.test(tok.prefix) ? [Number(tok.prefix)] : ctx.sources.filter((s) => getIntegrationDef(s.slug)?.prefix === tok.prefix).map((s) => s.id);
+  const nums = ids.map((id) => idx.get(storeKey(id, tok.key))).filter((b): b is RenderedBlock => b?.widget.value.type === 'number');
+  if (!nums.length) return null;
+  const additive = !['percent', 'decimal'].includes(nums[0].widget.format);
+  const used = additive ? nums : nums.slice(0, 1);
+  const vals = used.map((b) => b.widget.value as { value: number | null; comparison?: { value: number | null } });
+  const cur = vals.reduce((t, v) => t + (v.value ?? 0), 0);
+  const withPrev = vals.filter((v) => v.comparison && v.comparison.value != null);
+  const prev = withPrev.length === vals.length ? withPrev.reduce((t, v) => t + (v.comparison!.value ?? 0), 0) : null;
+  if (tok.part === 'change') {
+    const p = pct(cur, prev);
+    return p == null ? null : `${p > 0 ? '+' : p < 0 ? '−' : ''}${Math.abs(p).toFixed(1)}%`;
+  }
+  const v = tok.part === 'previous' ? prev : cur;
+  return v == null ? null : formatValue(v, used[0].widget.format, { currency: used[0].widget.currency ?? ctx.currency, decimalSeparatorFormat: ctx.decimal });
 }
 
 /** Comparison range for a widget with a custom period (previous period of the same length). */

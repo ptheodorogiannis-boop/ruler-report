@@ -81,7 +81,7 @@ export async function reportView(report: ReportFull, opts: { includeHidden?: boo
   const stored = layoutOf(report);
   const layout = stored ?? (await seedForReport(report, raw));
   const { report: sources, project: projectSources } = await sourcesFor(report);
-  const ctx = { sources: projectSources.length ? projectSources : sources, currency: report.project.currency, range, comparison };
+  const ctx = { sources: projectSources.length ? projectSources : sources, currency: report.project.currency, range, comparison, names: { client: report.project.name, report: report.title }, decimal: report.project.decimalSeparatorFormat, dateFormat: report.project.dateFormat };
   const data = composeReport(raw, layout, ctx, { includeHidden: opts.includeHidden });
   return { raw, data, layout, seeded: !stored, range, comparison, updatedAt, sources, projectSources };
 }

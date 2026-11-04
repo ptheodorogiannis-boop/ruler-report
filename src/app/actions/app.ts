@@ -390,6 +390,7 @@ export async function saveAutomationAction(_: unknown, fd: FormData) {
       weekdaysOnly: fd.get('weekdaysOnly') === 'on',
       monthlyRule: /^(day|(first|last):[0-6])$/.test(String(fd.get('monthlyRule') ?? '')) ? String(fd.get('monthlyRule')) : 'day',
       holdOnFailure: fd.get('holdOnFailure') === 'on',
+      reviewBeforeSend: fd.get('reviewBeforeSend') === 'on',
       attachPdf: fd.get('attachPdf') === 'on',
       templateId: Number(fd.get('templateId')) || null,
       integrationIds,

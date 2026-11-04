@@ -14,6 +14,7 @@ import { comparisonFor, indexValues, layoutToSections, storeKey, valueKey } from
 import type { ReportLayout } from '@/lib/layout/types';
 import { widgetRefs } from '@/lib/layout/refs';
 import { compareNeeds } from '@/lib/layout/compare';
+import { tokenRefs } from '@/lib/layout/tokens';
 import { resolveContainer } from '@/lib/layout/container';
 import { connectorFor } from '@/lib/connectors';
 
@@ -343,7 +344,15 @@ export async function ensureWidgetValues(inp: EnsureInput): Promise<{ data: Repo
     // ads blocks: the block's scope, else the account default frozen at generation
     const blockScope = isAdsSlug(b.slug) ? (b.campaigns ?? frozenDefault(b.integrationId)) : undefined;
     for (const w of b.widgets) {
-      if (w.slug === 'manual' || w.slug === 'analysis' || w.slug === 'image' || w.slug === 'pdf') continue;
+      if (w.slug === 'analysis') {
+        // metric variables in a text card ({fb_ads:spend} …, src/lib/layout/tokens.ts): account-wide values, like formulas
+        for (const tk of tokenRefs(w.custom?.html)) {
+          const ids = /^\d+$/.test(tk.prefix) ? [Number(tk.prefix)] : ctxs.filter((c) => getIntegrationDef(c.slug)?.prefix === tk.prefix).map((c) => c.id);
+          for (const id of ids) await need(id, tk.key);
+        }
+        continue;
+      }
+      if (w.slug === 'manual' || w.slug === 'image' || w.slug === 'pdf') continue;
       if (w.slug === 'container') {
         // campaign table (spec v3 §2.3): one value per (account, metrics, scope)
         const id = w.integrationId || b.integrationId;
@@ -445,7 +454,7 @@ export function layoutFingerprint(layout: ReportLayout): string {
       const refs = widgetRefs(w).map((r) => `${r.integrationId}:${r.key}`).join(',');
       const period = w.custom?.period ? `@${w.custom.period.start}..${w.custom.period.end}` : '';
       // a comparison's periods are part of what it shows (relative ones follow the dashboard's range, which is in the cache key already)
-      const cmp = w.slug === 'compare' ? JSON.stringify([w.custom?.compareMode, w.custom?.comparePrevious, w.custom?.compareYearAgo, w.custom?.comparePeriods]) : '';
+      const cmp = w.slug === 'compare' ? JSON.stringify([w.custom?.compareMode, w.custom?.comparePrevious, w.custom?.compareYearAgo, w.custom?.comparePeriods]) : w.slug === 'analysis' ? JSON.stringify(tokenRefs(w.custom?.html)) : '';
       return `${valueKey(w.slug === 'container' && !w.integrationId ? { ...w, integrationId: b.integrationId } : w, b.campaigns) ?? ''}|${w.slug === 'calculated' ? w.custom?.formula ?? '' : ''}|${refs}${period}${cmp}`;
     }),
   );

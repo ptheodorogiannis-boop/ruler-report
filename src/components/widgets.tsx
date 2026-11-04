@@ -32,6 +32,8 @@ export interface CardProps {
   grid?: boolean;
   /** series colours for multi-series charts (docs/superpowers/specs › §5); the block colour is `brand` */
   palette?: string[];
+  /** timeline events drawn on time charts */
+  events?: { date: string; title: string }[];
 }
 const customOf = (b: RenderedBlock) => (b.custom ?? {}) as WidgetCustom;
 
@@ -110,7 +112,7 @@ function Kpi({ b, fmt, grid }: CardProps) {
   );
 }
 
-function ChartCard({ b, fmt, brand, grid, palette }: CardProps) {
+function ChartCard({ b, fmt, brand, grid, palette, events }: CardProps) {
   const w = b.widget;
   const v = w.value as Extract<WidgetValue, { type: 'chart' }>;
   const c = customOf(b);
@@ -130,7 +132,7 @@ function ChartCard({ b, fmt, brand, grid, palette }: CardProps) {
         {v.labels.length === 0 ? (
           <div className="py-10 text-center text-sm text-slate-400">{tr('public.noData')}</div>
         ) : isTime ? (
-          <TimeChart labels={v.labels} series={v.series} seriesLabels={v.seriesLabels ?? []} format={w.format} opts={o} comparison={v.comparison?.series} color={first} fill={grid} kind={kind} palette={colors} />
+          <TimeChart labels={v.labels} series={v.series} seriesLabels={v.seriesLabels ?? []} format={w.format} opts={o} comparison={v.comparison?.series} color={first} fill={grid} kind={kind} palette={colors} events={events} />
         ) : (
           <CategoryChart labels={v.labels} series={v.series} seriesLabels={v.seriesLabels ?? []} format={w.format} opts={o} pie={pie} donut={c.chartType === 'donut'} stacked={c.chartType === 'stacked'} fill={grid} palette={colors} />
         )}
@@ -308,7 +310,7 @@ export function BlockHeader({ s, dataNotes, editor }: { s: RenderedSection; data
 }
 
 /** A layout block: header + widgets positioned on the 12-column grid. */
-function LayoutSection({ s, fmt, brand, theme, dataNotes }: { s: RenderedSection; fmt: Fmt; brand?: string; theme?: ReportTheme; dataNotes?: boolean }) {
+function LayoutSection({ s, fmt, brand, theme, dataNotes, events }: { s: RenderedSection; fmt: Fmt; brand?: string; theme?: ReportTheme; dataNotes?: boolean; events?: { date: string; title: string }[] }) {
   // the block's colour (its own, else the report's accent, or the platform's when the look asks) drives the icon, the
   // KPI highlights and the first chart series
   const platformColor = (s.source && getIntegrationDef(s.source.slug)?.color) || '#636d7c';
@@ -324,7 +326,7 @@ function LayoutSection({ s, fmt, brand, theme, dataNotes }: { s: RenderedSection
         <div className="rgrid">
           {s.blocks.map((b, i) => (
             <div key={b.id ?? i} className="ritem" style={gridStyle(b.layout!)} data-w={b.layout!.w} data-kind={b.widget.value.type}>
-              <WidgetCard b={b} fmt={fmt} brand={blockColor} palette={palette} grid />
+              <WidgetCard b={b} fmt={fmt} brand={blockColor} palette={palette} grid events={events} />
             </div>
           ))}
         </div>
@@ -434,7 +436,7 @@ export function AnalysisCardView({ c }: { c: BodyCard }) {
 }
 
 export function ReportBody({ data, fmt, brand, sourceActions, dataNotes, cards }: { data: ReportData; fmt: Fmt; brand?: string; sourceActions?: SourceActions; /** "About these numbers" controls in block headers (client pages, company switch) */ dataNotes?: boolean; /** analysis cards: without a blockId at the top, with one right after that block (spec v3 §4.4) */ cards?: BodyCard[] }) {
-  const accent = data.theme?.accent ?? brand ?? '#1a36e6';
+  const accent = data.theme?.accent ?? brand ?? '#db0100';
   const known = new Set(data.sections.map((s) => s.id));
   const top = (cards ?? []).filter((c) => !c.blockId || !known.has(c.blockId));
   const forBlock = (id: string) => (cards ?? []).filter((c) => c.blockId === id);
@@ -452,7 +454,7 @@ export function ReportBody({ data, fmt, brand, sourceActions, dataNotes, cards }
       {data.sections.length === 0 && <div className="card p-8 text-center text-sm text-ink-2">{tr('public.noMatchingWidgets')}</div>}
       {data.sections.map((s) => (
         <Fragment key={s.id}>
-          {s.source ? <LayoutSection s={s} fmt={fmt} brand={accent} theme={data.theme} dataNotes={dataNotes} /> : <AutoSection s={s} fmt={fmt} brand={accent} />}
+          {s.source ? <LayoutSection s={s} fmt={fmt} brand={accent} theme={data.theme} dataNotes={dataNotes} events={data.events} /> : <AutoSection s={s} fmt={fmt} brand={accent} />}
           {forBlock(s.id).map((c) => (
             <AnalysisCardView key={c.id} c={c} />
           ))}

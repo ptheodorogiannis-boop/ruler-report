@@ -11,6 +11,7 @@ import { BlockColor, LookPanel } from './look-panel';
 import { CustomChartSettings } from './widget-settings/custom-chart';
 import { TileSettings } from './widget-settings/tile';
 import { CompareSettings } from './widget-settings/compare';
+import { TEXT_VARS } from '@/lib/layout/tokens';
 import { PdfSettings } from './widget-settings/pdf';
 import { ImageSettings } from './widget-settings/image';
 import { ContainerSettings } from './widget-settings/container';
@@ -36,6 +37,9 @@ import { DND_TYPE, GridCanvas, getDragPayload, setDragPayload } from './grid';
 import { PlatformBadge, ReportBody, WidgetCard, type Fmt, AnalysisCardView, type BodyCard } from './widgets';
 
 export interface EditorProps {
+  /** the client (project) name and its date format, for {client} / {period} variables in text cards */
+  clientName?: string;
+  dateFormat?: string;
   reportId: number;
   kind: 'report' | 'dashboard';
   title: string;
@@ -108,7 +112,7 @@ export function ReportEditor(props: EditorProps) {
   const [templateDialog, setTemplateDialog] = useState(false);
   const [lookOpen, setLookOpen] = useState(false);
 
-  const ctx = useMemo(() => ({ sources, currency, range, comparison }), [sources, currency, range, comparison]);
+  const ctx = useMemo(() => ({ sources, currency, range, comparison, names: { client: props.clientName, report: props.title }, decimal: fmt.decimalSeparatorFormat, dateFormat: props.dateFormat }), [sources, currency, range, comparison, props.clientName, props.title, fmt.decimalSeparatorFormat, props.dateFormat]);
   const composed = useMemo(() => composeReport(data, layout, ctx, { includeHidden: true }), [data, layout, ctx]);
   const rendered = useMemo(() => {
     const m = new Map<string, RenderedBlock>();
@@ -607,6 +611,68 @@ export function ReportEditor(props: EditorProps) {
   );
 }
 
+/**
+ * The text card's editor with its variables (src/lib/layout/tokens.ts): chips for the names and dates, and every number
+ * metric of the report as {prefix:key}; a click inserts the token at the caret. The report fills them in when it renders.
+ */
+function TextWithVariables({ value, onChange, rawIdx, sources, placeholder }: { value: string; onChange: (v: string) => void; rawIdx: Map<string, RenderedBlock>; sources: SourceInfo[]; placeholder: string }) {
+  const t = useT();
+  const area = useRef<HTMLTextAreaElement>(null);
+  const insert = (tok: string) => {
+    const el = area.current;
+    const s = el?.selectionStart ?? value.length;
+    const e = el?.selectionEnd ?? value.length;
+    onChange(value.slice(0, s) + tok + value.slice(e));
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(s + tok.length, s + tok.length);
+    });
+  };
+  const metrics = useMemo(() => {
+    const out: { token: string; label: string }[] = [];
+    for (const [k, b] of rawIdx) {
+      if (b.widget.value.type !== 'number' || k.includes('@') || k.includes('#') || b.integrationId <= 0) continue;
+      const src = sources.find((x) => x.id === b.integrationId);
+      const prefix = src ? getIntegrationDef(src.slug)?.prefix : undefined;
+      if (!prefix) continue;
+      const token = `{${prefix}:${b.widget.key}}`;
+      if (!out.some((o) => o.token === token)) out.push({ token, label: `${b.platform}, ${b.widget.label}` });
+    }
+    return out.sort((a, b) => a.label.localeCompare(b.label));
+  }, [rawIdx, sources]);
+  return (
+    <>
+      <textarea ref={area} className="input min-h-[200px] text-sm" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+      <div className="space-y-2" data-variables>
+        <div className="label">{t('editor.variables')}</div>
+        <div className="flex flex-wrap gap-1">
+          {TEXT_VARS.map((v) => (
+            <button key={v} type="button" className="var-chip" onClick={() => insert(`{${v}}`)}>
+              {`{${v}}`}
+            </button>
+          ))}
+        </div>
+        {metrics.length > 0 && (
+          <details className="var-metrics">
+            <summary className="cursor-pointer text-xs font-medium text-ink-2">{t('editor.metricVariables', { count: metrics.length })}</summary>
+            <ul className="mt-2 max-h-48 space-y-0.5 overflow-y-auto">
+              {metrics.map((m) => (
+                <li key={m.token}>
+                  <button type="button" className="navlink min-h-[32px] w-full justify-between text-xs" onClick={() => insert(m.token)} title={m.token}>
+                    <span className="truncate">{m.label}</span>
+                    <code className="shrink-0 text-[11px] text-ink-3">{m.token}</code>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+        <div className="text-xs text-ink-3">{t('editor.variablesHint')}</div>
+      </div>
+    </>
+  );
+}
+
 /** The "new block" drop zone: hidden until a metric is being dragged from the panel (html[data-rr-drag]). */
 function NewBlockDrop({ label, ...handlers }: { label: string; onDragOver: (e: React.DragEvent) => void; onDragLeave: (e: React.DragEvent) => void; onDrop: (e: React.DragEvent) => void }) {
   return (
@@ -1002,7 +1068,7 @@ function SettingsPanel({ w, rendered, raw, rawIdx, sources, range, comparison, k
         {w.slug === 'analysis' && (
           <div className="space-y-2">
             <label className="label">{t('editor.text')}</label>
-            <textarea className="input min-h-[200px] text-sm" value={c.html ?? ''} onChange={(e) => onChange({ html: e.target.value }, 'html')} placeholder={t('editor.textPlaceholder')} />
+            <TextWithVariables value={c.html ?? ''} onChange={(html) => onChange({ html }, 'html')} rawIdx={rawIdx} sources={sources} placeholder={t('editor.textPlaceholder')} />
             <div className="text-xs text-slate-400">{t('editor.htmlStripped')}</div>
           </div>
         )}

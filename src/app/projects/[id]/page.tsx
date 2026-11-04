@@ -264,14 +264,15 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                 <div className="text-xs text-slate-500">next: {a.nextRunAt ? a.nextRunAt.toISOString().slice(0, 16).replace('T', ' ') + ' UTC' : '—'}</div>
                 {a.runs[0]?.status === 'held' && (
                   <span className="inline-flex items-center gap-2 text-xs" data-run-held>
-                    <span className="badge bg-amber-50 text-amber-800" title="A source failed; the client has not received this report">
-                      held{Array.isArray((a.runs[0].detail as any)?.held) ? ` · ${(a.runs[0].detail as any).held.length} source${(a.runs[0].detail as any).held.length === 1 ? '' : 's'} failing` : ''}
+                    <span className="badge bg-amber-50 text-amber-800" title={(a.runs[0].detail as any)?.review ? t('automations.waitingApprovalHint') : 'A source failed; the client has not received this report'}>
+                      {(a.runs[0].detail as any)?.review ? t('automations.waitingApproval') : 'held'}
+                      {Array.isArray((a.runs[0].detail as any)?.held) ? `, ${(a.runs[0].detail as any).held.length} source${(a.runs[0].detail as any).held.length === 1 ? '' : 's'} failing` : ''}
                     </span>
                     {write && (
                       <form action={sendHeldRunAction}>
                         <input type="hidden" name="runId" value={a.runs[0].id} />
                         <button className="btn px-2 py-1" title="Refresh the sources that failed, then deliver the stored report">
-                          {t('automations.sendNow')}
+                          {(a.runs[0].detail as any)?.review ? t('automations.approveAndSend') : t('automations.sendNow')}
                         </button>
                       </form>
                     )}
@@ -398,6 +399,9 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                 <div className="flex flex-wrap gap-4 text-sm" data-delivery-flags>
                   <label className="flex items-center gap-1.5">
                     <input type="checkbox" name="holdOnFailure" defaultChecked /> {t('automations.holdOnFailure')}
+                  </label>
+                  <label className="flex items-center gap-1.5" title={t('automations.reviewBeforeSendHint')}>
+                    <input type="checkbox" name="reviewBeforeSend" /> {t('automations.reviewBeforeSend')}
                   </label>
                   <label className={`flex items-center gap-1.5 ${pdfAvailable() ? '' : 'text-ink-3'}`} title={pdfAvailable() ? 'The report goes out as a PDF attachment too' : 'Needs the PDF service (Chromium through Playwright, PDF_ENABLED=auto)'}>
                     <input type="checkbox" name="attachPdf" disabled={!pdfAvailable()} /> Attach the PDF{!pdfAvailable() && ' (service off)'}
