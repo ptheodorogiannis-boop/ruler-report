@@ -357,6 +357,12 @@ export function ReportEditor(props: EditorProps) {
       return { ...x, custom: Object.keys(custom).length ? custom : undefined };
     }), { coalesce: coalesce ? `${id}:${coalesce}` : undefined, immediate: periodChanged || formulaChanged });
   };
+  /** star or unstar a table row by its name (spec 2026-11-04 editor §5); at most 100 names are kept */
+  const toggleStar = (id: string, name: string) => {
+    const cur = widgetOf(id)?.custom?.starredRows ?? [];
+    const next = cur.includes(name) ? cur.filter((n) => n !== name) : [...cur, name].slice(-100);
+    updateCustom(id, { starredRows: next.length ? next : undefined });
+  };
   const setBlockWidgets = (blockId: string, widgets: LayoutWidget[]) => mutate((l) => mapBlock(l, blockId, (b) => ({ ...b, widgets })));
   const renameBlock = (blockId: string, title: string) => mutate((l) => mapBlock(l, blockId, (b) => ({ ...b, title })), { coalesce: `${blockId}:title` });
   const moveBlock = (blockId: string, dir: -1 | 1) =>
@@ -595,7 +601,7 @@ export function ReportEditor(props: EditorProps) {
                     const isNumber = rb?.widget.value.type === 'number' || w.component === 'number_v1' || w.component === 'empty_v1' || w.component === 'calculated_v1';
                     return (
                       <div className={clsx('relative h-full', selected === w.id && 'ritem-selected', w.custom?.hidden && 'ritem-hidden')} data-kind={kindOf(w.component)} data-widget={w.id} onClick={() => setSelected(w.id)}>
-                        {rb ? <WidgetCard b={rb} fmt={fmt} brand={blockColor} palette={palette} grid /> : <div className="card h-full" />}
+                        {rb ? <WidgetCard b={rb} fmt={fmt} brand={blockColor} palette={palette} grid onStarRow={(name) => toggleStar(w.id, name)} /> : <div className="card h-full" />}
                         {w.custom?.staleFor && (
                           <div className="written-for no-print" data-written-for>
                             {t('editor.writtenFor', { range: `${w.custom.staleFor.start} → ${w.custom.staleFor.end}` })}

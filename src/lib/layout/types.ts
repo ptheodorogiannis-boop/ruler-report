@@ -50,6 +50,8 @@ export interface WidgetCustom {
   sortBy?: string;
   sortDir?: SortDir;
   rows?: number;
+  /** row names (a table's first column, a campaign's name) the author starred: tinted on every page (spec 2026-11-04 editor §5) */
+  starredRows?: string[];
   // empty_v1 (manual metric)
   value?: number | null;
   previous?: number | null;

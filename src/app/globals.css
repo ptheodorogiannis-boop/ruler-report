@@ -75,6 +75,8 @@
   --light-grid: rgba(14, 14, 14, 0.07);
   --light-bar: #c5c5c3;
   --bar-muted: var(--light-bar);
+  /* a starred table row: the report accent, faintly (docs/superpowers/specs/2026-11-04-editor-report-management-design.md §5) */
+  --row-star: color-mix(in srgb, var(--brand) 12%, transparent);
   /* legacy names, re-pointed */
   --paper: rgba(14, 14, 14, 0.05); /* a quiet fill inside a tile: chips, tracks, hover rows */
   --card: var(--glass);
@@ -98,6 +100,7 @@
 /* dark values (Ruler Hub): defined for when a theme switch is wired; not switched on yet */
 :root[data-theme='dark'] {
   --ground: #0b0b0b;
+  --row-star: color-mix(in srgb, var(--brand) 22%, transparent);
   --glow-ink: rgba(255, 255, 255, 0.06);
   --glass: rgba(255, 255, 255, 0.07);
   --glass-line: rgba(255, 255, 255, 0.12);
@@ -1584,6 +1587,34 @@ body {
   background: var(--card-solid);
   font-size: 11px;
   color: var(--ink-3);
+}
+/* starred table rows: tinted and heavier on every page; the star button only exists in the editor */
+.row-starred,
+.row-starred > td {
+  background: var(--row-star);
+  font-weight: 600;
+}
+.row-star {
+  display: inline-flex;
+  margin-right: 8px;
+  vertical-align: -2px;
+  color: var(--ink-3);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+tr:hover .row-star,
+.row-star:focus-visible,
+.row-star[aria-pressed='true'] {
+  opacity: 1;
+}
+.row-star[aria-pressed='true'] {
+  color: var(--brand);
+}
+@media print {
+  .row-starred,
+  .row-starred > td {
+    background: color-mix(in srgb, var(--print-line) 50%, var(--print-paper));
+  }
 }
 .written-for-inline {
   margin-top: 8px;

@@ -558,6 +558,7 @@ export const customSchema = z
     alt: z.string().max(200).optional(),
     // analysis_v1 text kept through a period change: the range it was written for (cleared on the next edit)
     staleFor: z.object({ start: z.string().max(10), end: z.string().max(10) }).strict().optional(),
+    starredRows: z.array(z.string().max(300)).max(100).optional(),
   })
   .strict();
 

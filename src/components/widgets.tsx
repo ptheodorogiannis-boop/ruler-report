@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { Fragment } from 'react';
 import { ArrowDownRight, ArrowUpRight, Minus, AlertTriangle, Loader2, Star } from 'lucide-react';
+import { StarRowButton } from './star-row';
 import type { RenderedBlock, RenderedSection, ReportData, SourceStatus, WidgetValue } from '@/lib/engine/types';
 import type { WidgetCustom } from '@/lib/layout/types';
 import { formatValue, type FormatOpts } from '@/lib/util/format';
@@ -38,6 +39,8 @@ export interface CardProps {
   events?: { date: string; title: string }[];
   /** the Quantix tone of the tile on client pages (src/lib/layout/tones.ts) */
   tone?: Tone;
+  /** the editor only: star or unstar a table row by its name (spec 2026-11-04 editor §5) */
+  onStarRow?: (name: string) => void;
 }
 const customOf = (b: RenderedBlock) => (b.custom ?? {}) as WidgetCustom;
 
@@ -148,8 +151,9 @@ function ChartCard({ b, fmt, brand, grid, palette, events, tone }: CardProps) {
   );
 }
 
-function TableCard({ b, fmt, grid, tone }: CardProps) {
+function TableCard({ b, fmt, grid, tone, onStarRow }: CardProps) {
   const w = b.widget;
+  const starred = new Set(customOf(b).starredRows ?? []);
   const v = w.value as Extract<WidgetValue, { type: 'table' }>;
   const o = { currency: w.currency, ...fmt };
   const heads = tableColumnLabels(getIntegrationDef(b.slug)?.prefix ?? b.slug, v, getRequestLocale());
@@ -173,15 +177,20 @@ function TableCard({ b, fmt, grid, tone }: CardProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--line)]">
-            {v.rows.map((r, ri) => (
-              <tr key={ri} className="hover:bg-slate-50/50">
-                {r.map((cell, ci) => (
-                  <td key={ci} className={`td ${ci === 0 ? 'max-w-[280px] truncate font-medium' : 'text-right tabular-nums'}`}>
-                    {ci === 0 ? String(cell) : formatValue(cell as number, v.columnFormats[ci], o)}
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {v.rows.map((r, ri) => {
+              const name = String(r[0]);
+              const on = starred.has(name);
+              return (
+                <tr key={ri} className={clsx('hover:bg-slate-50/50', on && 'row-starred')} {...(on ? { 'data-starred': '' } : {})}>
+                  {r.map((cell, ci) => (
+                    <td key={ci} className={`td ${ci === 0 ? 'max-w-[280px] truncate font-medium' : 'text-right tabular-nums'}`}>
+                      {ci === 0 && onStarRow && <StarRowButton on={on} onClick={() => onStarRow(name)} />}
+                      {ci === 0 ? name : formatValue(cell as number, v.columnFormats[ci], o)}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
             {v.rows.length === 0 && (
               <tr>
                 <td className="td text-center text-slate-400" colSpan={v.columnLabels.length}>

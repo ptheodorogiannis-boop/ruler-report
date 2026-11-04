@@ -7,14 +7,16 @@ import type { CardProps } from './widgets';
 import { getIntegrationDef } from '@/lib/catalog/integrations';
 import { metricLabel } from '@/lib/catalog/labels';
 import { getRequestLocale } from '@/lib/i18n/request';
+import { StarRowButton } from './star-row';
 
 const pct = (cur: number, prev: number) => (prev === 0 ? null : Math.round(((cur - prev) / Math.abs(prev)) * 1000) / 10);
 
-export function ContainerCard({ b, fmt, grid }: CardProps) {
+export function ContainerCard({ b, fmt, grid, onStarRow }: CardProps) {
   const w = b.widget;
   const v = w.value as ContainerValue;
   const o = { currency: w.currency, ...fmt };
   const showStatus = (b.custom as { showStatus?: boolean } | undefined)?.showStatus !== false;
+  const starred = new Set((b.custom as { starredRows?: string[] } | undefined)?.starredRows ?? []);
   const prefix = getIntegrationDef(b.slug)?.prefix ?? b.slug;
   const locale = getRequestLocale();
   return (
@@ -37,8 +39,9 @@ export function ContainerCard({ b, fmt, grid }: CardProps) {
           </thead>
           <tbody>
             {v.rows.map((r) => (
-              <tr key={r.id} data-status={r.status}>
+              <tr key={r.id} data-status={r.status} className={clsx(starred.has(r.name) && 'row-starred')} {...(starred.has(r.name) ? { 'data-starred': '' } : {})}>
                 <td className="ctable-name">
+                  {onStarRow && <StarRowButton on={starred.has(r.name)} onClick={() => onStarRow(r.name)} />}
                   {showStatus && <span className={`ctable-dot ctable-dot-${r.status}`} title={r.status} aria-hidden="true" />}
                   <span className="truncate">{r.name}</span>
                 </td>
