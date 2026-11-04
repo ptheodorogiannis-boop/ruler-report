@@ -4,6 +4,9 @@
 import type { WidgetSpec } from '@/lib/engine/types';
 import { MONEY, PCT, num, series, sum, table } from './helpers';
 
+/** The longest "Show as" name a goal can get. */
+export const GOAL_NAME_MAX = 60;
+
 export interface MatomoGoal {
   id: string;
   name: string;

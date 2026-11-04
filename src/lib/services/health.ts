@@ -21,6 +21,8 @@ export interface HealthResult {
   health: Exclude<Health, 'unknown'>;
   error: string | null;
   tokenExpiresAt: Date | null;
+  /** what the check read that the integration keeps up to date (Matomo goals); merged into Integration.config on save */
+  config?: Record<string, unknown>;
 }
 export interface HealthSnapshot {
   health: Health;
@@ -51,6 +53,14 @@ export function alertFor(prev: HealthSnapshot, next: HealthResult, now: Date): A
   return prev.health === 'failing' || prev.health === 'expiring' ? 'recovered' : null;
 }
 
+/** The config keys a check refreshes. Only these: a validate also answers columns or a currency, which a check must not reset. */
+const REFRESHED_ON_CHECK = ['goals'];
+
+/** The integration's config with what a passing check read merged in; nothing to write when the check read nothing new. */
+export function checkedConfig(config: unknown, res: HealthResult): { config?: any } {
+  return res.config ? { config: { ...((config as Record<string, unknown>) ?? {}), ...res.config } } : {};
+}
+
 /** One integration: demo rows are always ok; an expired token fails without a call; otherwise the connector's validate, with a timeout. */
 export async function checkIntegration(row: HealthRow, opts: { connector?: Connector; now?: Date; timeoutMs?: number } = {}): Promise<HealthResult> {
   const now = opts.now ?? new Date();
@@ -61,6 +71,7 @@ export async function checkIntegration(row: HealthRow, opts: { connector?: Conne
   const connector = opts.connector ?? connectorFor({ slug: row.slug, credentials: creds });
   const timeoutMs = opts.timeoutMs ?? VALIDATE_TIMEOUT_MS;
   const ctx = { integration: { id: row.id, slug: row.slug, name: row.name, sourceId: row.sourceId, config: ((row.config as Record<string, any>) ?? {}) as Record<string, any>, credentials: creds } };
+  let refreshed: Record<string, unknown> | undefined;
   try {
     if (connector.validate) {
       let timer: ReturnType<typeof setTimeout> | undefined;
@@ -68,7 +79,9 @@ export async function checkIntegration(row: HealthRow, opts: { connector?: Conne
         timer = setTimeout(() => reject(new Error(`Timed out after ${Math.round(timeoutMs / 1000)} s`)), timeoutMs);
       });
       try {
-        await Promise.race([connector.validate(ctx), timeout]);
+        const res = await Promise.race([connector.validate(ctx), timeout]);
+        const picked = Object.fromEntries(REFRESHED_ON_CHECK.filter((k) => res?.config?.[k] !== undefined).map((k) => [k, res!.config![k]]));
+        if (Object.keys(picked).length) refreshed = picked;
       } finally {
         clearTimeout(timer);
       }
@@ -77,7 +90,7 @@ export async function checkIntegration(row: HealthRow, opts: { connector?: Conne
     return { health: 'failing', error: String((e as Error)?.message ?? e).slice(0, 300), tokenExpiresAt };
   }
   const expiring = !!tokenExpiresAt && tokenExpiresAt.getTime() - now.getTime() <= EXPIRING_DAYS * 86400000;
-  return { health: expiring ? 'expiring' : 'ok', error: null, tokenExpiresAt };
+  return { health: expiring ? 'expiring' : 'ok', error: null, tokenExpiresAt, ...(refreshed ? { config: refreshed } : {}) };
 }
 
 /** Owners and admins of the company get the e-mails. */
@@ -130,7 +143,7 @@ export async function checkAll(opts: { now?: Date; limit?: number; connectorFor?
       const alert = alertFor({ health: row.health as Health, healthAlertKind: row.healthAlertKind, healthAlertAt: row.healthAlertAt, tokenExpiresAt: row.tokenExpiresAt }, next, now);
       await db.integration.update({
         where: { id: row.id },
-        data: { health: next.health, healthError: next.error, healthCheckedAt: now, tokenExpiresAt: next.tokenExpiresAt, ...(alert ? { healthAlertKind: alert, healthAlertAt: now } : {}) },
+        data: { health: next.health, healthError: next.error, healthCheckedAt: now, tokenExpiresAt: next.tokenExpiresAt, ...checkedConfig(row.config, next), ...(alert ? { healthAlertKind: alert, healthAlertAt: now } : {}) },
       });
       if (alert) {
         alerts.push({ integrationId: row.id, alert });

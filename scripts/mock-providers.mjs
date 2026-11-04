@@ -1,4 +1,4 @@
-// Fake Google and Meta for clicking through "Connect with Google / Meta" without real accounts, and for the tests.
+// Fake Google, Meta and Matomo for clicking through "Connect with Google / Meta" without real accounts, and for the tests.
 // Nothing here talks to Google or Meta. Every account, id and number below is invented.
 //
 //   node scripts/mock-providers.mjs [port]          (default 3198)
@@ -87,6 +87,19 @@ export const FIXTURES = {
       '100000000000005': { id: '100000000000005', name: 'Seaside Hotel', category: 'Hotel' },
     },
   },
+  // a self-hosted Matomo at <mock>/matomo, token "mock-matomo"; goal 1 is the agency's "Lead", as on their real sites
+  matomo: {
+    sites: [
+      { idsite: '1', name: 'Acme Running Co', main_url: 'https://acmerunning.gr', currency: 'EUR', timezone: 'Europe/Athens' },
+      { idsite: '2', name: 'Olive Grove Taverna', main_url: 'https://olivegrove.gr', currency: 'EUR', timezone: 'Europe/Athens' },
+      { idsite: '3', name: 'Peak Fitness', main_url: 'https://peakfitness.example', currency: 'EUR', timezone: 'UTC' },
+    ],
+    goals: [
+      { idgoal: '1', name: 'Lead' },
+      { idgoal: '2', name: 'ClickToPhone' },
+      { idgoal: '3', name: 'Contact form' },
+    ],
+  },
 };
 
 const GOOGLE_SCOPE_LABEL = {
@@ -97,6 +110,67 @@ const GOOGLE_SCOPE_LABEL = {
   'https://www.googleapis.com/auth/yt-analytics.readonly': 'See YouTube Analytics reports',
   'https://www.googleapis.com/auth/business.manage': 'See your Business Profile listings',
 };
+
+// ───────────── Matomo ─────────────
+const matomoDays = (date) => {
+  const [a, b] = String(date ?? '').split(',');
+  const out = [];
+  for (let t = Date.parse(`${a}T00:00:00Z`); b && t <= Date.parse(`${b}T00:00:00Z`) && out.length < 800; t += 86400000) out.push(new Date(t).toISOString().slice(0, 10));
+  return out;
+};
+/** a stable 0..1 per day and key, so the same period always shows the same numbers */
+const matomoNoise = (d, k) => (((Number(d.replace(/-/g, '')) * 9301 + k * 49297) % 233280) / 233280);
+const MATOMO_GOAL_BASE = { 1: 4, 2: 7, 3: 2, ecommerceOrder: 3, ecommerceAbandonedCart: 5 };
+function matomoDay(method, d, q) {
+  const visits = 60 + Math.round(matomoNoise(d, 1) * 50);
+  if (method === 'VisitsSummary.get') return { nb_visits: visits, nb_uniq_visitors: visits - 9, bounce_count: Math.round(visits * 0.42), sum_visit_length: visits * 95, nb_actions: visits * 3 };
+  if (method === 'Actions.get') return { nb_pageviews: visits * 3 - 4 };
+  if (method === 'Goals.get') {
+    const g = q.idGoal;
+    const conv = g ? Math.round((MATOMO_GOAL_BASE[g] ?? 1) * (0.5 + matomoNoise(d, Number(g) || 9))) : 13;
+    return { nb_conversions: conv, revenue: g === 'ecommerceOrder' ? conv * 64.5 : g === '3' ? conv * 20 : 0, conversion_rate: `${((conv / visits) * 100).toFixed(1)}%` };
+  }
+  return [];
+}
+const MATOMO_TABLES = {
+  'Referrers.getReferrerType': [['Search Engines', 420, 31], ['Direct Entry', 260, 18], ['Websites', 120, 6], ['Social Networks', 90, 4], ['Campaigns', 75, 9]],
+  'DevicesDetection.getType': [['Smartphone', 610, 35], ['Desktop', 300, 28], ['Tablet', 55, 5]],
+  'UserCountry.getCountry': [['Greece', 780, 60, 'gr'], ['Cyprus', 90, 5, 'cy'], ['Germany', 45, 2, 'de']],
+  'UserCountry.getCity': [['Athens', 520, 41], ['Thessaloniki', 140, 9], ['Nicosia', 70, 4]],
+  'Actions.getPageUrls': [['/', 900, 0], ['/shop', 410, 0], ['/contact', 160, 0]],
+  'Actions.getPageTitles': [['Acme Running Co', 900, 0], ['Shop - Acme Running Co', 410, 0], ['Contact us - Acme Running Co', 160, 0]],
+  'Actions.getEntryPageUrls': [['/', 520, 0], ['/shop', 210, 0]],
+  'Referrers.getCampaigns': [['autumn-sale', 75, 9], ['newsletter-oct', 40, 3]],
+  'Goals.getItemsName': [['Trail shoe Kima', 0, 12], ['Running socks 3-pack', 0, 30]],
+};
+function matomoAnswer(q, state) {
+  if (q.method === 'API.getBulkRequest') {
+    const out = [];
+    for (let i = 0; q[`urls[${i}]`] != null; i++) out.push(matomoAnswer({ ...Object.fromEntries(new URLSearchParams(q[`urls[${i}]`])), token_auth: q.token_auth }, state));
+    return out;
+  }
+  if (q.token_auth !== 'mock-matomo') return { result: 'error', message: 'Unable to authenticate with the provided token. It is either invalid or expired.' };
+  const sites = FIXTURES.matomo.sites;
+  if (q.method === 'SitesManager.getSitesWithAtLeastViewAccess') return sites;
+  const site = sites.find((x) => x.idsite === String(q.idSite));
+  if (q.idSite && !site) return { result: 'error', message: `You can't access this resource as it requires view access for the website id = ${q.idSite}.` };
+  if (q.method === 'SitesManager.getSiteFromId') return site;
+  if (q.method === 'Goals.getGoals') return state.matomoGoals.map((g) => ({ ...g, idsite: q.idSite }));
+  const days = matomoDays(q.date);
+  if (['VisitsSummary.get', 'Actions.get', 'Goals.get'].includes(q.method)) {
+    if (q.period === 'day') return Object.fromEntries(days.map((d) => [d, matomoDay(q.method, d, q)]));
+    const sum = {};
+    for (const d of days) for (const [k, v] of Object.entries(matomoDay(q.method, d, q))) if (typeof v === 'number') sum[k] = (sum[k] ?? 0) + v;
+    if (q.method === 'Goals.get' && sum.nb_conversions != null) sum.conversion_rate = `${((sum.nb_conversions / (days.length * 85 || 1)) * 100).toFixed(1)}%`;
+    return sum;
+  }
+  const table = MATOMO_TABLES[q.method];
+  if (table) {
+    const k = Math.max(1, days.length) / 30;
+    return table.map(([label, visits, conv, code]) => ({ label, nb_visits: Math.round(visits * k), nb_uniq_visitors: Math.round(visits * k * 0.8), nb_hits: Math.round(visits * k * 1.3), nb_conversions: Math.round(conv * k), revenue: Math.round(conv * k * 40), orders: Math.round(conv * k), ...(code ? { code } : {}) }));
+  }
+  return { result: 'error', message: `The method '${q.method}' does not exist or is not available in the module 'API'.` };
+}
 
 function reply(res, status, body) {
   res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body));
@@ -139,7 +213,7 @@ function adsDataRows(query) {
 }
 
 export function createMockProviders(opts = {}) {
-  const state = { seen: [], gbpQuota: !!opts.gbpQuota };
+  const state = { seen: [], gbpQuota: !!opts.gbpQuota, matomoGoals: FIXTURES.matomo.goals.map((g) => ({ ...g })) };
   const server = http.createServer(async (req, res) => {
     const u = new URL(req.url, 'http://x');
     let raw = '';
@@ -211,6 +285,9 @@ export function createMockProviders(opts = {}) {
       }
     }
 
+    // ── Matomo's Reporting API: every call is a POST to /matomo/index.php with token_auth in the body
+    if (u.pathname === '/matomo/index.php') return req.method === 'POST' ? reply(res, 200, matomoAnswer(body, state)) : reply(res, 200, { result: 'error', message: 'Send the token as a POST parameter.' });
+
     // ── Meta login dialog + token
     if (u.pathname === '/m/dialog') {
       if (q.get('decision')) {
@@ -257,5 +334,5 @@ export function createMockProviders(opts = {}) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const port = Number(process.argv[2] ?? 3198);
   const { server } = createMockProviders({ gbpQuota: process.env.MOCK_GBP_QUOTA === '1' });
-  server.listen(port, '127.0.0.1', () => console.log(`mock Google + Meta on http://localhost:${port}`));
+  server.listen(port, '127.0.0.1', () => console.log(`mock Google, Meta and Matomo on http://localhost:${port}`));
 }

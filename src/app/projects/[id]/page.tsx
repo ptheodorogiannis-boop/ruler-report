@@ -40,12 +40,14 @@ import { shareUrl } from '@/lib/services/reports';
 import { pdfAvailable } from '@/lib/services/pdf';
 import { requestBaseUrl } from '@/lib/share';
 import { ListFilter } from '@/components/list-filter';
+import { MatomoGoals } from '@/components/matomo-goals';
+import type { MatomoGoalConfig } from '@/lib/catalog/matomo-goals';
 
 export const dynamic = 'force-dynamic';
 
 const TABS = ['overview', 'integrations', 'reports', 'dashboards', 'automations', 'goals', 'timeline', 'settings'];
 
-export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; new?: string; campaigns?: string; added?: string; refreshed?: string; failed?: string; ids?: string }> }) {
+export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; new?: string; campaigns?: string; goals?: string; added?: string; refreshed?: string; failed?: string; ids?: string }> }) {
   const { t, locale } = await getT();
   const p = await requirePrincipal();
   const { id } = await params;
@@ -55,6 +57,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   const tab = TABS.includes(sp.tab ?? '') ? sp.tab! : 'overview';
   // ?campaigns=<integrationId> opens the campaign scope editor under that row (spec v3 §2.2)
   const editingCampaignsId = Number(sp.campaigns) || 0;
+  const editingGoalsId = Number(sp.goals) || 0;
   // ?ids= from the accounts-found submit: name those rows in the banner and list them first
   const justAdded = new Set(String(sp.ids ?? '').split(',').map(Number).filter((n) => Number.isInteger(n) && n > 0));
   const write = canWrite(p);
@@ -185,6 +188,16 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                           )}
                         </div>
                       )}
+                      {i.slug === 'matomo' && Array.isArray((i.config as MatomoGoalConfig | null)?.goals) && (
+                        <div className="flex flex-wrap gap-x-3 text-xs text-ink-2" data-goals-line>
+                          <span>{t('integrations.goalsCount', { count: (i.config as MatomoGoalConfig).goals!.length })}</span>
+                          {write && (
+                            <Link href={`/projects/${project.id}?tab=integrations&goals=${editingGoalsId === i.id ? '' : i.id}`} className="link">
+                              {editingGoalsId === i.id ? t('common.close') : t('integrations.goalsEdit')}
+                            </Link>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="text-xs">
                       <HealthChip health={i.health} tokenExpiresAt={i.tokenExpiresAt} healthCheckedAt={i.healthCheckedAt} error={i.healthError} lastError={i.lastError} lastSyncAt={i.lastSyncAt} />
@@ -245,6 +258,11 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                       );
                     })()}
                   </div>
+                  {write && editingGoalsId === i.id && i.slug === 'matomo' && (
+                    <div className="px-4 pb-4">
+                      <MatomoGoals integrationId={i.id} name={i.name} config={i.config as MatomoGoalConfig | null} />
+                    </div>
+                  )}
                   {write && editingCampaignsId === i.id && isAdsSlug(i.slug) && (
                     <div className="px-4 pb-4" data-campaign-editor>
                       <ActionForm action={updateIntegrationCampaignsAction} submit={t('campaigns.save')} className="card space-y-3 p-4">

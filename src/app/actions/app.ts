@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { isLocale } from '@/lib/i18n';
 import { isMediaOrHttps } from '@/lib/media/url';
-import { checkIntegration } from '@/lib/services/health';
+import { checkIntegration, checkedConfig } from '@/lib/services/health';
 import { regenerateSource } from '@/lib/engine/report';
 import { scopeSchema, type CampaignScope } from '@/lib/engine/campaigns';
 import { listCampaignsFor } from '@/lib/services/campaigns';
@@ -19,6 +19,8 @@ import { db } from '@/lib/db';
 import { analyse, analyseBlock, aiConfigured } from '@/lib/ai/insights';
 import { TONE_LABEL, isTone, type Tone } from '@/lib/ai/tones';
 import { connectIntegration, refreshColumns } from '@/lib/services/integrations';
+import { connectMatomoSites, matomoSitesInProject, saveGoalNames } from '@/lib/services/matomo';
+import { listMatomoSites } from '@/lib/connectors/matomo';
 import { changeReportPeriod, withoutStale, type ComparisonChoice } from '@/lib/services/report-period';
 import { archiveReport, convertReport, createReport, deleteArchivedReport, duplicateReport, restoreReport } from '@/lib/services/reports';
 import { snapshotReport, liveDashboardData } from '@/lib/engine/report';
@@ -131,6 +133,65 @@ export async function connectIntegrationAction(_: unknown, fd: FormData) {
     return { error: (e as Error).message };
   }
   redirect(`/projects/${fd.get('projectId')}?tab=integrations`);
+}
+// ───────────── Matomo (docs/superpowers/specs/2026-11-04-ads-previews-sources-matomo-design.md §3) ─────────────
+/** Matomo's own words for a wrong address or token, without the internal "invalid_token:" marker. */
+const matomoFail = (e: unknown) => {
+  const r = fail(e);
+  return { ok: false as const, error: r.error.replace(/^invalid_token:\s*/, '') };
+};
+const matomoCreds = (input: { baseUrl: string; tokenAuth: string }) => {
+  const creds = { baseUrl: String(input.baseUrl ?? '').trim(), tokenAuth: String(input.tokenAuth ?? '').trim() };
+  if (!creds.baseUrl || !creds.tokenAuth) throw new Error('Enter your Matomo address and its API token');
+  return creds;
+};
+/** "Load sites": every site the token can see, marked when this Matomo's site is already in the project. */
+export async function listMatomoSitesAction(input: { projectId: number; baseUrl: string; tokenAuth: string }): Promise<Result<{ sites: { id: string; name: string; url: string; inProject: boolean }[] }>> {
+  try {
+    const p = await writer();
+    await assertProject(p, Number(input.projectId));
+    const creds = matomoCreds(input);
+    const sites = await listMatomoSites(creds);
+    const have = await matomoSitesInProject(p.companyId, Number(input.projectId), creds.baseUrl);
+    return { ok: true, sites: sites.map((s) => ({ id: s.id, name: s.name, url: s.url, inProject: have.has(s.id) })) };
+  } catch (e) {
+    return matomoFail(e);
+  }
+}
+/** "Connect": one integration per picked site (a site already in the project gets the new token instead). */
+export async function connectMatomoAction(input: { projectId: number; baseUrl: string; tokenAuth: string; siteIds: string[] }): Promise<Result<{ ids: number[]; created: number; refreshed: number }>> {
+  try {
+    const p = await writer();
+    const projectId = Number(input.projectId);
+    await assertProject(p, projectId);
+    const creds = matomoCreds(input);
+    const before = await matomoSitesInProject(p.companyId, projectId, creds.baseUrl);
+    const ids = await connectMatomoSites({ companyId: p.companyId, projectId, ...creds, siteIds: Array.isArray(input.siteIds) ? input.siteIds.map(String) : [] });
+    const refreshed = ids.filter((id) => [...before.values()].includes(id)).length;
+    revalidatePath(`/projects/${projectId}`);
+    return { ok: true, ids, created: ids.length - refreshed, refreshed };
+  } catch (e) {
+    return matomoFail(e);
+  }
+}
+/** The Goals list's "Show as" names: goal_<id> fields; empty clears a rename. */
+export async function saveGoalNamesAction(_: unknown, fd: FormData) {
+  try {
+    const p = await writer();
+    const row = await db.integration.findFirst({ where: { id: Number(fd.get('integrationId')), companyId: p.companyId } });
+    if (!row) throw new Error('Integration not found');
+    await assertProject(p, row.projectId);
+    const names: Record<string, string> = {};
+    for (const [k, v] of fd.entries()) {
+      const m = /^goal_(\d+)$/.exec(k);
+      if (m) names[m[1]] = String(v);
+    }
+    await saveGoalNames(p.companyId, row.id, names);
+    revalidatePath(`/projects/${row.projectId}`);
+  } catch (e) {
+    return { error: (e as Error).message, saved: false };
+  }
+  return { error: null as string | null, saved: true };
 }
 export async function removeIntegrationAction(fd: FormData) {
   const p = await writer();
@@ -678,7 +739,7 @@ export async function checkIntegrationAction(fd: FormData) {
     if (!row) throw new Error('Integration not found');
     await assertProject(p, row.projectId);
     const res = await checkIntegration(row);
-    await db.integration.update({ where: { id }, data: { health: res.health, healthError: res.error, healthCheckedAt: new Date(), tokenExpiresAt: res.tokenExpiresAt } });
+    await db.integration.update({ where: { id }, data: { health: res.health, healthError: res.error, healthCheckedAt: new Date(), tokenExpiresAt: res.tokenExpiresAt, ...checkedConfig(row.config, res) } });
   } catch {
     // the chip shows the stored state; a failed manual check is not an error page
   }

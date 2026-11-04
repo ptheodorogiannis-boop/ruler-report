@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { AppShell, PageHeader } from '@/components/shell';
 import { ActionForm } from '@/components/action-form';
 import { PlatformTile } from '@/components/platform-tile';
+import { MatomoConnect } from '@/components/matomo-connect';
 import { connectIntegrationAction } from '@/app/actions/app';
 import { assertProject, canAdmin, canWrite, requirePrincipal } from '@/lib/auth';
 import { getIntegrationDef } from '@/lib/catalog/integrations';
@@ -158,6 +159,15 @@ export default async function ConnectForm({ params, searchParams }: { params: Pr
               </div>
               <details className="group mt-6 border-t border-[var(--line)] pt-4" open={!!existing && !provider}>
                 <summary className="cursor-pointer select-none text-sm font-medium text-ink-2 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]">{t('connect.manualToggle')}</summary>
+                <div className="mt-4">{manualForm}</div>
+              </details>
+            </>
+          ) : slug === 'matomo' && !existing ? (
+            // Matomo (spec 2026-11-04 §3): address + token, then pick the sites; a site ID by hand or sample data stays one click away
+            <>
+              <MatomoConnect projectId={project.id} />
+              <details className="group mt-6 border-t border-[var(--line)] pt-4">
+                <summary className="cursor-pointer select-none text-sm font-medium text-ink-2 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]">{t('connect.matomoManual')}</summary>
                 <div className="mt-4">{manualForm}</div>
               </details>
             </>

@@ -18,7 +18,7 @@ const db = path.join(root, 'prisma', 'mock.db');
 if (args.includes('--fresh') || !existsSync(db)) copyFileSync(path.join(root, 'prisma', 'dev.db'), db);
 
 const { server } = createMockProviders({ gbpQuota: process.env.MOCK_GBP_QUOTA === '1' });
-server.listen(mockPort, '127.0.0.1', () => console.log(`mock Google + Meta on http://127.0.0.1:${mockPort}`));
+server.listen(mockPort, '127.0.0.1', () => console.log(`mock Google, Meta and Matomo on http://127.0.0.1:${mockPort}`));
 
 const env = {
   ...process.env,

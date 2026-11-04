@@ -10,4 +10,9 @@ export interface MockSeen {
 }
 export const FIXTURES: any;
 export function mockCode(scopes: string[]): string;
-export function createMockProviders(opts?: { gbpQuota?: boolean }): { server: Server; state: { seen: MockSeen[]; gbpQuota: boolean } };
+/** a goal of the stand-in Matomo, as Goals.getGoals answers it */
+export interface MockMatomoGoal {
+  idgoal: string;
+  name: string;
+}
+export function createMockProviders(opts?: { gbpQuota?: boolean }): { server: Server; state: { seen: MockSeen[]; gbpQuota: boolean; matomoGoals: MockMatomoGoal[] } };
