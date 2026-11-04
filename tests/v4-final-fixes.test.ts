@@ -19,3 +19,23 @@ test('the app pages ship the strings of the Ask box and the metric picker (no ra
     assert.ok(dict['catalog.group.delivery'], `${locale}: picker group names`);
   }
 });
+
+test('an archived report is never sent: "Send now" on its held run refuses, nothing is mailed, the run stays held', async () => {
+  const { db } = await import('../src/lib/db');
+  const { addIntegration, makeCompany } = await import('./helpers');
+  const { runAutomation, deliverRun } = await import('../src/lib/services/automations');
+  const { archiveReport } = await import('../src/lib/services/reports');
+  const { company, project } = await makeCompany('Archived delivery Co');
+  const fine = await addIntegration(company.id, project.id, 'facebook_ads', { sourceId: 'act_ok' });
+  const broken = await addIntegration(company.id, project.id, 'facebook_ads', { sourceId: 'act_broken', demo: false, credentials: { oauth: 'meta' } });
+  const a = await db.automation.create({ data: { projectId: project.id, title: 'Held', frequency: 'monthly', channels: ['email'], emails: ['client@x.test'], integrationIds: [fine.id, broken.id], holdOnFailure: true, dayOfMonth: 1, hour: 8, enabled: true, nextRunAt: new Date() } });
+  const r = await runAutomation(a.id);
+  assert.equal(r.status, 'held');
+  const run = await db.automationRun.findFirstOrThrow({ where: { automationId: a.id } });
+  await archiveReport(r.report.id, company.id);
+  const before = await db.report.findUniqueOrThrow({ where: { id: r.report.id } });
+  await assert.rejects(deliverRun(run.id), /archived/i);
+  assert.equal(await db.outbox.count({ where: { companyId: company.id, toAddr: 'client@x.test' } }), 0, 'no dead link mailed');
+  assert.equal((await db.automationRun.findUniqueOrThrow({ where: { id: run.id } })).status, 'held');
+  assert.equal(JSON.stringify((await db.report.findUniqueOrThrow({ where: { id: r.report.id } })).data), JSON.stringify(before.data), 'no new data');
+});

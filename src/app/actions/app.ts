@@ -282,7 +282,7 @@ export async function emailReportAction(fd: FormData) {
   const p = await writer();
   const r = await db.report.findFirst({ where: { id: Number(fd.get('id')), companyId: p.companyId } });
   const to = String(fd.get('to') ?? '').split(/[,\s;]+/).filter((x) => /.+@.+/.test(x));
-  if (!r || !to.length) return;
+  if (!r || r.archivedAt || !to.length) return;
   const base = process.env.APP_URL || 'http://localhost:3100';
   const url = `${base}/${r.kind === 'report' ? 'r' : 'd'}/${r.shareToken}`;
   await sendEmail(to, r.title, `<p>${r.title} is ready.</p><p><a href="${url}">Open the ${r.kind}</a></p>`, { companyId: p.companyId });
@@ -688,7 +688,7 @@ export async function checkIntegrationAction(fd: FormData) {
 export async function retrySourceAction(fd: FormData) {
   const p = await writer();
   const r = await db.report.findFirst({ where: { id: Number(fd.get('reportId')), companyId: p.companyId }, include: { project: true } });
-  if (!r || r.kind !== 'report') return;
+  if (!r || r.kind !== 'report' || r.archivedAt) return;
   await assertProject(p, r.projectId);
   try {
     await regenerateSource(r, Number(fd.get('integrationId')));

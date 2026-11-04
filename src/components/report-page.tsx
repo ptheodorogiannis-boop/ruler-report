@@ -60,8 +60,8 @@ export async function InternalReport({ id, kind }: { id: number; kind: 'report' 
         }
         actions={
           <>
-            {r.shareEnabled && <CopyButton text={url} label={t('share.copyLink')} />}
-            {r.shareEnabled && (
+            {r.shareEnabled && !r.archivedAt && <CopyButton text={url} label={t('share.copyLink')} />}
+            {r.shareEnabled && !r.archivedAt && (
               <a href={url} target="_blank" rel="noreferrer" className="btn">
                 <ExternalLink size={14} /> {t('share.openClientView')}
               </a>
@@ -75,7 +75,7 @@ export async function InternalReport({ id, kind }: { id: number; kind: 'report' 
                 <Presentation size={14} /> Studio
               </Link>
             )}
-            {write && (
+            {write && !r.archivedAt && (
               <form action={refreshReportAction}>
                 <input type="hidden" name="id" value={r.id} />
                 <button className="btn" title={kind === 'report' ? t('share.refreshSnapshot') : t('share.bypassCache')}>
@@ -198,12 +198,14 @@ export async function InternalReport({ id, kind }: { id: number; kind: 'report' 
                   </ConfirmButton>
                 </form>
               </div>
-              <form action={archiveReportAction} className="pt-3">
-                <input type="hidden" name="id" value={r.id} />
-                <button className="btn">
-                  <Archive size={14} /> {t('reports.archive')}
-                </button>
-              </form>
+              {!r.archivedAt && (
+                <form action={archiveReportAction} className="pt-3">
+                  <input type="hidden" name="id" value={r.id} />
+                  <button className="btn">
+                    <Archive size={14} /> {t('reports.archive')}
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         </details>

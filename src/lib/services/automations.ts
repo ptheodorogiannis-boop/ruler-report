@@ -272,6 +272,7 @@ export async function deliverRun(runId: number) {
     const run = await db.automationRun.findUniqueOrThrow({ where: { id: runId }, include: { automation: { include: { project: true } } } });
     let report = run.reportId ? await db.report.findUnique({ where: { id: run.reportId }, include: { project: true } }) : null;
     if (!report) throw new Error('The held report no longer exists');
+    if (report.archivedAt) throw new Error('The held report is archived: restore it to send it');
     const extra: Record<string, unknown> = {};
     const failedBefore = failedSources(report.data as unknown as ReportData);
     if (failedBefore.length) {
