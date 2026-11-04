@@ -21,16 +21,16 @@ import { blockColorOf, blockVars, paletteFor, themeVars, withBlockColor } from '
 import { PlatformIcon } from '@/components/platform-icon';
 import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ArrowDown, ArrowUp, Check, ChevronDown, Code2, Copy, Download, Eye, EyeOff, GripVertical, LayoutTemplate, Loader2, Palette, Plus, Redo2, Settings2, Star, Trash2, Undo2, X } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, Check, ChevronDown, Code2, Copy, Download, Eye, EyeOff, GripVertical, LayoutTemplate, Loader2, Minus, Palette, Plus, Redo2, Settings2, Star, Trash2, Undo2, X } from 'lucide-react';
 import { saveLayoutAction, saveReportAsTemplateAction } from '@/app/actions/editor';
 import { getIntegrationDef, isAdsSlug } from '@/lib/catalog/integrations';
 import type { Component, DateRange, Format, RenderedBlock, ReportData } from '@/lib/engine/types';
 import { composeReport, effectiveScope, indexValues, newId, valueKey, widgetValueKey, withBlockScope } from '@/lib/layout/compose';
-import { firstFree } from '@/lib/layout/grid';
-import { DEFAULT_SIZE, MIN_SIZE, type LayoutBlock, type LayoutWidget, type ReportLayout, type SourceInfo, type WidgetCustom } from '@/lib/layout/types';
+import { compact, firstFree, moveItem, resizeItem, resolve } from '@/lib/layout/grid';
+import { DEFAULT_SIZE, GRID_COLS, MIN_SIZE, type LayoutBlock, type LayoutWidget, type ReportLayout, type SourceInfo, type WidgetCustom } from '@/lib/layout/types';
 import { reportToCsv } from '@/lib/services/export';
 import { CopyButton } from './action-form';
-import { DND_TYPE, GridCanvas, setDragPayload } from './grid';
+import { DND_TYPE, GridCanvas, getDragPayload, setDragPayload } from './grid';
 import { PlatformBadge, ReportBody, WidgetCard, type Fmt, AnalysisCardView, type BodyCard } from './widgets';
 
 export interface EditorProps {
@@ -210,22 +210,92 @@ export function ReportEditor(props: EditorProps) {
   const blockOf = (id: string) => latest.current.blocks.find((b) => b.widgets.some((w) => w.id === id));
   const widgetOf = (id: string) => latest.current.blocks.flatMap((b) => b.widgets).find((w) => w.id === id);
 
+  const makeWidget = (p: Payload, block: Pick<LayoutBlock, 'integrationId'>, at: { x: number; y: number }): LayoutWidget => {
+    const component = componentOfPayload(p);
+    const base = { id: newId(), component, ...at, ...DEFAULT_SIZE[component] };
+    return p.kind === 'metric'
+      ? { ...base, slug: p.slug, key: p.key, integrationId: p.integrationId }
+      : p.kind === 'blended'
+        ? { ...base, slug: 'custom', key: p.key, integrationId: 0 }
+        : { ...base, slug: p.slug, key: SPECIAL_KEY[p.slug], integrationId: p.slug === 'container' ? block.integrationId : 0, custom: SPECIAL_DEFAULT[p.slug]() };
+  };
   const addWidget = (blockId: string, p: Payload, pos?: { x: number; y: number }) => {
     const block = latest.current.blocks.find((b) => b.id === blockId);
     if (!block) return;
-    const component = componentOfPayload(p);
-    const size = DEFAULT_SIZE[component];
-    const at = pos ?? firstFree(block.widgets, size.w, size.h);
-    const base = { id: newId(), component, ...at, ...size };
-    const w: LayoutWidget =
-      p.kind === 'metric'
-        ? { ...base, slug: p.slug, key: p.key, integrationId: p.integrationId }
-        : p.kind === 'blended'
-          ? { ...base, slug: 'custom', key: p.key, integrationId: 0 }
-          : { ...base, slug: p.slug, key: SPECIAL_KEY[p.slug], integrationId: p.slug === 'container' ? block.integrationId : 0, custom: SPECIAL_DEFAULT[p.slug]() };
-    mutate((l) => mapBlock(l, blockId, (b) => ({ ...b, widgets: [...b.widgets, w] })), { immediate: true });
+    const size = DEFAULT_SIZE[componentOfPayload(p)];
+    const w = makeWidget(p, block, pos ?? firstFree(block.widgets, size.w, size.h));
+    // a drop at a chosen cell pushes what is there down, then everything settles upwards (no overlaps, no gaps)
+    mutate((l) => mapBlock(l, blockId, (b) => ({ ...b, widgets: pos ? compact(resolve([...b.widgets, w], w)) : [...b.widgets, w] })), { immediate: true });
     if (p.kind === 'special') setSelected(w.id);
   };
+  /** A drop on the "new block" zone: a block for the dragged metric's account (or a custom block) holding that widget. */
+  const addBlockWith = (p: Payload, index: number) => {
+    const src = p.kind === 'metric' ? sources.find((s) => s.id === p.integrationId) ?? null : null;
+    const def = src ? getIntegrationDef(src.slug) : null;
+    const shell = { integrationId: src?.id ?? 0 };
+    const w = makeWidget(p, shell, { x: 0, y: 0 });
+    const b: LayoutBlock = { id: newId('b'), title: src ? def?.name ?? src.name : t('editor.customBlock'), integrationId: shell.integrationId, slug: src?.slug ?? 'custom', widgets: [w] };
+    mutate((l) => ({ ...l, blocks: [...l.blocks.slice(0, index), b, ...l.blocks.slice(index)] }), { immediate: true });
+    if (p.kind === 'special') setSelected(w.id);
+  };
+  /** Size presets from the settings panel: a width in columns (moved left first if it would not fit), or a height step. */
+  const sizeWidget = (id: string, size: { cols?: number; dh?: number }) => {
+    const b = blockOf(id);
+    const w = widgetOf(id);
+    if (!b || !w) return;
+    const min = MIN_SIZE[compOf(w)];
+    const cols = Math.max(min.w, Math.min(GRID_COLS, size.cols ?? w.w));
+    const h = Math.max(min.h, w.h + (size.dh ?? 0));
+    let items = w.x + cols > GRID_COLS ? moveItem(b.widgets, id, GRID_COLS - cols, w.y) : b.widgets;
+    items = resizeItem(items, id, cols, h, min);
+    if (items !== b.widgets) setBlockWidgets(b.id, items);
+  };
+  const [overBlock, setOverBlock] = useState<string | null>(null);
+  useEffect(() => {
+    const clear = () => setOverBlock(null);
+    window.addEventListener('dragend', clear);
+    window.addEventListener('drop', clear);
+    return () => (window.removeEventListener('dragend', clear), window.removeEventListener('drop', clear));
+  }, []);
+  /** The whole block takes a drop: on its header or around the grid the widget goes to the first free place. */
+  const blockDrop = (blockId: string) => ({
+    onDragOver: (e: React.DragEvent) => {
+      if (!e.dataTransfer.types.includes(DND_TYPE)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      if (overBlock !== blockId) setOverBlock(blockId);
+    },
+    onDragLeave: (e: React.DragEvent) => {
+      if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+      setOverBlock((v) => (v === blockId ? null : v));
+    },
+    onDrop: (e: React.DragEvent) => {
+      setOverBlock(null);
+      if (e.defaultPrevented) return; // the grid placed it at the pointer
+      const pl = parsePayload(e.dataTransfer.getData(DND_TYPE) || getDragPayload() || '');
+      setDragPayload(null);
+      if (!pl) return;
+      e.preventDefault();
+      addWidget(blockId, pl);
+    },
+  });
+  const newBlockDrop = (index: number) => ({
+    onDragOver: (e: React.DragEvent) => {
+      if (!e.dataTransfer.types.includes(DND_TYPE)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      (e.currentTarget as HTMLElement).classList.add('is-over');
+    },
+    onDragLeave: (e: React.DragEvent) => (e.currentTarget as HTMLElement).classList.remove('is-over'),
+    onDrop: (e: React.DragEvent) => {
+      (e.currentTarget as HTMLElement).classList.remove('is-over');
+      const pl = parsePayload(e.dataTransfer.getData(DND_TYPE) || getDragPayload() || '');
+      setDragPayload(null);
+      if (!pl) return;
+      e.preventDefault();
+      addBlockWith(pl, index);
+    },
+  });
   const removeWidget = (id: string) => {
     mutate((l) => ({ ...l, blocks: l.blocks.map((b) => ({ ...b, widgets: b.widgets.filter((w) => w.id !== id) })) }));
     if (selected === id) setSelected(null);
@@ -314,6 +384,7 @@ export function ReportEditor(props: EditorProps) {
           {preview ? <Settings2 size={14} /> : <Eye size={14} />} {preview ? t('editor.backToEditing') : t('editor.previewAsClient')}
         </button>
         <span className="ml-auto hidden text-xs text-slate-400 md:inline">{t('editor.gridHint')}</span>
+        <span className="editor-phone-hint w-full">{t('editor.dragWider')}</span>
       </div>
       {error && (
         <div className="no-print flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -339,6 +410,7 @@ export function ReportEditor(props: EditorProps) {
           {panel && <AddMetricsPanel block={panel} sources={sources} customMetrics={customMetrics} onAdd={(p) => addWidget(panel.id, p)} onClose={() => setPanelBlock(null)} />}
           <div className="min-w-0 flex-1 space-y-8">
           {layout.blocks.length === 0 && <div className="card p-8 text-center text-sm text-slate-500">{t('editor.noBlocks')}</div>}
+          {layout.blocks.length === 0 && <NewBlockDrop label={t('editor.dropNewBlock')} {...newBlockDrop(0)} />}
           {layout.blocks.map((b, bi) => {
             const sec = composed.sections.find((s) => s.id === b.id);
             const src = sec?.source;
@@ -349,7 +421,8 @@ export function ReportEditor(props: EditorProps) {
             const BlockIconC = b.icon ? ICONS[b.icon] : null;
             return (
               <Fragment key={b.id}>
-              <section data-block={b.id} className="space-y-3" style={blockVars(layout.theme, b.id, platformColor, accent)}>
+              {bi === 0 && <NewBlockDrop label={t('editor.dropNewBlock')} {...newBlockDrop(0)} />}
+              <section data-block={b.id} className={clsx('block-drop space-y-3', overBlock === b.id && 'is-over')} style={blockVars(layout.theme, b.id, platformColor, accent)} {...blockDrop(b.id)}>
                 <div className={clsx('flex flex-wrap items-center gap-2', b.hideHeader && 'opacity-60')}>
                   {BlockIconC && (
                     <span className="block-icon" data-icon={b.icon} aria-hidden="true">
@@ -473,7 +546,7 @@ export function ReportEditor(props: EditorProps) {
                       <div className={clsx('relative h-full', selected === w.id && 'ritem-selected', w.custom?.hidden && 'ritem-hidden')} data-kind={kindOf(w.component)} onClick={() => setSelected(w.id)}>
                         {rb ? <WidgetCard b={rb} fmt={fmt} brand={blockColor} palette={palette} grid /> : <div className="card h-full" />}
                         <div className="rtoolbar no-print" onClick={(e) => e.stopPropagation()}>
-                          <button {...api.dragHandle} aria-label={t('editor.dragToMove')}>
+                          <button {...api.dragHandle} className="rtool-drag" aria-label={t('editor.dragToMove')}>
                             <GripVertical size={14} />
                           </button>
                           {isNumber && (
@@ -500,6 +573,7 @@ export function ReportEditor(props: EditorProps) {
               {(cards ?? []).filter((c) => c.blockId === b.id).map((c) => (
                 <AnalysisCardView key={c.id} c={c} />
               ))}
+              <NewBlockDrop label={t('editor.dropNewBlock')} {...newBlockDrop(bi + 1)} />
               </Fragment>
             );
           })}
@@ -520,10 +594,21 @@ export function ReportEditor(props: EditorProps) {
           onDuplicate={() => duplicateWidget(selectedWidget.id)}
           onExport={rendered.get(selectedWidget.id) && !['text', 'error'].includes(rendered.get(selectedWidget.id)!.widget.value.type) ? () => downloadCsv(rendered.get(selectedWidget.id)!) : undefined}
           onClose={() => setSelected(null)}
+          onSize={(sz) => sizeWidget(selectedWidget.id, sz)}
             />
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** The "new block" drop zone: hidden until a metric is being dragged from the panel (html[data-rr-drag]). */
+function NewBlockDrop({ label, ...handlers }: { label: string; onDragOver: (e: React.DragEvent) => void; onDragLeave: (e: React.DragEvent) => void; onDrop: (e: React.DragEvent) => void }) {
+  return (
+    <div className="newblock-drop no-print" {...handlers}>
+      <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+      <span>{label}</span>
     </div>
   );
 }
@@ -808,7 +893,11 @@ interface SettingsProps {
   onDuplicate: () => void;
   onExport?: () => void;
   onClose: () => void;
+  /** size presets: a width in columns, or a height step */
+  onSize: (s: { cols?: number; dh?: number }) => void;
 }
+/** widths in grid columns for the size presets: a quarter, half, three quarters and the full width */
+const SIZE_PRESETS: [number, string][] = [[3, 'editor.sizeS'], [6, 'editor.sizeM'], [9, 'editor.sizeL'], [12, 'editor.sizeFull']];
 const FORMATS: Format[] = ['number', 'currency', 'percent', 'decimal', 'duration'];
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
@@ -820,7 +909,7 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
   );
 }
 
-function SettingsPanel({ w, rendered, raw, rawIdx, sources, range, comparison, kind, decimal, onChange, onRemove, onDuplicate, onExport, onClose }: SettingsProps) {
+function SettingsPanel({ w, rendered, raw, rawIdx, sources, range, comparison, kind, decimal, onChange, onRemove, onDuplicate, onExport, onClose, onSize }: SettingsProps) {
   const t = useT();
   const c = w.custom ?? {};
   const comp = w.component;
@@ -858,6 +947,24 @@ function SettingsPanel({ w, rendered, raw, rawIdx, sources, range, comparison, k
         </button>
       </div>
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
+        <div data-size-presets>
+          <div className="label">{t('editor.size')}</div>
+          <div className="segments">
+            {SIZE_PRESETS.map(([cols, key]) => (
+              <button key={cols} type="button" aria-pressed={w.w === cols} onClick={() => onSize({ cols })}>
+                {t(key)}
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-2">
+            <button type="button" className="btn" onClick={() => onSize({ dh: -1 })}>
+              <Minus size={14} strokeWidth={1.5} aria-hidden="true" /> {t('editor.shorter')}
+            </button>
+            <button type="button" className="btn" onClick={() => onSize({ dh: 1 })}>
+              <Plus size={14} strokeWidth={1.5} aria-hidden="true" /> {t('editor.taller')}
+            </button>
+          </div>
+        </div>
         <div className="space-y-2">
           <div>
             <label className="label">{t('common.title')}</label>

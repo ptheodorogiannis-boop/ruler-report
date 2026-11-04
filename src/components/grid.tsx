@@ -11,8 +11,16 @@ import { gridStyle } from './widgets';
 
 export const DND_TYPE = 'application/x-rr-widget';
 let currentPayload: string | null = null;
-/** The metrics panel calls this on dragstart so `dragover` (which cannot read the data) can size the ghost. */
-export const setDragPayload = (p: string | null) => (currentPayload = p);
+/**
+ * The metrics panel calls this on dragstart (and with null on dragend) so `dragover`, which cannot read the data, can size
+ * the ghost. It also marks the page while a drag is on, so every block shows a large drop area and the editor shows the
+ * "new block" drop zone (docs/DESIGN.md › Ruler glass pass › bigger drop targets).
+ */
+export const setDragPayload = (p: string | null) => {
+  currentPayload = p;
+  if (typeof document !== 'undefined') document.documentElement.toggleAttribute('data-rr-drag', !!p);
+};
+export const getDragPayload = () => currentPayload;
 
 export interface DragHandleProps {
   onPointerDown: (e: React.PointerEvent) => void;
@@ -139,19 +147,19 @@ export function GridCanvas({ items, onChange, renderItem, onDropNew, dropSize, m
     const size = dropSize?.(payload) ?? { w: 3, h: 2 };
     const { x, y } = toCell(e.clientX, e.clientY, 0, 0);
     onDropNew(payload, { x: clampX(x, size.w), y });
-    currentPayload = null;
+    setDragPayload(null);
   };
 
   const dragged = drag ? shown.find((i) => i.id === drag.id) : null;
   return (
     <div
       ref={ref}
-      className={clsx('rgrid rgrid-edit relative', editable && 'rounded-xl outline-dashed outline-1 outline-transparent transition', editable && ghost && 'outline-brand/60', shown.length === 0 && 'min-h-[88px]')}
+      className={clsx('rgrid rgrid-edit relative', editable && 'rgrid-drop', ghost && 'is-over', shown.length === 0 && 'is-empty')}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      {shown.length === 0 && !ghost && <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-400">{emptyHint ?? 'Empty block — add metrics from the panel or drop them here.'}</div>}
+      {shown.length === 0 && !ghost && <div className="rgrid-empty">{emptyHint ?? 'Empty block: add metrics from the panel or drop them here.'}</div>}
       {dragged && <div className="ritem rplaceholder" style={gridStyle(dragged)} />}
       {ghost && <div className="ritem rplaceholder" style={gridStyle(ghost)} />}
       {shown.map((w) => {
