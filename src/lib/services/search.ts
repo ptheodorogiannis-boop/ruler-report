@@ -6,6 +6,7 @@
 import type { Principal } from '@/lib/auth';
 import { INTEGRATIONS, getIntegrationDef } from '@/lib/catalog/integrations';
 import { db } from '@/lib/db';
+import { fold } from '@/lib/util/text';
 
 export type SearchKind = 'clients' | 'reports' | 'dashboards' | 'accounts' | 'connect';
 export interface SearchItem {
@@ -21,12 +22,6 @@ export const SEARCH_MIN_CHARS = 2;
 export const SEARCH_PER_GROUP = 8;
 /** rows read per kind before matching; a workspace beyond this searches its most recent rows */
 const SCAN = 2000;
-
-const fold = (s: string) =>
-  s
-    .normalize('NFD')
-    .replace(/\p{M}/gu, '')
-    .toLowerCase();
 
 export async function searchAll(p: Principal, q: string, projectId?: number): Promise<SearchGroup[]> {
   const needle = fold(q.trim());

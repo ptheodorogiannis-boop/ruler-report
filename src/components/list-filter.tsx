@@ -6,12 +6,7 @@
 // Matching ignores case and accents ("όμιλος" finds "Όμιλος"); Escape clears.
 import { useEffect, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
-
-const fold = (s: string) =>
-  s
-    .normalize('NFD')
-    .replace(/\p{M}/gu, '')
-    .toLowerCase();
+import { fold } from '@/lib/util/text';
 
 export function ListFilter({ label, placeholder, countLabel, emptyLabel, children }: { label: string; placeholder: string; /** "{shown} of {total}" */ countLabel: string; emptyLabel: string; children: React.ReactNode }) {
   const root = useRef<HTMLDivElement>(null);

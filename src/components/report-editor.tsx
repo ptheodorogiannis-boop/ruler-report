@@ -5,8 +5,7 @@
 // undo / redo, "Save as template". Rendering goes through the same composeReport() the public page uses,
 // so what the writer sees is what the client link shows.
 import clsx from 'clsx';
-import { useLocale, useT } from '@/components/i18n-provider';
-import { metricLabel } from '@/lib/catalog/labels';
+import { useT } from '@/components/i18n-provider';
 import { BlockColor, LookPanel } from './look-panel';
 import { CustomChartSettings } from './widget-settings/custom-chart';
 import { TileSettings } from './widget-settings/tile';
@@ -21,6 +20,7 @@ import { scopeSummary, type CampaignScope } from '@/lib/engine/campaigns';
 import { changeReportPeriodAction, listCampaignsAction } from '@/app/actions/app';
 import { useRouter } from 'next/navigation';
 import { PeriodControl } from './period-control';
+import { MetricPicker, type MetricPayload } from './metric-picker';
 import { withoutStale, type ComparisonChoice } from '@/lib/services/period-rules';
 import { AnalyseAllButton, BlockAnalyseMenu } from './block-analyse';
 import { ICONS, ICON_NAMES } from './infographic';
@@ -63,12 +63,7 @@ export interface EditorProps {
   timezone?: string;
 }
 
-interface MetricDef {
-  reference_key: string;
-  component: Component;
-  references: { title: string; description?: string; group?: string };
-}
-type Payload = { kind: 'metric'; slug: string; integrationId: number; key: string; component: Component; title: string } | { kind: 'special'; slug: 'manual' | 'analysis' | 'calculated' | 'custom_chart' | 'infographic' | 'image' | 'container' | 'compare' | 'pdf' | 'map' } | { kind: 'blended'; key: string; title: string };
+type Payload = MetricPayload | { kind: 'special'; slug: 'manual' | 'analysis' | 'calculated' | 'custom_chart' | 'infographic' | 'image' | 'container' | 'compare' | 'pdf' | 'map' } | { kind: 'blended'; key: string; title: string };
 
 // dictionary keys per component, resolved with t at render (spec v3 §5)
 const COMP_LABEL: Record<string, string> = { number_v1: 'editor.comp_number_v1', chart_v1: 'editor.comp_chart_v1', datatable_v1: 'editor.comp_datatable_v1', funnel_v1: 'editor.comp_funnel_v1', container_v1: 'editor.comp_container_v1', analysis_v1: 'editor.comp_analysis_v1', empty_v1: 'editor.comp_empty_v1', calculated_v1: 'editor.comp_calculated_v1', custom_chart_v1: 'editor.comp_custom_chart_v1', infographic_v1: 'editor.comp_infographic_v1', image_v1: 'editor.comp_image_v1', compare_v1: 'editor.comp_compare_v1', pdf_v1: 'editor.comp_pdf_v1', map_v1: 'editor.comp_map_v1' };
@@ -127,6 +122,8 @@ export function ReportEditor(props: EditorProps) {
     return m;
   }, [composed]);
   const rawIdx = useMemo(() => indexValues(data), [data]);
+  /** "integrationId:key" of every metric in the report, for the picker's ticks */
+  const inReport = useMemo(() => new Set(layout.blocks.flatMap((b) => b.widgets.filter((w) => !w.custom?.period).map((w) => `${w.integrationId}:${w.key}`))), [layout]);
 
   // ───── autosave (debounced, serialised, with a queued re-save when edits land mid-flight) ─────
   const latest = useRef(layout);
@@ -446,7 +443,7 @@ export function ReportEditor(props: EditorProps) {
         <ReportBody data={composeReport(data, layout, ctx)} fmt={fmt} brand={brand} cards={cards} />
       ) : (
         <div className="flex items-start gap-5">
-          {panel && <AddMetricsPanel block={panel} sources={sources} customMetrics={customMetrics} onAdd={(p) => addWidget(panel.id, p)} onClose={() => setPanelBlock(null)} />}
+          {panel && <AddMetricsPanel block={panel} sources={sources} customMetrics={customMetrics} existing={inReport} onAdd={(p) => addWidget(panel.id, p)} onClose={() => setPanelBlock(null)} />}
           <div className="min-w-0 flex-1 space-y-8">
           {layout.blocks.length === 0 && <div className="card p-8 text-center text-sm text-slate-500">{t('editor.noBlocks')}</div>}
           {layout.blocks.length === 0 && <NewBlockDrop label={t('editor.dropNewBlock')} {...newBlockDrop(0)} />}
@@ -832,45 +829,15 @@ function SaveTemplateDialog({ reportId, defaultTitle, onClose }: { reportId: num
 }
 
 // ───────────── Add metrics drawer ─────────────
-function AddMetricsPanel({ block, sources, customMetrics, onAdd, onClose }: { block: LayoutBlock; sources: SourceInfo[]; customMetrics: EditorProps['customMetrics']; onAdd: (p: Payload) => void; onClose: () => void }) {
+function AddMetricsPanel({ block, sources, customMetrics, existing, onAdd, onClose }: { block: LayoutBlock; sources: SourceInfo[]; customMetrics: EditorProps['customMetrics']; existing: Set<string>; onAdd: (p: Payload) => void; onClose: () => void }) {
   const t = useT();
-  const locale = useLocale();
   const [tab, setTab] = useState<'predefined' | 'custom'>('predefined');
   const fixed = block.integrationId > 0 ? sources.find((s) => s.id === block.integrationId) : undefined;
   const [sourceId, setSourceId] = useState<number>(fixed?.id ?? sources[0]?.id ?? 0);
   const source = fixed ?? sources.find((s) => s.id === sourceId);
-  const [search, setSearch] = useState('');
-  const [metrics, setMetrics] = useState<MetricDef[]>([]);
-  const [loading, setLoading] = useState(false);
   useEffect(() => {
     setSourceId(fixed?.id ?? sources[0]?.id ?? 0);
   }, [block.id, fixed?.id, sources]);
-  useEffect(() => {
-    if (!source) return;
-    const ctrl = new AbortController();
-    setLoading(true);
-    const t = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/v2/metrics?integration_slug=${source.slug}&integration_id=${source.id}&per_page=100&search=${encodeURIComponent(search)}`, { signal: ctrl.signal });
-        const j = await res.json();
-        setMetrics(j.data ?? []);
-      } catch {
-        /* aborted */
-      } finally {
-        setLoading(false);
-      }
-    }, 180);
-    return () => {
-      clearTimeout(t);
-      ctrl.abort();
-    };
-  }, [source?.id, source?.slug, search]);
-  const grouped = useMemo(() => {
-    const m = new Map<string, MetricDef[]>();
-    for (const d of metrics) m.set(d.references.group ?? 'Other', [...(m.get(d.references.group ?? 'Other') ?? []), d]);
-    return [...m];
-  }, [metrics]);
-  const payloadFor = (d: MetricDef): Payload => ({ kind: 'metric', slug: source!.slug, integrationId: source!.id, key: d.reference_key.split(':').slice(1).join(':'), component: d.component, title: d.references.title });
   const dragProps = (p: Payload) => ({
     draggable: true,
     onDragStart: (e: React.DragEvent) => {
@@ -881,7 +848,6 @@ function AddMetricsPanel({ block, sources, customMetrics, onAdd, onClose }: { bl
     },
     onDragEnd: () => setDragPayload(null),
   });
-  const inBlock = (key: string, iid: number) => block.widgets.some((w) => w.key === key && w.integrationId === iid && !w.custom?.period);
   const specials: { slug: keyof typeof SPECIAL_KEY; title: string; hint: string }[] = [
     { slug: 'analysis', title: t('editor.spAnalysis'), hint: t('editor.spAnalysisHint') },
     { slug: 'manual', title: t('editor.spManual'), hint: t('editor.spManualHint') },
@@ -924,30 +890,8 @@ function AddMetricsPanel({ block, sources, customMetrics, onAdd, onClose }: { bl
                 ))}
               </select>
             )}
-            <input className="input" placeholder={t('editor.searchMetrics')} value={search} onChange={(e) => setSearch(e.target.value)} autoFocus />
             <div className="text-xs text-slate-400">{t('editor.drawerHint')}</div>
-            {loading && <div className="text-xs text-slate-400">{t('common.loading')}</div>}
-            {!loading && !source && <div className="text-xs text-slate-400">{t('editor.connectFirst')}</div>}
-            {grouped.map(([g, list]) => (
-              <div key={g}>
-                <div className="mb-1 text-xs font-medium text-ink-3">{g}</div>
-                <div className="space-y-0.5">
-                  {list.map((d) => {
-                    const p = payloadFor(d);
-                    const has = p.kind === 'metric' && inBlock(p.key, p.integrationId);
-                    return (
-                      <button key={d.reference_key} {...dragProps(p)} onClick={() => onAdd(p)} className={clsx('flex w-full cursor-grab items-center justify-between rounded px-2 py-1 text-left text-sm hover:bg-slate-50 active:cursor-grabbing', has && 'opacity-60')} title={d.references.description}>
-                        <span className="truncate">{metricLabel({ reference_key: d.reference_key, title: d.references.title }, locale)}</span>
-                        <span className="ml-2 flex shrink-0 items-center gap-1">
-                          {has && <Check size={11} className="text-emerald-600" />}
-                          <span className="rounded bg-slate-100 px-1.5 text-[11px] font-semibold text-slate-500">{COMP_LABEL[d.component] ? t(COMP_LABEL[d.component]) : d.component}</span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+            {source ? <MetricPicker key={source.id} source={source} existing={existing} onPick={onAdd} variant="panel" dragProps={dragProps} /> : <div className="text-xs text-slate-400">{t('editor.connectFirst')}</div>}
           </div>
         ) : (
           <div className="space-y-3">

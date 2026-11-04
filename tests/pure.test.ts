@@ -151,3 +151,9 @@ test('column keys keep non-Latin headers (Greek market) distinct instead of coll
   const d = detectColumns(['Ημερομηνία', 'Κόστος', 'Κλήσεις'], [{ Ημερομηνία: '2026-09-01', Κόστος: '12,5', Κλήσεις: '3' }]);
   assert.deepEqual(d.columns.map((c) => c.key), ['ημερομηνια', 'κοστος', 'κλησεις']);
 });
+
+test('fold: search text without accents or case (the list filters, the app search and the metric picker)', async () => {
+  const { fold } = await import('../src/lib/util/text');
+  assert.equal(fold('Κόστος Ανά Κλικ'), 'κοστος ανα κλικ');
+  assert.equal(fold('Café CPC'), 'cafe cpc');
+});
