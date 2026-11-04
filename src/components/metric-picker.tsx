@@ -13,6 +13,7 @@ import { groupId } from '@/lib/catalog/groups';
 import type { Component } from '@/lib/engine/types';
 import type { SourceInfo } from '@/lib/layout/types';
 import { fold } from '@/lib/util/text';
+import { fetchAllPages } from '@/lib/api/fetch-all';
 
 export interface MetricPayload {
   kind: 'metric';
@@ -34,6 +35,7 @@ export function MetricPicker({ source, existing, onPick, variant, dragProps, onC
   const t = useT();
   const locale = useLocale();
   const [metrics, setMetrics] = useState<MetricDef[] | null>(null);
+  const [failed, setFailed] = useState(false);
   const [search, setSearch] = useState('');
   const [chip, setChip] = useState<Chip>('all');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -42,11 +44,12 @@ export function MetricPicker({ source, existing, onPick, variant, dragProps, onC
   useEffect(() => {
     const ctrl = new AbortController();
     setMetrics(null);
-    fetch(`/api/v2/metrics?integration_slug=${source.slug}&integration_id=${source.id}&per_page=100&pickable=1`, { signal: ctrl.signal })
-      .then((r) => r.json())
-      .then((j) => setMetrics(j.data ?? []))
+    setFailed(false);
+    // every page: a Sheet or CSV with many columns has more than 100 metrics
+    fetchAllPages<MetricDef>(`/api/v2/metrics?integration_slug=${source.slug}&integration_id=${source.id}&per_page=100&pickable=1`, fetch, ctrl.signal)
+      .then(setMetrics)
       .catch(() => {
-        /* aborted */
+        if (!ctrl.signal.aborted) setFailed(true);
       });
     return () => ctrl.abort();
   }, [source.id, source.slug]);
@@ -106,7 +109,12 @@ export function MetricPicker({ source, existing, onPick, variant, dragProps, onC
           </button>
         ))}
       </div>
-      {metrics === null && <div className="text-xs text-ink-3">{t('common.loading')}</div>}
+      {metrics === null && !failed && <div className="text-xs text-ink-3">{t('common.loading')}</div>}
+      {failed && (
+        <div className="text-xs text-red-600" role="alert">
+          {t('editor.metricsLoadFailed')}
+        </div>
+      )}
       <div role="listbox" aria-label={t('editor.searchMetrics')} className="space-y-3">
         {groups.map((g) => {
           const open = searching || !collapsed.has(g.id);

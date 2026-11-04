@@ -434,6 +434,7 @@
   "editor.mapCountryPlaceholder": "A by country metric…",
   "editor.mapPanelMetrics": "Panel metrics",
   "editor.metricVariables": "Metrics of this report ({count})",
+  "editor.metricsLoadFailed": "Couldn't load the metrics: close and open the panel again",
   "editor.month": "Month",
   "editor.moveDown": "Move block down",
   "editor.moveLeft": "Move left",

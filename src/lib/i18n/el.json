@@ -434,6 +434,7 @@
   "editor.mapCountryPlaceholder": "Μέτρηση ανά χώρα…",
   "editor.mapPanelMetrics": "Μετρήσεις του πίνακα",
   "editor.metricVariables": "Μετρήσεις αυτής της αναφοράς ({count})",
+  "editor.metricsLoadFailed": "Δεν φορτώθηκαν οι μετρήσεις: κλείστε και ανοίξτε ξανά το πάνελ",
   "editor.month": "Μήνας",
   "editor.moveDown": "Μετακίνηση μπλοκ κάτω",
   "editor.moveLeft": "Μετακίνηση αριστερά",
