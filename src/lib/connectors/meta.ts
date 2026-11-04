@@ -141,19 +141,24 @@ async function byIds(ctx: any, ids: string[], fields: string, extra: Record<stri
     try {
       Object.assign(out, await fetchJson<Record<string, any>>(`${endpoints.meta.graph}/?${qs}`));
     } catch (e) {
+      // the rows keep no type / no image, so say why in the logs (Graph's message only: never the address, which holds the token)
+      const why = String((e as Error)?.message ?? e);
+      console.warn(`meta: reading ${fields} for ${batch.length} id(s) failed: ${why}`);
       // Graph refuses the whole call when one id cannot be read (a deleted ad set, no access): ask the others one by one
-      if (batch.length < 2 || !/\(#(100|803)\)/.test(String((e as Error)?.message ?? ''))) continue;
+      if (batch.length < 2 || !/\(#(100|803)\)/.test(why)) continue;
+      let lost = 0;
       for (let j = 0; j < batch.length; j += 5) {
         await Promise.all(
           batch.slice(j, j + 5).map(async (id) => {
             try {
               out[id] = await fetchJson(`${endpoints.meta.graph}/${encodeURIComponent(id)}?${new URLSearchParams({ fields, ...extra, access_token: token })}`);
             } catch {
-              /* this row keeps no type / no thumbnail */
+              lost++;
             }
           }),
         );
       }
+      if (lost) console.warn(`meta: ${lost} of ${batch.length} id(s) could not be read one by one either (${fields})`);
     }
   }
   return out;
@@ -214,6 +219,12 @@ export const metaConnector: Connector = {
       for (const g of kept) {
         const c = creatives[creativeOf(g) ?? ''];
         g.thumb = c?.thumbnail_url ?? c?.image_url ?? null;
+      }
+      // ads still without an image: the one-call form Meta documents for ads (its default 64 px thumbnail, else the image)
+      const bare = kept.filter((g) => !g.thumb);
+      if (bare.length) {
+        const one = await byIds(ctx, bare.map((g) => g.key), 'creative{thumbnail_url,image_url}');
+        for (const g of bare) g.thumb = one[g.key]?.creative?.thumbnail_url ?? one[g.key]?.creative?.image_url ?? null;
       }
     }
     return kept.map(({ acts: _a, adsetId: _s, ...r }) => r);

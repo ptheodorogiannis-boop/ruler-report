@@ -14,6 +14,7 @@ const savedGraph = endpoints.meta.graph;
 let server: http.Server;
 const idsCalls: { ids: string[]; fields: string; width?: string | null }[] = [];
 const oneCalls: string[] = [];
+let sizedFails = false; // Meta refuses the creatives call that asks for a sized thumbnail
 let withGone = false; // an ad whose ad set was deleted: Graph refuses a whole ?ids= call that names it
 let manyAds = 0; // > 0: the insights answer that many ads instead of the fixture
 const range = { start: '2026-10-01', end: '2026-10-31' };
@@ -52,6 +53,12 @@ before(async () => {
     const fail = () => res.writeHead(400, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { message: '(#100) Some of the aliases you requested do not exist: gone', code: 100 } }));
     const width = u.searchParams.get('thumbnail_width');
     const node = (id: string, fields: string): unknown => {
+      // the one-call form: an ad's creative with its images expanded
+      if (fields.startsWith('creative{')) {
+        const a = CREATIVES[id] as { creative?: { id: string } } | undefined;
+        const c = a?.creative ? CREATIVE_NODES[a.creative.id] : undefined;
+        return a && { id, creative: { id: a.creative?.id, ...(c ?? {}) } };
+      }
       if (fields.startsWith('creative')) return manyAds ? { id, creative: { id: `c-${id}` } } : CREATIVES[id];
       if (fields.includes('thumbnail_url')) {
         const c = manyAds ? { thumbnail_url: `https://cdn.example/${id}-thumb.jpg` } : CREATIVE_NODES[id];
@@ -64,6 +71,7 @@ before(async () => {
       const fields = u.searchParams.get('fields') ?? '';
       idsCalls.push({ ids, fields, width });
       if (ids.includes('gone')) return fail();
+      if (sizedFails && width) return res.writeHead(400, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { message: '(#100) Param thumbnail_width is not supported here', code: 100 } }));
       const out: Record<string, unknown> = {};
       for (const id of ids) {
         const n = node(id, fields);
@@ -74,7 +82,7 @@ before(async () => {
     const one = /^\/([A-Za-z0-9_-]+)$/.exec(u.pathname);
     if (one && u.searchParams.get('fields') && !u.searchParams.get('level')) {
       oneCalls.push(one[1]);
-      const n = one[1] === 'gone' ? null : node(one[1], u.searchParams.get('fields')!);
+      const n = one[1] === 'gone' || (sizedFails && width) ? null : node(one[1], u.searchParams.get('fields')!);
       return n ? send(n) : fail();
     }
     const level = u.searchParams.get('level');
@@ -132,7 +140,7 @@ test('ads level: rows keyed by ad id, results of the ad set event, a 240 px thum
   assert.equal(by.a1.thumb, 'https://cdn.example/a1-thumb.jpg?w=240');
   assert.equal(by.a2.thumb, 'https://cdn.example/a2-thumb.jpg?w=240');
   assert.equal(by.a3.thumb, 'https://cdn.example/a3-full.jpg', 'no thumbnail: the image');
-  const nodes = idsCalls.filter((c) => c.fields.includes('thumbnail_url'));
+  const nodes = idsCalls.filter((c) => c.fields.startsWith('thumbnail_url'));
   assert.ok(nodes.length > 0 && nodes.every((c) => c.width === '240'), 'creatives asked with thumbnail_width=240');
 });
 
@@ -190,5 +198,25 @@ test('one deleted ad set: Graph refuses the whole batch, the other ids are asked
     assert.ok(oneCalls.includes('s1') && oneCalls.includes('gone'));
   } finally {
     withGone = false;
+  }
+});
+
+test('when Meta refuses the sized thumbnail call, the images come from the one-call form, and the reason is logged without the token', async () => {
+  sizedFails = true;
+  const warned: string[] = [];
+  const warn = console.warn;
+  console.warn = (...a: unknown[]) => void warned.push(a.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' '));
+  try {
+    const rows = await metaConnector.breakdown(ctx, 'ad', ['spend'], range);
+    const by = Object.fromEntries(rows.map((r) => [r.key, r]));
+    assert.equal(by.a1.thumb, 'https://cdn.example/a1-thumb.jpg', 'the default thumbnail of the one-call form');
+    assert.equal(by.a2.thumb, 'https://cdn.example/a2-thumb.jpg');
+    assert.equal(by.a3.thumb, 'https://cdn.example/a3-full.jpg');
+    assert.equal(by.a4.thumb, null);
+    assert.ok(warned.some((w) => /thumbnail_width is not supported/.test(w)), warned.join(' | '));
+    assert.ok(warned.every((w) => !/EAA-test|access_token/.test(w)), 'never the token');
+  } finally {
+    console.warn = warn;
+    sizedFails = false;
   }
 });
