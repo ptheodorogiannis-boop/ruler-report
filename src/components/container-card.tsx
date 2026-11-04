@@ -8,6 +8,13 @@ import { getIntegrationDef } from '@/lib/catalog/integrations';
 import { metricLabel } from '@/lib/catalog/labels';
 import { getRequestLocale } from '@/lib/i18n/request';
 import { StarRowButton } from './star-row';
+import { RowThumb } from './row-thumb';
+import { resultLabel } from '@/lib/connectors/meta-results';
+import { tr } from '@/lib/i18n/request';
+
+/** Results and Cost per result carry the row's result type under the number */
+const TYPED = new Set(['results', 'cost_per_result']);
+const NAME_COLUMN = { campaign: 'public.ctableCampaign', adset: 'public.ctableAdset', ad: 'public.ctableAd' } as const;
 
 const pct = (cur: number, prev: number) => (prev === 0 ? null : Math.round(((cur - prev) / Math.abs(prev)) * 1000) / 10);
 
@@ -29,7 +36,7 @@ export function ContainerCard({ b, fmt, grid, onStarRow }: CardProps) {
         <table className="ctable">
           <thead>
             <tr>
-              <th className="ctable-name">Campaign</th>
+              <th className="ctable-name">{tr(NAME_COLUMN[v.level ?? 'campaign'])}</th>
               {v.metrics.map((m) => (
                 <th key={m.key} className="num">
                   {metricLabel({ reference_key: `${prefix}:${m.key}`, title: m.label }, locale)}
@@ -43,6 +50,7 @@ export function ContainerCard({ b, fmt, grid, onStarRow }: CardProps) {
                 <td className="ctable-name">
                   {onStarRow && <StarRowButton on={starred.has(r.name)} onClick={() => onStarRow(r.name)} />}
                   {showStatus && <span className={`ctable-dot ctable-dot-${r.status}`} title={r.status} aria-hidden="true" />}
+                  {v.level === 'ad' && <RowThumb src={r.thumb} alt={r.name} />}
                   <span className="truncate">{r.name}</span>
                 </td>
                 {r.values.map((val, i) => {
@@ -52,6 +60,7 @@ export function ContainerCard({ b, fmt, grid, onStarRow }: CardProps) {
                     <td key={i} className="num">
                       {formatValue(val, v.metrics[i].format, o)}
                       {d != null && <span className={clsx('ctable-delta', d > 0 ? 'text-up' : d < 0 ? 'text-down' : '')}>{`${d > 0 ? '+' : ''}${d}%`}</span>}
+                      {r.resultType !== undefined && TYPED.has(v.metrics[i].key) && <span className="cell-note">{resultLabel(r.resultType, tr)}</span>}
                     </td>
                   );
                 })}

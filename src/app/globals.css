@@ -1623,6 +1623,43 @@ tr:hover .row-star,
     background: color-mix(in srgb, var(--print-line) 50%, var(--print-paper));
   }
 }
+/* a row's image in a table (spec 2026-11-04 ads §1): 48px, cropped; print keeps it */
+.row-thumb {
+  display: inline-flex;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  margin-right: 12px;
+  overflow: hidden;
+  border-radius: 8px;
+  vertical-align: middle;
+  background: var(--paper);
+}
+.row-thumb > * {
+  width: 100%;
+  height: 100%;
+}
+.row-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* the type of a result under its number */
+.cell-note {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+.row-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 3px;
+}
+.row-link:hover {
+  text-decoration-color: currentColor;
+}
 /* the canvas while a period change re-pulls the numbers */
 .editor-locked {
   opacity: 0.6;

@@ -89,6 +89,9 @@ export interface TableValue {
   columnFormats: Format[];
   rows: (string | number | null)[][];
   total_rows: number;
+  /** a row's image (post tables) and its link, aligned with `rows` (docs/superpowers/specs/2026-11-04-ads-previews-sources-matomo-design.md §1) */
+  thumbs?: (string | null)[];
+  links?: (string | null)[];
 }
 export interface FunnelValue {
   type: 'funnel';

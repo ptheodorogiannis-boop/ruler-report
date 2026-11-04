@@ -2,6 +2,7 @@ import clsx from 'clsx';
 import { Fragment } from 'react';
 import { ArrowDownRight, ArrowUpRight, Minus, AlertTriangle, Loader2, Star } from 'lucide-react';
 import { StarRowButton } from './star-row';
+import { RowThumb } from './row-thumb';
 import type { RenderedBlock, RenderedSection, ReportData, SourceStatus, WidgetValue } from '@/lib/engine/types';
 import type { WidgetCustom } from '@/lib/layout/types';
 import { formatValue, type FormatOpts } from '@/lib/util/format';
@@ -185,7 +186,8 @@ function TableCard({ b, fmt, grid, tone, onStarRow }: CardProps) {
                   {r.map((cell, ci) => (
                     <td key={ci} className={`td ${ci === 0 ? 'max-w-[280px] truncate font-medium' : 'text-right tabular-nums'}`}>
                       {ci === 0 && onStarRow && <StarRowButton on={on} onClick={() => onStarRow(name)} />}
-                      {ci === 0 ? name : formatValue(cell as number, v.columnFormats[ci], o)}
+                      {ci === 0 && v.thumbs && <RowThumb src={v.thumbs[ri]} alt={name} />}
+                      {ci === 0 ? (v.links?.[ri] ? <a href={v.links[ri]!} target="_blank" rel="noreferrer" className="row-link">{name}</a> : name) : formatValue(cell as number, v.columnFormats[ci], o)}
                     </td>
                   ))}
                 </tr>
