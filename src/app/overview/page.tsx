@@ -17,12 +17,14 @@ export const dynamic = 'force-dynamic';
  * the rail as instrument readouts. No cards, no table chrome: hairlines, display numerals and the caliper on hover.
  */
 export default async function OverviewPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
-  const { t } = await getT();
+  const { t, locale } = await getT();
   const p = await requirePrincipal();
   const sp = await searchParams;
   const days = [7, 14, 30, 90].includes(Number(sp.days)) ? Number(sp.days) : 30;
   const { range, rows } = await companyOverview(p, days);
-  // the agency board reads in one number format (each client keeps its own in its reports); currencies stay per client
+  // the agency board reads in one number format, the viewer's (Greek 1.234,56, English 1,234.56); each client keeps its own
+  // format in its reports, and currencies stay per client
+  const decimalSeparatorFormat = locale === 'el' ? 'dot_comma' : 'comma_dot';
   const projects = await db.project.findMany({ where: { companyId: p.companyId, ...(p.projectIds ? { id: { in: p.projectIds } } : {}) }, select: { id: true, dateFormat: true } });
   const anomalies = rows.flatMap((r) => r.anomalies.map((a) => ({ project: r.name, id: r.project_id, ...a })));
   const broken = rows.filter((r) => r.broken > 0);
@@ -115,7 +117,7 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
                       <td key={k.id} className="board-cell">
                         {v ? (
                           <div className="readout">
-                            <span className="readout-value display num">{formatValue(v.value, k.format, { currency: r.currency })}</span>
+                            <span className="readout-value display num">{formatValue(v.value, k.format, { currency: r.currency, decimalSeparatorFormat })}</span>
                             <span className="readout-delta">
                               <Delta pct={v.change_pct} diff={diff} />
                             </span>

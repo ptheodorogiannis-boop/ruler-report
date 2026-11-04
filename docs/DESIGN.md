@@ -751,7 +751,8 @@ where Hallmark or unslop disagree with it, the system wins and the stamp in `glo
 - **Client initials are neutral in the app** (ink on a light fill) and take the client's colour only on their own
   report cover and goals page. The red accent stays rare.
 - **The agency board reads in one number format.** Each client keeps its own decimal format in its reports; the
-  Overview uses one format for every row so the columns compare (currencies stay per client).
+  Overview uses one format for every row, the viewer's (Greek `1.234,56`, English `1,234.56`), so the columns compare
+  (currencies stay per client).
 
 **Features in this pass.** Bigger drop targets in the editor (every block shows a dashed drop area with two rows of room
 while a metric is dragged, a "new block" zone after each block, size presets in the block toolbar); the comparison
