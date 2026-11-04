@@ -109,8 +109,9 @@ test('I6: the request store takes a lookup instead of the dictionaries, so the c
   assert.ok(GREEK.test(tr('public.sources')), 'the server helper binds the real dictionary');
   setServerLocale('en');
   assert.equal(tr('public.sources'), 'Sources');
-  const shell = src('src/components/shell.tsx');
-  for (const ns of ['public', 'health', 'connect', 'wizard']) assert.ok(shell.includes(`'${ns}'`), `the shell ships ${ns} (the editor preview renders public chrome on the client)`);
+  // the shell ships APP_NAMESPACES (src/lib/i18n/namespaces.ts)
+  const { APP_NAMESPACES } = await import('../src/lib/i18n/namespaces');
+  for (const ns of ['public', 'health', 'connect', 'wizard']) assert.ok(APP_NAMESPACES.includes(ns), `the shell ships ${ns} (the editor preview renders public chrome on the client)`);
 });
 
 test('I4: the per-platform data notes, the ranked-list placeholder and the quarter eyebrow speak Greek on a Greek page', async () => {

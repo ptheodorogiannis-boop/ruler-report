@@ -81,7 +81,8 @@ test('editor in Greek: the toolbar, the look panel and the analysis panel carry 
     const { readFileSync } = await import('node:fs');
     const shell = readFileSync('src/components/shell.tsx', 'utf8');
     assert.ok(/<I18nProvider locale=\{locale\} dict=\{dictFor\(locale, APP_NAMESPACES\)\}>/.test(shell), 'AppShell wraps the page in I18nProvider');
-    for (const ns of ['editor', 'analysis', 'look', 'settings', 'automations', 'goals', 'templates', 'share', 'campaigns', 'media', 'tones', 'common']) assert.ok(shell.includes(`'${ns}'`), `namespace ${ns} shipped`);
+    const { APP_NAMESPACES } = await import('../src/lib/i18n/namespaces');
+    for (const ns of ['editor', 'analysis', 'look', 'settings', 'automations', 'goals', 'templates', 'share', 'campaigns', 'media', 'tones', 'common']) assert.ok(APP_NAMESPACES.includes(ns), `namespace ${ns} shipped`);
   }
   const { createElement } = await import('react');
   const { renderToStaticMarkup } = await import('react-dom/server');
