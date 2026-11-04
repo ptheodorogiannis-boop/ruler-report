@@ -16,7 +16,9 @@ export function ContainerSettings({ c, sources, integrationId, rendered, onChang
   const source = sources.find((s) => s.id === integrationId) ?? null;
   const level = c.level ?? 'campaign';
   // Results / Cost per result count each ad set's own event: only per ad or ad set (spec 2026-11-04 ads §1)
-  const { metrics, loading } = useCatalog(source, (m) => m.component === 'number_v1' && (level !== 'campaign' || !PER_ROW_ONLY.includes(m.key)));
+  // filtered here, not in useCatalog: its filter runs once per account, and switching the level must show or hide them
+  const { metrics: numbers, loading } = useCatalog(source, (m) => m.component === 'number_v1');
+  const metrics = level === 'campaign' ? numbers.filter((m) => !PER_ROW_ONLY.includes(m.key)) : numbers;
   const levels = source?.slug === 'facebook_ads' ? (['campaign', 'adset', 'ad'] as const) : null;
   const chosen = c.metrics?.length ? c.metrics : DEFAULT_CONTAINER_METRICS;
   const toggle = (key: string) => onChange({ metrics: chosen.includes(key) ? chosen.filter((k) => k !== key) : [...chosen, key] });
