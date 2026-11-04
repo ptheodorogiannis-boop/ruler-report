@@ -171,7 +171,7 @@ test('Meta: one consent for ad accounts, Pages and Instagram; a declined Instagr
   const { company, project } = await makeCompany();
   const p = await principalFor(company.id, 'admin', null);
   const { start, asked, cb } = await bundleConsent('meta', p, project.id);
-  assert.deepEqual(asked, ['ads_read', 'pages_show_list', 'pages_read_engagement', 'read_insights', 'instagram_basic', 'instagram_manage_insights', 'business_management'], 'business_management rides along, optional');
+  assert.deepEqual(asked, ['ads_read', 'pages_show_list', 'pages_read_engagement', 'read_insights', 'instagram_basic', 'instagram_manage_insights', 'business_management', 'pages_read_user_content'], 'business_management and pages_read_user_content (post comments) ride along, optional');
   assert.equal(start.origin + start.pathname, `${base}/m/dialog`);
   const pending = openPending(cb.cookies.get(PENDING_COOKIE)!.value)!;
   assert.deepEqual(pending.granted, ['facebook_ads', 'facebook', 'instagram_business']);

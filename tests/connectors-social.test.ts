@@ -25,7 +25,7 @@ const idx = (d: string) => diffDays('2026-01-01', d);
 const dayOf = (unixSec: string | null) => new Date(Number(unixSec) * 1000).toISOString().slice(0, 10);
 
 const seen: { path: string; q: URLSearchParams; auth?: string }[] = [];
-const flags = { rejectProfileViews: false, reviewsDown: false };
+const flags = { rejectProfileViews: false, reviewsDown: false, noUserContent: false };
 let server: http.Server;
 let base = '';
 
@@ -88,6 +88,9 @@ before(async () => {
         if (q.get('metric') === 'page_video_views') return reply(res, 400, { error: { message: '(#100) The value must be a valid insights metric' } });
         return reply(res, 200, fbInsights(q));
       }
+      // a token without pages_read_user_content: Meta refuses any posts request that asks for comments (production, 2026-11-04)
+      if (id === 'PAGE1' && edge === 'published_posts' && flags.noUserContent && (q.get('fields') ?? '').includes('comments'))
+        return reply(res, 400, { error: { message: "(#10) This endpoint requires the 'pages_read_user_content' permission or the 'Page Public Content Access' feature. Refer to https://developers.facebook.com/docs/apps/review/login-permissions#manage-pages", type: 'OAuthException', code: 10 } });
       if (id === 'PAGE1' && edge === 'published_posts')
         return reply(res, 200, {
           data: [
@@ -252,6 +255,24 @@ test('Facebook Page: a metric Meta rejects only affects its own widget; removed 
   const age = await get('audience_age');
   assert.equal(age.type, 'chart');
   assert.equal(age.labels.length, 0);
+});
+
+test('Facebook Page: without pages_read_user_content the posts still load; the comments metric names the missing permission', async () => {
+  flags.noUserContent = true;
+  try {
+    const { get } = await connect('facebook', 'PAGE1', 'tok');
+    assert.equal((await get('posts')).value, 2, 'posts are read without the comments field');
+    assert.equal((await get('shares')).value, 2);
+    const comments = await get('comments');
+    assert.equal(comments.type, 'error');
+    assert.match(comments.message, /pages_read_user_content/);
+    assert.match(comments.message, /[Rr]econnect/);
+    const t = await get('top_posts');
+    assert.equal(t.type, 'table', 'the posts table still renders');
+    assert.equal(t.rows.length, 2);
+  } finally {
+    flags.noUserContent = false;
+  }
 });
 
 test('Facebook Page: top posts table has counts from the list and reach/impressions from per-post insights', async () => {

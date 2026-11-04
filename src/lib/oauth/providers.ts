@@ -11,6 +11,8 @@ export interface OAuthSlug {
   provider: Provider;
   /** scopes requested for this integration only (least privilege) */
   scopes: string[];
+  /** asked for alongside, never required: a declined one does not drop the network */
+  optional?: string[];
   /** what the picker calls the accounts */
   noun: string;
 }
@@ -23,7 +25,9 @@ export const OAUTH_SLUGS: Record<string, OAuthSlug> = {
   google_my_business: { provider: 'google', scopes: [`${G}business.manage`], noun: 'Business Profile locations' },
   youtube: { provider: 'google', scopes: [`${G}youtube.readonly`, `${G}yt-analytics.readonly`], noun: 'YouTube channels' },
   facebook_ads: { provider: 'meta', scopes: ['ads_read'], noun: 'ad accounts' },
-  facebook: { provider: 'meta', scopes: ['pages_show_list', 'pages_read_engagement', 'read_insights'], noun: 'Facebook Pages' },
+  // pages_read_user_content (post comments) is asked for, never required: without it the Page connector reads posts
+  // without comment counts (src/lib/connectors/facebook.ts), so a decline must not drop the Page
+  facebook: { provider: 'meta', scopes: ['pages_show_list', 'pages_read_engagement', 'read_insights'], optional: ['pages_read_user_content'], noun: 'Facebook Pages' },
   instagram_business: { provider: 'meta', scopes: ['pages_show_list', 'pages_read_engagement', 'instagram_basic', 'instagram_manage_insights'], noun: 'Instagram business accounts' },
 };
 
@@ -73,12 +77,15 @@ export interface Tokens {
 const qs = (o: Record<string, string | undefined>) => new URLSearchParams(Object.entries(o).filter(([, v]) => v != null) as [string, string][]);
 
 export const scopesFor = (slugs: string[]): string[] => [...new Set(slugs.flatMap((s) => OAUTH_SLUGS[s]?.scopes ?? []))];
+/** The provider's optional permissions plus those of the networks asked for (each asked once). */
+const optionalFor = (provider: Provider, slugs: string[]): string[] => [...new Set([...OPTIONAL_SCOPES[provider], ...slugs.flatMap((s) => OAUTH_SLUGS[s]?.optional ?? [])])];
 /** Asked for, never required: without business_management Meta lists only the Pages and ad accounts assigned to the
  *  person directly, not the ones they reach through a Business Portfolio (owned or client assets). */
 export const OPTIONAL_SCOPES: Record<Provider, string[]> = { google: [], meta: ['business_management'] };
 
 export function authUrl(provider: Provider, slug: string | string[], state: string, redirectUri: string): string {
-  const scopes = scopesFor(Array.isArray(slug) ? slug : [slug]);
+  const slugs = Array.isArray(slug) ? slug : [slug];
+  const scopes = scopesFor(slugs);
   if (provider === 'google') {
     return `${endpoints.google.auth}?${qs({
       client_id: process.env.GOOGLE_CLIENT_ID,
@@ -93,7 +100,7 @@ export function authUrl(provider: Provider, slug: string | string[], state: stri
   }
   // Facebook Login for Business apps define their permissions in a configuration instead of `scope`
   const config = process.env.META_LOGIN_CONFIG_ID;
-  return `${endpoints.meta.dialog}?${qs({ client_id: process.env.META_APP_ID, redirect_uri: redirectUri, response_type: 'code', ...(config ? { config_id: config } : { scope: [...scopes, ...OPTIONAL_SCOPES.meta].join(',') }), state })}`;
+  return `${endpoints.meta.dialog}?${qs({ client_id: process.env.META_APP_ID, redirect_uri: redirectUri, response_type: 'code', ...(config ? { config_id: config } : { scope: [...scopes, ...optionalFor('meta', slugs)].join(',') }), state })}`;
 }
 
 const form = (o: Record<string, string | undefined>) => ({ method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: qs(o) });

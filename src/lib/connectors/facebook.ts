@@ -11,6 +11,8 @@
 //   • one invalid metric fails a whole insights request, so every metric is requested on its own and a failing one is skipped
 //     (when every requested metric fails — expired token, missing permission — the error is raised so the report says why)
 //   • comments, shares and the post count come from the posts list and are dated by the post's creation day
+//   • a post's comments are user content: without pages_read_user_content Meta refuses the whole posts request (#10), so
+//     the list is read again without them; posts and shares still load, comments say which permission is missing
 import type { BreakdownRow, Connector, DailyData, DateRange } from '@/lib/engine/types';
 import { addDays, eachDay } from '@/lib/util/dates';
 import { chunkRange, graphGet, graphPaged, pool, unix } from './metagraph';
@@ -53,21 +55,32 @@ interface Post {
   comments: number;
   shares: number;
 }
-async function posts(ctx: any, range: DateRange): Promise<Post[]> {
-  const rows = await graphPaged<any>(ctx, `/${ctx.integration.sourceId}/published_posts`, {
-    fields: 'id,created_time,message,story,shares,comments.summary(true).limit(0),reactions.summary(true).limit(0)',
-    since: String(unix(range.start)),
-    until: String(unix(addDays(range.end, 1))),
-    limit: '100',
-  });
-  return rows.map((r) => ({
+const POST_FIELDS = 'id,created_time,message,story,shares,reactions.summary(true).limit(0)';
+/** Meta's answer when the token lacks pages_read_user_content (the comments field asks for user content). */
+const refusesUserContent = (e: unknown) => /pages_read_user_content|\(#10\)/.test(String((e as Error)?.message ?? e));
+export const COMMENTS_NEED_PERMISSION = 'Meta did not allow reading comments: this connection needs the pages_read_user_content permission. Reconnect the Page to grant it.';
+
+/** The Page's posts in the range; `comments` is false when Meta refused the comment counts (they then read as 0). */
+async function posts(ctx: any, range: DateRange): Promise<{ list: Post[]; comments: boolean }> {
+  const read = (fields: string) =>
+    graphPaged<any>(ctx, `/${ctx.integration.sourceId}/published_posts`, { fields, since: String(unix(range.start)), until: String(unix(addDays(range.end, 1))), limit: '100' });
+  let comments = true;
+  let rows: any[];
+  try {
+    rows = await read(`${POST_FIELDS},comments.summary(true).limit(0)`);
+  } catch (e) {
+    if (!refusesUserContent(e)) throw e;
+    comments = false;
+    rows = await read(POST_FIELDS);
+  }
+  return { comments, list: rows.map((r) => ({
     id: String(r.id),
     created_time: String(r.created_time),
     message: r.message ?? r.story,
     reactions: Number(r.reactions?.summary?.total_count ?? 0),
     comments: Number(r.comments?.summary?.total_count ?? 0),
     shares: Number(r.shares?.count ?? 0),
-  }));
+  })) };
 }
 
 export const facebookConnector: Connector = {
@@ -97,14 +110,18 @@ export const facebookConnector: Connector = {
       if (s) for (const d of eachDay(range)) if (s[d] != null) set(d, p, s[d]);
     }
     if (prims.some((p) => POST_PRIMS.includes(p))) {
-      for (const post of await posts(ctx, range)) {
+      const { list, comments } = await posts(ctx, range);
+      const postPrims = prims.filter((p) => POST_PRIMS.includes(p) && (p !== 'comments' || comments));
+      // only comments were asked for and Meta refused them: say which permission is missing instead of an empty number
+      if (!comments && prims.includes('comments') && !metrics.length && !postPrims.length) throw new Error(COMMENTS_NEED_PERMISSION);
+      for (const post of list) {
         const d = post.created_time.slice(0, 10);
-        if (prims.includes('posts')) set(d, 'posts', (out[d]?.posts ?? 0) + 1);
-        if (prims.includes('comments')) set(d, 'comments', (out[d]?.comments ?? 0) + post.comments);
-        if (prims.includes('shares')) set(d, 'shares', (out[d]?.shares ?? 0) + post.shares);
+        if (postPrims.includes('posts')) set(d, 'posts', (out[d]?.posts ?? 0) + 1);
+        if (postPrims.includes('comments')) set(d, 'comments', (out[d]?.comments ?? 0) + post.comments);
+        if (postPrims.includes('shares')) set(d, 'shares', (out[d]?.shares ?? 0) + post.shares);
       }
       // a day with no post is a real zero, not a missing value
-      for (const d of eachDay(range)) for (const p of prims.filter((x) => POST_PRIMS.includes(x))) if (out[d]?.[p] == null) set(d, p, 0);
+      for (const d of eachDay(range)) for (const p of postPrims) if (out[d]?.[p] == null) set(d, p, 0);
     }
     return out;
   },
@@ -112,7 +129,7 @@ export const facebookConnector: Connector = {
   async breakdown(ctx, dimension, prims, range, opts): Promise<BreakdownRow[]> {
     // demographic breakdowns no longer exist for Pages; only the post table is available
     if (dimension !== 'post') return [];
-    const list = await posts(ctx, range);
+    const { list } = await posts(ctx, range);
     const rows: BreakdownRow[] = list.map((p) => {
       const likes = p.reactions ?? 0;
       return {
