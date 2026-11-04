@@ -174,6 +174,7 @@ model Report {
   shareToken       String    @unique
   shareEnabled     Boolean   @default(true)
   password         String?   // optional share-link password (hash)
+  clientAsk        Boolean   @default(false) // the client may ask questions on the shared link (docs/superpowers/specs/2026-11-04-map-search-ask-layout-design.md §3)
   views            Int       @default(0)
   createdBy        Int?
   automationId     Int?
@@ -181,6 +182,7 @@ model Report {
   updatedAt        DateTime  @updatedAt
 
   timeline         TimelineEvent[]
+  clientQuestions  ClientQuestion[]
 }
 
 model Automation {
@@ -375,4 +377,18 @@ model Media {
   height    Int?
   data      Bytes?   // the file itself when MEDIA_STORE=db (default on Vercel); null when it lives on disk
   createdAt DateTime @default(now())
+}
+
+/// A question a client asked on a shared link, with the answer it got (the agency reads them on the report's Share tab).
+model ClientQuestion {
+  id        Int      @id @default(autoincrement())
+  reportId  Int
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  question  String
+  answer    String
+  locale    String
+  ai        Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([reportId, createdAt])
 }
