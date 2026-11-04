@@ -934,7 +934,7 @@
   "results.link_click": "Κλικ σε σύνδεσμο",
   "results.offsite_conversion_fb_pixel_add_to_cart": "Προσθήκη στο καλάθι (pixel)",
   "results.offsite_conversion_fb_pixel_complete_registration": "Εγγραφή",
-  "results.offsite_conversion_fb_pixel_initiated_checkout": "Έναρξη ολοκλήρωσης αγοράς",
+  "results.offsite_conversion_fb_pixel_initiate_checkout": "Έναρξη ολοκλήρωσης αγοράς",
   "results.offsite_conversion_fb_pixel_lead": "Δυνητικός πελάτης",
   "results.offsite_conversion_fb_pixel_purchase": "Αγορά",
   "results.offsite_conversion_fb_pixel_view_content": "Προβολή περιεχομένου",

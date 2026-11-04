@@ -10,7 +10,7 @@ import { applyScope, campaignScopeOf, scopeHash, scopeSchema, type CampaignScope
 import { presetRange, previousPeriod, type Preset } from '@/lib/util/dates';
 import { clientPreset } from '@/lib/services/dashboards';
 import { createHash } from 'node:crypto';
-import { comparisonFor, indexValues, layoutToSections, storeKey, valueKey } from '@/lib/layout/compose';
+import { comparisonFor, indexValues, layoutToSections, storeKey, valueKey, widgetScope } from '@/lib/layout/compose';
 import type { ReportLayout } from '@/lib/layout/types';
 import { widgetRefs } from '@/lib/layout/refs';
 import { compareNeeds } from '@/lib/layout/compare';
@@ -412,7 +412,8 @@ export async function ensureWidgetValues(inp: EnsureInput): Promise<{ data: Repo
         }
         continue;
       }
-      const scope = blockScope;
+      // a metric from another account (the source dropdown) reads that account account-wide, not the block's campaigns
+      const scope = widgetScope(w, b.integrationId, blockScope);
       const k = valueKey(w, scope)!;
       needed.add(k);
       if (idx.has(k)) continue;
@@ -464,7 +465,7 @@ export function layoutFingerprint(layout: ReportLayout): string {
       const period = w.custom?.period ? `@${w.custom.period.start}..${w.custom.period.end}` : '';
       // a comparison's periods are part of what it shows (relative ones follow the dashboard's range, which is in the cache key already)
       const cmp = w.slug === 'compare' ? JSON.stringify([w.custom?.compareMode, w.custom?.comparePrevious, w.custom?.compareYearAgo, w.custom?.comparePeriods]) : w.slug === 'analysis' ? JSON.stringify(tokenRefs(w.custom?.html)) : '';
-      return `${valueKey(w.slug === 'container' && !w.integrationId ? { ...w, integrationId: b.integrationId } : w, b.campaigns) ?? ''}|${w.slug === 'calculated' ? w.custom?.formula ?? '' : ''}|${refs}${period}${cmp}`;
+      return `${valueKey(w.slug === 'container' && !w.integrationId ? { ...w, integrationId: b.integrationId } : w, widgetScope(w, b.integrationId, b.campaigns)) ?? ''}|${w.slug === 'calculated' ? w.custom?.formula ?? '' : ''}|${refs}${period}${cmp}`;
     }),
   );
   return createHash('sha1').update(lines.sort().join('\n')).digest('hex').slice(0, 12);

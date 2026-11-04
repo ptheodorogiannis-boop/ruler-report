@@ -125,3 +125,61 @@ test('image copies are kept on every save of a frozen report: editing its layout
 });
 
 void encryptJson;
+
+// ── a metric from another account inside a scoped ads block (review 1): it reads its own account, account-wide
+test('a Google Ads metric in a Meta block that picks campaigns is fetched account-wide, saved, keyed and shown as such', async () => {
+  const { reportView, saveLayout } = await import('../src/lib/layout/service');
+  const { createReport } = await import('../src/lib/services/reports');
+  const { indexValues, widgetValueKey } = await import('../src/lib/layout/compose');
+  const { layoutFingerprint } = await import('../src/lib/engine/report');
+  const { company, project } = await makeCompany();
+  const meta = await addIntegration(company.id, project.id, 'facebook_ads');
+  const gads = await addIntegration(company.id, project.id, 'google_adwords');
+  const tpl = await db.template.findFirstOrThrow({ where: { companyId: null, kind: 'report', isDefault: true } });
+  const created = await createReport({ companyId: company.id, projectId: project.id, kind: 'report', title: 'Scope', start: '2026-09-01', end: '2026-09-30', templateId: tpl.id, integrationIds: [meta.id, gads.id] });
+  const reload = () => db.report.findUniqueOrThrow({ where: { id: created.id }, include: { project: true } });
+  const layout = JSON.parse(JSON.stringify((await reportView(await reload(), { includeHidden: true })).layout));
+  const block = layout.blocks.find((b: any) => b.integrationId === meta.id);
+  // a block holding only the Google Ads widget: two different Meta scopes need the same values
+  const only = (ids: string[]) => ({ version: 1, blocks: [{ id: 'm', title: 'Meta', integrationId: meta.id, slug: 'facebook_ads', campaigns: { mode: 'pick', ids }, widgets: [{ id: 'fx', slug: 'google_adwords', key: 'spend', component: 'number_v1', integrationId: gads.id, x: 0, y: 0, w: 3, h: 2 }] }] }) as any;
+  assert.equal(layoutFingerprint(only(['c1'])), layoutFingerprint(only(['c2'])), 'the Meta scope does not change what the Google Ads widget needs');
+  block.campaigns = { mode: 'pick', ids: ['c1'] };
+  block.widgets.push({ id: 'fx', slug: 'google_adwords', key: 'spend', component: 'number_v1', integrationId: gads.id, x: 0, y: 80, w: 3, h: 2 });
+  const saved = await saveLayout(await reload(), layout);
+  assert.equal(widgetValueKey(block.widgets.at(-1), block, saved.data), `${gads.id}:spend`);
+  const stored = indexValues(saved.data).get(`${gads.id}:spend`);
+  assert.equal(stored?.widget.value.type, 'number', JSON.stringify(stored?.widget.value).slice(0, 160));
+  const view = await reportView(await reload());
+  const fx = view.data.sections.find((s) => s.id === block.id)!.blocks.find((b) => b.id === 'fx')!;
+  assert.equal(fx.widget.value.type, 'number', JSON.stringify(fx.widget.value).slice(0, 160));
+  assert.equal((fx.widget.value as any).value, (stored!.widget.value as any).value);
+  // the block's own widgets still follow its scope
+  const own = view.data.sections.find((s) => s.id === block.id)!.blocks.find((b) => b.integrationId === meta.id && b.widget.key === 'spend');
+  if (own) assert.ok(own.campaignScope, 'the Meta spend is the scoped one');
+});
+
+// ── Results / Cost per result at the Campaigns level (review 4): they count each ad set's own event, so never per campaign
+test('a Campaigns-level table never shows Results or Cost per result, even when they were ticked at the Ads level', async () => {
+  const { resolveContainer, metricsAtLevel } = await import('../src/lib/layout/container');
+  const ctx = { id: 7, slug: 'facebook_ads', name: 'Acme', sourceId: 'act_1', config: {}, credentials: { demo: true } } as any;
+  const session = { getBreakdown: async () => [{ key: '11', label: 'Brand', values: { spend: 10, results: 0 } }] } as any;
+  const w = { id: 'w', slug: 'container', key: 'campaigns', component: 'container_v1', integrationId: 7, x: 0, y: 0, w: 12, h: 6, custom: { metrics: ['spend', 'results', 'cost_per_result'] } } as any;
+  const v = (await resolveContainer(ctx, w, { start: '2026-10-01', end: '2026-10-31' }, null, session, [{ id: '11', name: 'Brand', status: 'active' }])) as any;
+  assert.deepEqual(v.metrics.map((m: any) => m.key), ['spend']);
+  const ads = (await resolveContainer(ctx, { ...w, custom: { ...w.custom, level: 'ad' } }, { start: '2026-10-01', end: '2026-10-31' }, null, session, [])) as any;
+  assert.deepEqual(ads.metrics.map((m: any) => m.key), ['spend', 'results', 'cost_per_result']);
+  // switching the settings back to Campaigns drops them from the widget too
+  assert.deepEqual(metricsAtLevel(['spend', 'results', 'cost_per_result'], 'campaign'), ['spend']);
+  assert.deepEqual(metricsAtLevel(['spend', 'results'], 'ad'), ['spend', 'results']);
+  assert.equal(metricsAtLevel(undefined, 'campaign'), undefined);
+});
+
+// ── Meta's action name for a checkout (review 5): initiate_checkout, as the insights actions and meta.ts's ACTION map name it
+test('a checkout-optimised ad set counts offsite_conversion.fb_pixel_initiate_checkout, labelled Checkout started', async () => {
+  const { promotedObjectAction, resultLabel } = await import('../src/lib/connectors/meta-results');
+  const { t } = await import('../src/lib/i18n');
+  const type = promotedObjectAction('OFFSITE_CONVERSIONS', { custom_event_type: 'INITIATED_CHECKOUT' });
+  assert.equal(type, 'offsite_conversion.fb_pixel_initiate_checkout');
+  assert.equal(resultLabel(type, (k: string) => t('en', k)), 'Checkout started');
+  assert.equal(resultLabel(type, (k: string) => t('el', k)), 'Έναρξη ολοκλήρωσης αγοράς');
+});

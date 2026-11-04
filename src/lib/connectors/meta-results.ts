@@ -2,13 +2,15 @@
 // Meta documents no per-ad results field, so the type comes from the ad set's optimisation: optimization_goal plus its
 // promoted_object map to the action_type whose count in `actions` is the result.
 
-/** custom_event_type → the pixel action name (lower case, except CONTENT_VIEW, which Meta reports as view_content) */
+/** custom_event_type → the pixel action name (lower case, except CONTENT_VIEW → view_content and INITIATED_CHECKOUT →
+ * initiate_checkout, as the insights actions name them). CONTACT, SCHEDULE, SUBMIT_APPLICATION, START_TRIAL and SUBSCRIBE are
+ * not yet checked against a live account. */
 const PIXEL_EVENTS: Record<string, string> = {
   PURCHASE: 'purchase',
   ADD_TO_CART: 'add_to_cart',
   LEAD: 'lead',
   COMPLETE_REGISTRATION: 'complete_registration',
-  INITIATED_CHECKOUT: 'initiated_checkout',
+  INITIATED_CHECKOUT: 'initiate_checkout',
   CONTENT_VIEW: 'view_content',
   ADD_PAYMENT_INFO: 'add_payment_info',
   ADD_TO_WISHLIST: 'add_to_wishlist',

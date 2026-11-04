@@ -934,7 +934,7 @@
   "results.link_click": "Link click",
   "results.offsite_conversion_fb_pixel_add_to_cart": "Add to cart (pixel)",
   "results.offsite_conversion_fb_pixel_complete_registration": "Registration",
-  "results.offsite_conversion_fb_pixel_initiated_checkout": "Checkout started",
+  "results.offsite_conversion_fb_pixel_initiate_checkout": "Checkout started",
   "results.offsite_conversion_fb_pixel_lead": "Lead",
   "results.offsite_conversion_fb_pixel_purchase": "Purchase",
   "results.offsite_conversion_fb_pixel_view_content": "Content view",

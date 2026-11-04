@@ -5,10 +5,10 @@
 import type { RenderedBlock } from '@/lib/engine/types';
 import { useT } from '@/components/i18n-provider';
 import { DEFAULT_CONTAINER_METRICS, MAX_CONTAINER_ROWS } from '@/lib/layout/types';
+import { PER_ROW_ONLY, metricsAtLevel } from '@/lib/layout/container-custom';
 import { useCatalog } from './common';
 import type { PanelProps } from './custom-chart';
 
-const PER_ROW_ONLY = ['results', 'cost_per_result'];
 const LEVEL_LABEL = { campaign: 'editor.levelCampaign', adset: 'editor.levelAdset', ad: 'editor.levelAd' } as const;
 
 export function ContainerSettings({ c, sources, integrationId, rendered, onChange }: Pick<PanelProps, 'c' | 'sources' | 'onChange'> & { integrationId: number; rendered?: RenderedBlock }) {
@@ -33,7 +33,11 @@ export function ContainerSettings({ c, sources, integrationId, rendered, onChang
           <label className="label" htmlFor="container-level">
             {t('editor.level')}
           </label>
-          <select id="container-level" className="input" value={level} onChange={(e) => onChange({ level: e.target.value === 'campaign' ? undefined : (e.target.value as 'adset' | 'ad'), hiddenCampaigns: undefined })} data-container-level>
+          <select id="container-level" className="input" value={level} onChange={(e) => {
+              const next = e.target.value as 'campaign' | 'adset' | 'ad';
+              // back to Campaigns: Results / Cost per result leave the table too (they are per ad or ad set only)
+              onChange({ level: next === 'campaign' ? undefined : next, hiddenCampaigns: undefined, ...(next === 'campaign' && c.metrics ? { metrics: metricsAtLevel(c.metrics, 'campaign') } : {}) });
+            }} data-container-level>
             {levels.map((l) => (
               <option key={l} value={l}>
                 {t(LEVEL_LABEL[l])}

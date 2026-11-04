@@ -56,6 +56,8 @@ export function containerFromRows(
   return applyContainerCustom({ type: 'container', metrics, rows: all, truncated: 0 }, c);
 }
 
+export { metricsAtLevel, PER_ROW_ONLY } from './container-custom';
+
 /** The engine side: metric keys → catalog widgets → primitives → one campaign breakdown per period. */
 export async function resolveContainer(
   ctx: IntegrationCtx,
@@ -68,12 +70,15 @@ export async function resolveContainer(
 ): Promise<ContainerValue | ErrorValue> {
   const c = w.custom ?? {};
   const wanted = c.metrics?.length ? c.metrics : DEFAULT_CONTAINER_METRICS;
-  const widgets = wanted.map((k) => findWidget(ctx.slug, k, ctx.config as any)).filter((x): x is NonNullable<typeof x> => !!x && widgetPrims(x.calc).length > 0);
+  const level = c.level ?? 'campaign';
+  // Results / Cost per result count each ad set's own event: never per campaign, even if ticked at another level
+  const widgets = wanted
+    .map((k) => findWidget(ctx.slug, k, ctx.config as any))
+    .filter((x): x is NonNullable<typeof x> => !!x && widgetPrims(x.calc).length > 0 && !(x.containerOnly && level === 'campaign'));
   if (!widgets.length) return { type: 'error', code: 'invalid_metrics_combination', message: 'Pick at least one metric for the campaign table.' };
   const metrics: ContainerMetric[] = widgets.map((wd) => ({ key: wd.key, label: wd.title, format: wd.format }));
   const plan = planPrims(ctx.slug, [...new Set(widgets.flatMap((wd) => widgetPrims(wd.calc)))]);
   const sortBy = plan.real[0];
-  const level = c.level ?? 'campaign';
   // below campaigns the rows are ads or ad sets: the scope narrows the connector's call, never the row keys
   const scoped = (rs: BreakdownRow[]) => (campaignIds && level === 'campaign' ? rs.filter((r) => campaignIds.includes(r.key)) : rs);
   const rows = scoped(await session.getBreakdown(ctx, level, plan.real, range, sortBy, campaignIds));

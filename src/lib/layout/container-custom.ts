@@ -25,3 +25,10 @@ export function applyContainerCustom(v: ContainerValue, c: Pick<WidgetCustom, 's
   const limit = Math.max(1, Math.min(MAX_CONTAINER_ROWS, c?.rows ?? 10));
   return { ...v, rows: rows.slice(0, limit), truncated: (v.truncated ?? 0) + Math.max(0, rows.length - limit) };
 }
+
+/** Metrics that exist per ad or ad set only (Meta Ads Results, Cost per result). */
+export const PER_ROW_ONLY = ['results', 'cost_per_result'];
+/** A table's metric list at a level: the per-row-only ones go when the level is Campaigns. */
+export function metricsAtLevel(metrics: string[] | undefined, level: 'campaign' | 'adset' | 'ad'): string[] | undefined {
+  return metrics && level === 'campaign' ? metrics.filter((k) => !PER_ROW_ONLY.includes(k)) : metrics;
+}

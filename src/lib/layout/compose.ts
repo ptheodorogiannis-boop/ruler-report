@@ -358,9 +358,17 @@ export function effectiveScope(b: Pick<LayoutBlock, 'campaigns' | 'integrationId
   if (!isAdsSlug(b.slug)) return undefined;
   return b.campaigns ?? data?.sources?.find((s) => s.integrationId === b.integrationId)?.campaigns;
 }
+/**
+ * The campaign scope a widget's value is read under: its block's, unless the widget reads another account (a metric added
+ * from the source dropdown), which stays account-wide as refs to other accounts do (review I8). Widgets of the block's own
+ * account, blended metrics and drawer-added tables (integrationId 0) keep the block's scope, so stored keys do not move.
+ */
+export function widgetScope<T>(w: Pick<LayoutWidget, 'integrationId'>, blockIntegrationId: number, scope: T | undefined): T | undefined {
+  return w.integrationId > 0 && w.integrationId !== blockIntegrationId ? undefined : scope;
+}
 /** Store key of a widget inside its block (a drawer-added campaign table belongs to the block's account). */
 export function widgetValueKey(w: LayoutWidget, b: Pick<LayoutBlock, 'campaigns' | 'integrationId' | 'slug'>, data: ReportData | null | undefined): string | null {
-  return valueKey(w.slug === 'container' && !w.integrationId ? { ...w, integrationId: b.integrationId } : w, effectiveScope(b, data));
+  return valueKey(w.slug === 'container' && !w.integrationId ? { ...w, integrationId: b.integrationId } : w, widgetScope(w, b.integrationId, effectiveScope(b, data)));
 }
 /** Set a block's campaign scope (undefined clears it). An explicit "all" is stored as such, so it overrides a narrowing account default (review I6). */
 export function withBlockScope(layout: ReportLayout, blockId: string, scope: CampaignScope | undefined): ReportLayout {
@@ -421,7 +429,7 @@ function renderWidget(w: LayoutWidget, idx: Map<string, RenderedBlock>, ctx: Com
     block = { integrationId: 0, platform: 'Image', slug: 'image', account_name: '', widget: { reference_key: `image:${w.id}`, key: w.key, label: c.title ?? 'Image', description: c.description, format: 'text', diff_type: 'neutral', value: url ? { type: 'image', url, alt: c.alt ?? c.title ?? 'Image', caption: c.caption, fit: c.fit ?? 'contain' } : { type: 'error', code: 'invalid_metrics_combination', message: 'Choose an image.' } } };
   } else {
     // a campaign table added from the drawer carries integrationId 0: it belongs to the block's account
-    const base = idx.get(valueKey(w.slug === 'container' && !w.integrationId ? { ...w, integrationId: blockIntegrationId } : w, scope)!);
+    const base = idx.get(valueKey(w.slug === 'container' && !w.integrationId ? { ...w, integrationId: blockIntegrationId } : w, widgetScope(w, blockIntegrationId, scope))!);
     block = base ? { ...base, widget: { ...base.widget } } : pending(c.title ?? w.key, w, ctx, data, c.period ? 'Loading custom period…' : 'Loading…');
   }
   // overrides shared by every widget
