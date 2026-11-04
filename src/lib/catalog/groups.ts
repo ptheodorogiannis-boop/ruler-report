@@ -11,7 +11,7 @@ export const groupId = (name: string): string =>
 export const GROUP_ORDER: Record<string, string[]> = {
   ads: ['investment', 'delivery', 'engagement', 'efficiency', 'results', 'funnel', 'by_platform', 'audience', 'charts', 'tables'],
   social: ['audience', 'delivery', 'engagement', 'content', 'conversion', 'charts', 'tables'],
-  web: ['traffic', 'engagement', 'conversion', 'e_commerce', 'acquisition', 'audience', 'funnel', 'charts', 'tables'],
+  web: ['traffic', 'engagement', 'conversion', 'goals', 'e_commerce', 'acquisition', 'audience', 'funnel', 'charts', 'tables'],
   seo: ['performance', 'audience', 'charts', 'tables'],
   ecom: ['sales', 'customers', 'funnel', 'audience', 'charts', 'tables'],
   crm: ['leads', 'deals', 'value', 'team', 'funnel', 'charts', 'tables'],

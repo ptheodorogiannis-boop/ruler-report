@@ -18,6 +18,7 @@ import { mapRefs } from '@/lib/layout/map';
 import { tokenRefs } from '@/lib/layout/tokens';
 import { resolveContainer } from '@/lib/layout/container';
 import { keepThumbnails } from '@/lib/media/thumbs';
+import { missingMetricMessage } from '@/lib/catalog/matomo-goals';
 import { connectorFor } from '@/lib/connectors';
 
 export function toCtx(row: Integration, project: Pick<Project, 'currency'>): IntegrationCtx {
@@ -336,7 +337,7 @@ export async function ensureWidgetValues(inp: EnsureInput): Promise<{ data: Repo
     const base = { integrationId, platform: def?.name ?? 'Unknown', slug: c?.slug ?? 'unknown', account_name: c?.name ?? '' };
     if (!c || !def) return store(k, { ...base, widget: { reference_key: key, key, label: key, format: 'number', diff_type: 'neutral', value: { type: 'error', code: 'invalid_metrics_combination', message: 'This account is not connected to the report.' } } });
     const w = findWidget(c.slug, key, c.config as any);
-    if (!w) return store(k, { ...base, widget: { reference_key: `${def.prefix}:${key}`, key, label: key, format: 'number', diff_type: 'neutral', value: { type: 'error', code: 'invalid_metrics_combination', message: `Unknown metric "${key}" for ${def.name}.` } } });
+    if (!w) return store(k, { ...base, widget: { reference_key: `${def.prefix}:${key}`, key, label: key, format: 'number', diff_type: 'neutral', value: { type: 'error', code: 'invalid_metrics_combination', message: missingMetricMessage(c.slug, key, def.name) } } });
     const sc = await scopeFor(c, scope);
     const value = sc.empty ? noCampaign(sc) : await resolveWidget({ integration: c, widget: w, range: period ?? inp.range, comparison: comparisonFor(period, inp.comparison), session, ...scopeArgs(sc) });
     store(k, { ...base, widget: { reference_key: w.reference_key, key: w.key, label: w.title, description: w.description, format: w.format, diff_type: w.diff, currency: c.currency, value }, ...(sc.info ? { campaignScope: sc.info } : {}) });

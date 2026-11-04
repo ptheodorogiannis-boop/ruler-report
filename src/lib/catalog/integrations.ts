@@ -7,6 +7,7 @@
 import type { WidgetSpec } from '@/lib/engine/types';
 import type { Variants } from './helpers';
 import { metaExtraWidgets } from './meta-extra';
+import { goalWidgets } from './matomo-goals';
 
 export type Category = 'social' | 'ads' | 'analytics' | 'seo' | 'crm' | 'email' | 'ecommerce' | 'local' | 'calls' | 'custom';
 export type ConnectorId = 'demo' | 'meta' | 'gads' | 'ga4' | 'gsc' | 'woo' | 'sheets' | 'csv' | 'rest' | 'ingest' | 'facebook' | 'instagram' | 'youtube' | 'gbp' | 'matomo';
@@ -45,6 +46,8 @@ export interface IntegrationDef {
   variants?: Variants;
   /** widgets this platform adds to its archetype's (Meta Ads: Results, Cost per result) */
   extraWidgets?: () => WidgetSpec[];
+  /** widgets that depend on the account's config (Matomo: one set per goal); the catalog is cached per config */
+  dynamicWidgets?: (config: Record<string, any> | null | undefined) => WidgetSpec[];
 }
 
 const d = (
@@ -111,7 +114,7 @@ export const INTEGRATIONS: IntegrationDef[] = [
   d('search_console', 'Google Search Console', 'seo', 'seo', 'gsc', 'gsc', 'oauth_google', '#458cf5', true, { sourceIdLabel: 'Site URL (https://… or sc-domain:…)' }),
   d('google_my_business', 'Google Business Profile', 'local', 'local', 'gbp', 'gbp', 'oauth_google', '#34a853', true, { sourceIdLabel: 'Location (accounts/…/locations/…)' }),
   // a real connector since 2026-11-04 (src/lib/connectors/matomo.ts); accounts connected before stay sample data until reconnected
-  d('matomo', 'Matomo', 'analytics', 'web', 'matomo', 'matomo', 'token', '#3152a0', false, { sourceIdLabel: 'Site ID', fields: [{ name: 'baseUrl', label: 'Matomo address', placeholder: 'https://analytics.example.com' }, { name: 'tokenAuth', label: 'API token (token_auth)', secret: true }] }),
+  d('matomo', 'Matomo', 'analytics', 'web', 'matomo', 'matomo', 'token', '#3152a0', false, { sourceIdLabel: 'Site ID', dynamicWidgets: goalWidgets, fields: [{ name: 'baseUrl', label: 'Matomo address', placeholder: 'https://analytics.example.com' }, { name: 'tokenAuth', label: 'API token (token_auth)', secret: true }] }),
   d('plausible', 'Plausible', 'analytics', 'web', 'plausible', 'demo', 'api_key', '#5850ec', false, { fields: APIKEY, sourceIdLabel: 'Site domain' }),
   d('ruler_attribution', 'Ruler Attribution', 'analytics', 'web', 'ruler_attr', 'demo', 'api_key', '#4f46e5', false, { fields: [{ name: 'baseUrl', label: 'Attribution server URL' }, ...APIKEY] }),
   // ── CRM

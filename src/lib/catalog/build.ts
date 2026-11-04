@@ -44,16 +44,17 @@ function tagsFor(w: WidgetSpec, category: string): WidgetTags {
 }
 
 /** Widgets for an integration type. Custom-data types need the detected columns from the integration config. */
-export function getCatalog(slug: string, config?: { columns?: CustomColumn[] } | null): CatalogWidget[] {
+export function getCatalog(slug: string, config?: ({ columns?: CustomColumn[] } & Record<string, any>) | null): CatalogWidget[] {
   const def = getIntegrationDef(slug);
   if (!def) return [];
   if (def.archetype === 'custom') return customCatalog(slug, def.prefix, config?.columns ?? []);
 
-  const ck = slug;
+  // an account whose widgets depend on its config (Matomo goals) is cached per goals and names
+  const ck = def.dynamicWidgets ? `${slug}#${createHash('sha1').update(JSON.stringify([config?.goals ?? [], config?.goalNames ?? {}])).digest('hex').slice(0, 12)}` : slug;
   const hit = cache.get(ck);
   if (hit) return hit;
   const arch = ARCHETYPES[def.archetype];
-  const base = [...arch.widgets(), ...(def.extraWidgets?.() ?? [])];
+  const base = [...arch.widgets(), ...(def.extraWidgets?.() ?? []), ...(def.dynamicWidgets?.(config) ?? [])];
   const out: CatalogWidget[] = [];
   for (const w of base) out.push({ ...w, slug, prefix: def.prefix, reference_key: `${def.prefix}:${w.key}`, tags: tagsFor(w, def.category) });
 
@@ -102,7 +103,7 @@ function customCatalog(slug: string, prefix: string, columns: CustomColumn[]): C
   return specs.map((w) => ({ ...w, slug, prefix, reference_key: `${prefix}:${w.key}`, tags: { ...DEFAULT_TAGS, calculation: 'Passed through the network', ...(w.tags ?? {}) } as WidgetTags }));
 }
 
-export function findWidget(slug: string, key: string, config?: { columns?: CustomColumn[] } | null): CatalogWidget | undefined {
+export function findWidget(slug: string, key: string, config?: ({ columns?: CustomColumn[] } & Record<string, any>) | null): CatalogWidget | undefined {
   const cat = getCatalog(slug, config);
   return cat.find((w) => w.key === key || w.reference_key === key);
 }
