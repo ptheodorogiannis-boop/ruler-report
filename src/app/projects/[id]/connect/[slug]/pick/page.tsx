@@ -14,6 +14,7 @@ import { detailParts } from '@/lib/oauth/detail';
 import { PENDING_COOKIE, openPending } from '@/lib/oauth/pending';
 import { OAUTH_SLUGS, PROVIDER_NAME, listAccounts, type AccountOption } from '@/lib/oauth/providers';
 import { getT } from '@/lib/i18n/server';
+import { ListFilter } from '@/components/list-filter';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,9 +80,10 @@ export default async function PickAccounts({ params }: { params: Promise<{ id: s
             >
               <input type="hidden" name="projectId" value={project.id} />
               <input type="hidden" name="slug" value={slug} />
+              <ListFilter label={t('connect.searchAccounts')} placeholder={t('connect.searchAccounts')} countLabel={t('common.shownOf')} emptyLabel={t('common.noMatches')}>
               <ul className="divide-y divide-[var(--line)] border-y border-[var(--line)]">
                 {options.map((o) => (
-                  <li key={o.key}>
+                  <li key={o.key} data-search={`${o.name} ${detailParts(o.detail, t).join(' ')}`}>
                     <label className="flex cursor-pointer items-start gap-3 px-1 py-3 transition-colors hover:bg-[var(--paper)] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--focus)]">
                       <input type="checkbox" name="pick" value={o.key} disabled={!!o.blocked} className="mt-0.5 h-4 w-4 accent-[var(--brand)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]" />
                       <span className="min-w-0">
@@ -98,6 +100,7 @@ export default async function PickAccounts({ params }: { params: Promise<{ id: s
                   </li>
                 ))}
               </ul>
+              </ListFilter>
             </ActionForm>
           </>
         )}

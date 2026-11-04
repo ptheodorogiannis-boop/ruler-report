@@ -6,6 +6,7 @@ import { requirePrincipal } from '@/lib/auth';
 import { CATEGORY_LABEL, INTEGRATIONS, type Category } from '@/lib/catalog/integrations';
 import { getCatalog } from '@/lib/catalog/build';
 import { db } from '@/lib/db';
+import { ListFilter } from '@/components/list-filter';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,9 +19,10 @@ export default async function IntegrationsPage() {
   return (
     <AppShell active="/integrations">
       <PageHeader title={t('nav.integrations')} subtitle={t('integrations.subtitle', { count: INTEGRATIONS.length, live })} />
+      <ListFilter label={t('connect.searchIntegrations')} placeholder={t('connect.searchIntegrations')} countLabel={t('common.shownOf')} emptyLabel={t('common.noMatches')}>
       <div className="space-y-8">
         {(Object.keys(CATEGORY_LABEL) as Category[]).map((c) => (
-          <section key={c}>
+          <section key={c} data-search-group>
             <h2 className="mb-3 text-sm font-semibold text-ink-2">{t(`integrations.cat_${c}`)}</h2>
             <div className="card overflow-hidden">
               <table className="w-full table-fixed">
@@ -32,7 +34,7 @@ export default async function IntegrationsPage() {
                 </colgroup>
                 <tbody className="divide-y divide-[var(--line)]">
                   {INTEGRATIONS.filter((i) => i.category === c).map((i) => (
-                    <tr key={i.slug}>
+                    <tr key={i.slug} data-search={`${i.name} ${i.slug}`}>
                       <td className="td">
                         <span className="inline-flex min-w-0 items-center gap-2.5 font-medium" title={i.slug}>
                           <PlatformTile slug={i.slug} size="sm" />
@@ -50,6 +52,7 @@ export default async function IntegrationsPage() {
           </section>
         ))}
       </div>
+      </ListFilter>
       <p className="mt-8 text-sm text-ink-2">
         {t('integrations.needConnect')}{' '}
         <Link href="/projects" className="link font-medium text-ink">

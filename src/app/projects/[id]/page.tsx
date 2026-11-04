@@ -39,6 +39,7 @@ const SITUATION: Record<string, { label: string; tone: string }> = {
 import { shareUrl } from '@/lib/services/reports';
 import { pdfAvailable } from '@/lib/services/pdf';
 import { requestBaseUrl } from '@/lib/share';
+import { ListFilter } from '@/components/list-filter';
 
 export const dynamic = 'force-dynamic';
 
@@ -147,6 +148,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
           {integrations.length === 0 ? (
             !write && <Empty title={t('projects.noIntegrationsTitle')} hint={t('projects.integrationsHint')} />
           ) : (
+            <ListFilter label={t('connect.searchAccounts')} placeholder={t('connect.searchAccounts')} countLabel={t('common.shownOf')} emptyLabel={t('common.noMatches')}>
             <div className="card divide-y divide-[var(--line)]">
               {integrations
                 .map((i) => {
@@ -159,7 +161,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                 .sort((a, b) => Number(justAdded.has(b.i.id)) - Number(justAdded.has(a.i.id)) || Number(a.sample) - Number(b.sample))
                 .map(({ i, def, sample }) => {
                 return (
-                  <div key={i.id}>
+                  <div key={i.id} data-search={`${def?.name ?? i.slug} ${i.name}`}>
                   <div className="flex flex-wrap items-center gap-3 px-4 py-3" data-integration-row={i.slug} data-sample={sample ? '1' : '0'}>
                     <div className="flex w-52 shrink-0 items-center gap-2.5">
                       <PlatformTile slug={i.slug} size="sm" />
@@ -257,6 +259,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                 );
               })}
             </div>
+            </ListFilter>
           )}
         </div>
       )}
