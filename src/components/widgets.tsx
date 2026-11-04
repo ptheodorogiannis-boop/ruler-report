@@ -42,8 +42,23 @@ export interface CardProps {
   tone?: Tone;
   /** the editor only: star or unstar a table row by its name (spec 2026-11-04 editor §5) */
   onStarRow?: (name: string) => void;
+  /** the widget reads another account than its block's: its platform icon goes before the title (spec 2026-11-04 sources §2) */
+  foreign?: boolean;
 }
 const customOf = (b: RenderedBlock) => (b.custom ?? {}) as WidgetCustom;
+/** A widget's title; one from another account than its block's starts with that platform's icon, named for screen readers. */
+function Title({ b, foreign }: { b: RenderedBlock; foreign?: boolean }) {
+  return (
+    <>
+      {foreign && (
+        <span className="mr-1.5 inline-flex align-[-2px]" data-foreign-source={b.slug} role="img" aria-label={`${b.platform} · ${b.account_name}`} title={`${b.platform} · ${b.account_name}`}>
+          <PlatformIcon slug={b.slug} size={14} />
+        </span>
+      )}
+      {labelOf(b)}
+    </>
+  );
+}
 
 /** CSS variables that place a block on the 12-column grid (see .rgrid in globals.css). */
 export const gridStyle = (l: { x: number; y: number; w: number; h: number }) => ({ ['--gx' as any]: l.x + 1, ['--gy' as any]: l.y + 1, ['--gw' as any]: l.w, ['--gh' as any]: l.h }) as React.CSSProperties;
@@ -79,7 +94,7 @@ export function Delta({ pct, diff }: { pct: number | null | undefined; diff: str
   );
 }
 
-function Kpi({ b, fmt, grid, tone }: CardProps) {
+function Kpi({ b, fmt, grid, tone, foreign }: CardProps) {
   const w = b.widget;
   const v = w.value as Extract<WidgetValue, { type: 'number' }>;
   const c = customOf(b);
@@ -94,7 +109,9 @@ function Kpi({ b, fmt, grid, tone }: CardProps) {
     <div className={clsx('card kpi p-4', tone && TONE_CLASS[tone], grid && 'flex h-full flex-col justify-center overflow-hidden', hl && 'border-l-4')} style={hl ? { borderLeftColor: 'var(--block, var(--brand))' } : undefined} title={w.description}>
       <div className="flex items-center gap-1 text-xs font-medium text-ink-2">
         {hl && <Star size={11} className="shrink-0 fill-brand text-brand" aria-label={tr('public.highlighted')} />}
-        <span className="truncate">{labelOf(b)}</span>
+        <span className="truncate">
+          <Title b={b} foreign={foreign} />
+        </span>
       </div>
       <div className={clsx('kpi-value mt-1.5', hl && 'text-brand')}>{formatValue(v.value, w.format, o)}</div>
       {cal && (
@@ -121,7 +138,7 @@ function Kpi({ b, fmt, grid, tone }: CardProps) {
   );
 }
 
-function ChartCard({ b, fmt, brand, grid, palette, events, tone }: CardProps) {
+function ChartCard({ b, fmt, brand, grid, palette, events, tone, foreign }: CardProps) {
   const w = b.widget;
   const v = w.value as Extract<WidgetValue, { type: 'chart' }>;
   const c = customOf(b);
@@ -136,7 +153,9 @@ function ChartCard({ b, fmt, brand, grid, palette, events, tone }: CardProps) {
   return (
     <div className={clsx('card flex flex-col p-4', tone && TONE_CLASS[tone], grid && 'h-full overflow-hidden')} title={w.description}>
       <div className="mb-2 flex items-baseline justify-between gap-2">
-        <div className="truncate text-sm font-semibold">{labelOf(b)}</div>
+        <div className="truncate text-sm font-semibold">
+          <Title b={b} foreign={foreign} />
+        </div>
         {c.groupBy && c.groupBy !== 'day' && <span className="eyebrow shrink-0">{c.groupBy === 'week' || c.groupBy === 'month' || c.groupBy === 'quarter' ? tr(`public.by_${c.groupBy}`) : `by ${c.groupBy}`}</span>}
       </div>
       <div className={clsx('chart-area', grid && 'min-h-0 flex-1')}>
@@ -152,7 +171,7 @@ function ChartCard({ b, fmt, brand, grid, palette, events, tone }: CardProps) {
   );
 }
 
-function TableCard({ b, fmt, grid, tone, onStarRow }: CardProps) {
+function TableCard({ b, fmt, grid, tone, onStarRow, foreign }: CardProps) {
   const w = b.widget;
   const starred = new Set(customOf(b).starredRows ?? []);
   const v = w.value as Extract<WidgetValue, { type: 'table' }>;
@@ -161,7 +180,9 @@ function TableCard({ b, fmt, grid, tone, onStarRow }: CardProps) {
   return (
     <div className={clsx('card flex flex-col overflow-hidden', tone && TONE_CLASS[tone], grid ? 'h-full' : 'lg:col-span-2')} title={w.description}>
       <div className="flex items-center justify-between px-4 pt-3">
-        <div className="truncate text-sm font-semibold">{labelOf(b)}</div>
+        <div className="truncate text-sm font-semibold">
+          <Title b={b} foreign={foreign} />
+        </div>
         <div className="num shrink-0 text-xs text-ink-3">
           {tr('public.topOf', { n: v.rows.length, total: v.total_rows })}
         </div>
@@ -207,14 +228,16 @@ function TableCard({ b, fmt, grid, tone, onStarRow }: CardProps) {
   );
 }
 
-function FunnelCard({ b, fmt, grid }: CardProps) {
+function FunnelCard({ b, fmt, grid, foreign }: CardProps) {
   const w = b.widget;
   const v = w.value as Extract<WidgetValue, { type: 'funnel' }>;
   const o = { currency: w.currency, ...fmt };
   const maxv = Math.max(...v.steps.filter((s) => !/spent|spend|revenue/i.test(s.label)).map((s) => s.value ?? 0), 1);
   return (
     <div className={clsx('card flex flex-col p-4', grid ? 'h-full overflow-hidden' : 'lg:col-span-2')} title={w.description}>
-      <div className="mb-3 truncate text-sm font-semibold">{labelOf(b)}</div>
+      <div className="mb-3 truncate text-sm font-semibold">
+        <Title b={b} foreign={foreign} />
+      </div>
       <div className={clsx('scroll-region space-y-2', grid && 'min-h-0 flex-1 overflow-auto')} {...(grid && v.steps.length > 8 ? { tabIndex: 0, role: 'region', 'aria-label': `${w.label}, funnel` } : {})}>
         {v.steps.map((s, i) => {
           const isMoney = /spent|spend|revenue/i.test(s.label);
@@ -247,14 +270,16 @@ function TextCard({ b, grid }: CardProps) {
   );
 }
 
-function ErrorCard({ b, grid }: CardProps) {
+function ErrorCard({ b, grid, foreign }: CardProps) {
   const v = b.widget.value as Extract<WidgetValue, { type: 'error' }>;
   if (v.code === 'pending')
     return (
       <div className={clsx('card flex items-center gap-2 border-dashed p-4 text-sm text-slate-500', grid && 'h-full')}>
         <Loader2 size={15} className="shrink-0 animate-spin text-brand" />
         <div className="min-w-0">
-          <div className="truncate text-xs font-medium text-slate-600">{labelOf(b)}</div>
+          <div className="truncate text-xs font-medium text-slate-600">
+            <Title b={b} foreign={foreign} />
+          </div>
           <div className="text-xs">{v.message}</div>
         </div>
       </div>
@@ -263,7 +288,9 @@ function ErrorCard({ b, grid }: CardProps) {
     <div className={clsx('card flex items-start gap-2 border-amber-200 bg-amber-50/50 p-4', grid && 'h-full overflow-hidden')}>
       <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-500" />
       <div className="min-w-0">
-        <div className="truncate text-xs font-medium text-slate-600">{labelOf(b)}</div>
+        <div className="truncate text-xs font-medium text-slate-600">
+          <Title b={b} foreign={foreign} />
+        </div>
         <div className="text-xs text-amber-700">{v.message}</div>
       </div>
     </div>
@@ -345,7 +372,7 @@ function LayoutSection({ s, fmt, brand, theme, dataNotes, events, headline }: { 
         <div className="rgrid">
           {s.blocks.map((b, i) => (
             <div key={b.id ?? i} className="ritem" style={gridStyle(b.layout!)} data-w={b.layout!.w} data-kind={b.widget.value.type}>
-              <WidgetCard b={b} fmt={fmt} brand={blockColor} palette={palette} grid events={events} tone={blockTone(!!headline, b, theme?.tones)} />
+              <WidgetCard b={b} fmt={fmt} brand={blockColor} palette={palette} grid events={events} tone={blockTone(!!headline, b, theme?.tones)} foreign={b.integrationId > 0 && b.integrationId !== s.source?.integrationId} />
             </div>
           ))}
         </div>

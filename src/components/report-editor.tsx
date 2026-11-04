@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation';
 import { PeriodControl } from './period-control';
 import { useAiLanguage } from '@/components/ai-language';
 import { MetricPicker, type MetricPayload } from './metric-picker';
+import { SourceSelect, sortSources } from './source-select';
 import { BlockMenu } from './block-menu';
 import { nextStarred } from '@/lib/layout/stars';
 import { withoutStale, type ComparisonChoice } from '@/lib/services/period-rules';
@@ -622,7 +623,7 @@ export function ReportEditor(props: EditorProps) {
                     const isNumber = rb?.widget.value.type === 'number' || w.component === 'number_v1' || w.component === 'empty_v1' || w.component === 'calculated_v1';
                     return (
                       <div className={clsx('relative h-full', selected === w.id && 'ritem-selected', w.custom?.hidden && 'ritem-hidden')} data-kind={kindOf(w.component)} data-widget={w.id} onClick={() => setSelected(w.id)}>
-                        {rb ? <WidgetCard b={rb} fmt={fmt} brand={blockColor} palette={palette} grid onStarRow={(name) => toggleStar(w.id, name)} /> : <div className="card h-full" />}
+                        {rb ? <WidgetCard b={rb} fmt={fmt} brand={blockColor} palette={palette} grid onStarRow={(name) => toggleStar(w.id, name)} foreign={w.integrationId > 0 && w.integrationId !== b.integrationId} /> : <div className="card h-full" />}
                         {w.custom?.staleFor && (
                           <div className="written-for no-print" data-written-for>
                             {t('editor.writtenFor', { range: `${w.custom.staleFor.start} → ${w.custom.staleFor.end}` })}
@@ -895,12 +896,15 @@ function SaveTemplateDialog({ reportId, defaultTitle, onClose }: { reportId: num
 function AddMetricsPanel({ block, sources, customMetrics, existing, onAdd, onClose }: { block: LayoutBlock; sources: SourceInfo[]; customMetrics: EditorProps['customMetrics']; existing: Set<string>; onAdd: (p: Payload) => void; onClose: () => void }) {
   const t = useT();
   const [tab, setTab] = useState<'predefined' | 'custom'>('predefined');
-  const fixed = block.integrationId > 0 ? sources.find((s) => s.id === block.integrationId) : undefined;
-  const [sourceId, setSourceId] = useState<number>(fixed?.id ?? sources[0]?.id ?? 0);
-  const source = fixed ?? sources.find((s) => s.id === sourceId);
+  // the block's own account first (a custom block: the first account of the list); every other account of the report is one
+  // pick away, and its metrics keep their account (spec 2026-11-04 sources §2)
+  const own = block.integrationId > 0 ? sources.find((s) => s.id === block.integrationId) : undefined;
+  const first = own?.id ?? sortSources(sources)[0]?.id ?? 0;
+  const [sourceId, setSourceId] = useState<number>(first);
+  const source = sources.find((s) => s.id === sourceId);
   useEffect(() => {
-    setSourceId(fixed?.id ?? sources[0]?.id ?? 0);
-  }, [block.id, fixed?.id, sources]);
+    setSourceId(first);
+  }, [block.id, first]);
   const dragProps = (p: Payload) => ({
     draggable: true,
     onDragStart: (e: React.DragEvent) => {
@@ -944,15 +948,7 @@ function AddMetricsPanel({ block, sources, customMetrics, existing, onAdd, onClo
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {tab === 'predefined' ? (
           <div className="space-y-3">
-            {!fixed && (
-              <select className="input" value={sourceId} onChange={(e) => setSourceId(Number(e.target.value))}>
-                {sources.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {getIntegrationDef(s.slug)?.name ?? s.slug} · {s.name}
-                  </option>
-                ))}
-              </select>
-            )}
+            {sources.length > 0 && <SourceSelect sources={sources} value={sourceId} onChange={setSourceId} />}
             <div className="text-xs text-slate-400">{t('editor.drawerHint')}</div>
             {source ? <MetricPicker key={source.id} source={source} existing={existing} onPick={onAdd} variant="panel" dragProps={dragProps} /> : <div className="text-xs text-slate-400">{t('editor.connectFirst')}</div>}
           </div>
