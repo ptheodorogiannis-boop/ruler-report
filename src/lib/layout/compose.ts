@@ -16,6 +16,7 @@ import { isMediaOrHttps } from '@/lib/media/url';
 import { hashText, scopeHash, scopeSchema, type CampaignScope } from '@/lib/engine/campaigns';
 import { tileValue } from './tiles';
 import { MAX_COMPARE_PERIODS, MAX_COMPARE_REFS, compareValue } from './compare';
+import { MAX_MAP_PANEL, mapValue } from './map';
 import { applyTokens, type MetricToken, type TextVar } from './tokens';
 import { formatValue } from '@/lib/util/format';
 import { DEFAULT_SIZE, GRID_COLS, GRID_GAP, GRID_ROW_HEIGHT, HEX, PALETTE_NAMES, isSpecialSlug, type GroupBy, type LayoutBlock, type LayoutWidget, type MetricRef, type ReportLayout, type ReportTheme, type SourceInfo, type WidgetCustom } from './types';
@@ -32,7 +33,7 @@ const scopeSuffix = (scope?: CampaignScope) => {
 
 /** Key of a widget's value inside the data store, or null for widgets rendered purely from their settings. */
 export function valueKey(w: Pick<LayoutWidget, 'slug' | 'key' | 'integrationId' | 'custom'>, scope?: CampaignScope): string | null {
-  if (w.slug === 'manual' || w.slug === 'analysis' || w.slug === 'calculated' || w.slug === 'custom_chart' || w.slug === 'infographic' || w.slug === 'image' || w.slug === 'compare' || w.slug === 'pdf') return null;
+  if (w.slug === 'manual' || w.slug === 'analysis' || w.slug === 'calculated' || w.slug === 'custom_chart' || w.slug === 'infographic' || w.slug === 'image' || w.slug === 'compare' || w.slug === 'pdf' || w.slug === 'map') return null;
   // a campaign table's value depends on the metrics chosen, so they are part of the key
   if (w.slug === 'container') return `${w.integrationId}:container:${hashText((w.custom?.metrics ?? []).join(','))}${periodSuffix(w.custom?.period)}${scopeSuffix(scope)}`;
   return `${w.integrationId}:${w.key}${periodSuffix(w.custom?.period)}${scopeSuffix(scope)}`;
@@ -54,7 +55,7 @@ export type ComponentLookup = (slug: string, key: string, integrationId: number)
 /** Optional per-widget starting size (e.g. a table sized to its rows); falls back to DEFAULT_SIZE. */
 export type SizeLookup = (slug: string, key: string, integrationId: number, component: Component) => { w: number; h: number } | undefined;
 
-const SPECIAL_COMPONENT: Record<string, Component> = { manual: 'empty_v1', analysis: 'analysis_v1', calculated: 'calculated_v1', custom: 'number_v1', custom_chart: 'custom_chart_v1', infographic: 'infographic_v1', image: 'image_v1', container: 'container_v1', compare: 'compare_v1', pdf: 'pdf_v1' };
+const SPECIAL_COMPONENT: Record<string, Component> = { manual: 'empty_v1', analysis: 'analysis_v1', calculated: 'calculated_v1', custom: 'number_v1', custom_chart: 'custom_chart_v1', infographic: 'infographic_v1', image: 'image_v1', container: 'container_v1', compare: 'compare_v1', pdf: 'pdf_v1', map: 'map_v1' };
 
 function widgetFromRef(ref: TemplateWidgetRef, integrationId: number, component: Component, blockId: string, i: number, sizeOf?: SizeLookup): LayoutWidget {
   const size = sizeOf?.(ref.slug, ref.key, integrationId, component) ?? DEFAULT_SIZE[component] ?? DEFAULT_SIZE.number_v1;
@@ -181,7 +182,7 @@ export function sizeOfValue(v: WidgetValue | undefined, component: Component): {
 }
 
 export const componentOfValue = (v: WidgetValue | undefined): Component | undefined =>
-  v?.type === 'container' ? 'container_v1' : v?.type === 'number' ? 'number_v1' : v?.type === 'chart' ? 'chart_v1' : v?.type === 'table' ? 'datatable_v1' : v?.type === 'funnel' ? 'funnel_v1' : v?.type === 'text' ? 'analysis_v1' : v?.type === 'tile' ? 'infographic_v1' : v?.type === 'image' ? 'image_v1' : v?.type === 'compare' ? 'compare_v1' : v?.type === 'pdf' ? 'pdf_v1' : undefined;
+  v?.type === 'container' ? 'container_v1' : v?.type === 'number' ? 'number_v1' : v?.type === 'chart' ? 'chart_v1' : v?.type === 'table' ? 'datatable_v1' : v?.type === 'funnel' ? 'funnel_v1' : v?.type === 'text' ? 'analysis_v1' : v?.type === 'tile' ? 'infographic_v1' : v?.type === 'image' ? 'image_v1' : v?.type === 'compare' ? 'compare_v1' : v?.type === 'pdf' ? 'pdf_v1' : v?.type === 'map' ? 'map_v1' : undefined;
 
 /** The header options a block carries into a template section and a rendered section (spec v3 §4.3). */
 export const blockOptions = (b: { icon?: string; subtitle?: string; hideHeader?: boolean }) => ({
@@ -403,6 +404,12 @@ function renderWidget(w: LayoutWidget, idx: Map<string, RenderedBlock>, ctx: Com
     const value = compareValue(w, lookup, ctx.range, ctx.comparison ?? null);
     const first = c.ref ? lookup(c.ref) : undefined;
     block = { integrationId: 0, platform: 'Comparison', slug: 'compare', account_name: '', widget: { reference_key: `compare:${w.id}`, key: w.key, label: c.title ?? 'Comparison', description: c.description, format: value.type === 'compare' ? value.format : 'number', diff_type: c.positiveBad ? 'positive_bad' : 'positive_good', currency: first?.widget.currency ?? ctx.currency, value } };
+  } else if (w.slug === 'map') {
+    // countries coloured by one "by country" metric; refs to the block's own account follow the block's campaign scope
+    const lookup = (ref: MetricRef) => idx.get(storeKey(ref.integrationId, ref.key, undefined, ref.integrationId === blockIntegrationId ? scope : undefined));
+    const value = mapValue(w, lookup);
+    const shade = value.type === 'map' ? value.shade : undefined;
+    block = { integrationId: 0, platform: 'Map', slug: 'map', account_name: '', widget: { reference_key: `map:${w.id}`, key: w.key, label: c.title ?? 'Map', description: c.description, format: shade?.format ?? 'number', diff_type: c.positiveBad ? 'positive_bad' : 'positive_good', currency: shade?.currency ?? ctx.currency, value } };
   } else if (w.slug === 'pdf') {
     // only our own uploads: pdf.js fetches the file from this origin (no cross-origin reads, no third-party trackers)
     const url = c.url && /^\/api\/media\/[a-z0-9]{1,64}$/i.test(c.url) ? c.url : '';
@@ -531,6 +538,9 @@ export const customSchema = z
     comparePeriods: z.array(z.object({ label: z.string().max(60).optional(), start: dateStr, end: dateStr }).strict()).max(MAX_COMPARE_PERIODS).optional(),
     compareRefs: z.array(refSchema).max(MAX_COMPARE_REFS).optional(),
     changeAs: z.enum(['percent', 'absolute']).optional(),
+    // map_v1
+    mapShade: refSchema.optional(),
+    mapPanel: z.array(refSchema).max(MAX_MAP_PANEL).optional(),
     // pdf_v1
     pdfPages: z.string().max(100).regex(/^[\d\s,\-]*$/, 'Pages like "1-3, 5"').optional(),
     // infographic_v1
@@ -553,7 +563,7 @@ const widgetSchema = z.object({
   id: z.string().min(1).max(64),
   slug: z.string().min(1).max(64),
   key: z.string().min(1).max(128),
-  component: z.enum(['number_v1', 'chart_v1', 'datatable_v1', 'funnel_v1', 'container_v1', 'analysis_v1', 'empty_v1', 'calculated_v1', 'custom_chart_v1', 'infographic_v1', 'image_v1', 'compare_v1', 'pdf_v1']),
+  component: z.enum(['number_v1', 'chart_v1', 'datatable_v1', 'funnel_v1', 'container_v1', 'analysis_v1', 'empty_v1', 'calculated_v1', 'custom_chart_v1', 'infographic_v1', 'image_v1', 'compare_v1', 'pdf_v1', 'map_v1']),
   integrationId: z.number().int().min(0),
   x: z.number().int().min(0).max(GRID_COLS - 1),
   y: z.number().int().min(0).max(10_000),

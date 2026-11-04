@@ -2,7 +2,7 @@
 import type { CampaignScope } from './campaigns';
 import type { Tone } from '@/lib/ai/tones';
 
-export type Component = 'number_v1' | 'chart_v1' | 'datatable_v1' | 'funnel_v1' | 'container_v1' | 'analysis_v1' | 'empty_v1' | 'calculated_v1' | 'custom_chart_v1' | 'infographic_v1' | 'image_v1' | 'compare_v1' | 'pdf_v1';
+export type Component = 'number_v1' | 'chart_v1' | 'datatable_v1' | 'funnel_v1' | 'container_v1' | 'analysis_v1' | 'empty_v1' | 'calculated_v1' | 'custom_chart_v1' | 'infographic_v1' | 'image_v1' | 'compare_v1' | 'pdf_v1' | 'map_v1';
 export type Format = 'number' | 'currency' | 'percent' | 'decimal' | 'duration' | 'text';
 export type DiffType = 'positive_good' | 'positive_bad' | 'neutral';
 
@@ -166,7 +166,29 @@ export interface PdfValue {
   pages?: number[];
   caption?: string;
 }
-export type WidgetValue = NumberValue | ChartValue | TableValue | FunnelValue | ErrorValue | TextValue | TileValue | ImageValue | ContainerValue | CompareValue | PdfValue;
+/** map_v1 (docs/superpowers/specs/2026-11-04-map-search-ask-layout-design.md §1): country breakdowns joined by ISO code */
+export interface MapMetric {
+  label: string;
+  format: Format;
+  currency?: string;
+  platform: string;
+  slug: string;
+  error?: string;
+}
+export interface MapValue {
+  type: 'map';
+  /** the metric that colours the countries; the same as metrics[0] */
+  shade: MapMetric;
+  /** the panel's columns; every country's values[i] / previous[i] line up with metrics[i] */
+  metrics: MapMetric[];
+  /** ISO alpha-2 code, the English name (for CSV and as a fallback; the card names it in the reader's language) */
+  countries: { code: string; name: string; values: (number | null)[]; previous: (number | null)[] }[];
+  /** rows no country matched ("(not set)", "Other"), listed under the map */
+  unmatched: { label: string; values: (number | null)[] }[];
+  /** the four thresholds between the five colour steps of the shade metric */
+  steps: number[];
+}
+export type WidgetValue = NumberValue | ChartValue | TableValue | FunnelValue | ErrorValue | TextValue | TileValue | ImageValue | ContainerValue | CompareValue | PdfValue | MapValue;
 
 // ---------- connectors ----------
 export type DailyData = Record<string, Record<string, number>>; // date → prim → value

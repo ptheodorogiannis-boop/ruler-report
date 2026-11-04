@@ -14,6 +14,7 @@ import { comparisonFor, indexValues, layoutToSections, storeKey, valueKey } from
 import type { ReportLayout } from '@/lib/layout/types';
 import { widgetRefs } from '@/lib/layout/refs';
 import { compareNeeds } from '@/lib/layout/compare';
+import { mapRefs } from '@/lib/layout/map';
 import { tokenRefs } from '@/lib/layout/tokens';
 import { resolveContainer } from '@/lib/layout/container';
 import { connectorFor } from '@/lib/connectors';
@@ -381,6 +382,11 @@ export async function ensureWidgetValues(inp: EnsureInput): Promise<{ data: Repo
       if (w.slug === 'compare') {
         // one metric across periods or accounts (src/lib/layout/compare.ts); the block's own account follows its scope
         for (const n of compareNeeds(w, inp.range, inp.comparison ?? null)) await need(n.ref.integrationId, n.ref.key, n.period, n.ref.integrationId === b.integrationId ? blockScope : undefined);
+        continue;
+      }
+      if (w.slug === 'map') {
+        // the country breakdowns the map colours by and shows in its panel (src/lib/layout/map.ts)
+        for (const r of mapRefs(w)) await need(r.integrationId, r.key, undefined, r.integrationId === b.integrationId ? blockScope : undefined);
         continue;
       }
       if (w.slug === 'custom_chart' || w.slug === 'infographic') {

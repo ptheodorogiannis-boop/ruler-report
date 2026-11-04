@@ -3,6 +3,7 @@
 // can never disagree about what a widget needs.
 import type { LayoutWidget, MetricRef } from './types';
 import { compareRefs } from './compare';
+import { mapRefs } from './map';
 
 /** Every account + metric reference inside a widget's settings, in a stable order. */
 export function widgetRefs(w: Pick<LayoutWidget, 'slug' | 'custom'>): MetricRef[] {
@@ -10,6 +11,7 @@ export function widgetRefs(w: Pick<LayoutWidget, 'slug' | 'custom'>): MetricRef[
   if (!c) return [];
   if (w.slug === 'custom_chart') return (c.series ?? []).map((s) => ({ integrationId: s.integrationId, key: s.key }));
   if (w.slug === 'compare') return compareRefs(w).map((r) => ({ integrationId: r.integrationId, key: r.key }));
+  if (w.slug === 'map') return mapRefs(w).map((r) => ({ integrationId: r.integrationId, key: r.key }));
   if (w.slug === 'infographic') return [c.ref, c.ref2, c.tableRef].filter((r): r is MetricRef => !!r).map((r) => ({ integrationId: r.integrationId, key: r.key }));
   return [];
 }
