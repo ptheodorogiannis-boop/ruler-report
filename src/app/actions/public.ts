@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { safeEqual, sha256 } from '@/lib/crypto';
-import { goalsUnlockCookie, publicPath, unlockCookie } from '@/lib/share';
+import { goalsUnlockCookie, publicPath, publicReportWhere, unlockCookie } from '@/lib/share';
 import { localeForPublic, t } from '@/lib/i18n';
 
 const WEEK = 7 * 86400;
@@ -24,7 +24,7 @@ export async function unlockShareAction(_: unknown, fd: FormData) {
     redirect(publicPath('goals', token, q));
   }
   const kind = kindRaw === 'dashboard' ? 'dashboard' : 'report';
-  const r = await db.report.findFirst({ where: { shareToken: token, kind, shareEnabled: true }, include: { project: true } });
+  const r = await db.report.findFirst({ where: publicReportWhere(token, kind), include: { project: true } });
   if (!r || !r.password) redirect(publicPath(kind, token, q));
   if (!safeEqual(sha256(password), r.password)) return { error: t(localeForPublic(r.project, q.lang), 'public.wrongPassword') };
   (await cookies()).set(`rr_pw_${r.id}`, unlockCookie(r.id, r.password), { httpOnly: true, sameSite: 'lax', path: '/', maxAge: WEEK });

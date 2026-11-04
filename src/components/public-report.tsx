@@ -11,7 +11,7 @@ import { CopyPageLink } from '@/components/copy-page-link';
 import { clientAskTile } from '@/lib/services/client-ask';
 import { PrintButton } from '@/components/action-form';
 import { ReportCover, coverLayoutOf } from '@/components/report-cover';
-import { unlockCookie } from '@/lib/share';
+import { publicReportWhere, unlockCookie } from '@/lib/share';
 import { UnlockClient } from '@/components/unlock-client';
 import { DashboardControls } from '@/components/dashboard-controls';
 import { printAttrs } from '@/lib/print';
@@ -46,7 +46,7 @@ export function stripClientPrefix(title: string, client: string): string {
  * `?print=1&layout=pages` is the PDF service's view of the same page.
  */
 export async function PublicReport({ token, kind, embed, preset, compare, print, layout, lang }: { token: string; kind: 'report' | 'dashboard'; embed?: boolean; preset?: string; compare?: boolean; print?: string; layout?: string; lang?: string }) {
-  const r = await db.report.findFirst({ where: { shareToken: token, kind, shareEnabled: true }, include: { project: { include: { company: true } } } });
+  const r = await db.report.findFirst({ where: publicReportWhere(token, kind), include: { project: { include: { company: true } } } });
   if (!r) notFound();
   const company = r.project.company;
   // the client's language: ?lang= wins, else the project's (spec v3 §5)

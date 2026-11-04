@@ -115,11 +115,34 @@ export const shareUrl = (kind: string, token: string) => `${process.env.APP_URL 
 export async function duplicateReport(id: number, companyId: number) {
   const r = await db.report.findFirst({ where: { id, companyId } });
   if (!r) throw new Error('Report not found');
-  const { id: _id, createdAt: _c, updatedAt: _u, shareToken: _t, password: _p, views: _v, automationId: _a, title: _title, ...rest } = r;
+  const { id: _id, createdAt: _c, updatedAt: _u, shareToken: _t, password: _p, views: _v, automationId: _a, title: _title, archivedAt: _ar, ...rest } = r;
   const data: Record<string, unknown> = { title: `Copy of ${r.title}`, shareToken: randomToken(24), password: null, views: 0, automationId: null };
   // null JSON columns are left out so Prisma keeps them null without the DbNull dance
   for (const [k, v] of Object.entries(rest)) if (v !== null) data[k] = v;
   return db.report.create({ data: data as Prisma.ReportUncheckedCreateInput });
+}
+
+// ───── archive and delete (docs/superpowers/specs/2026-11-04-editor-report-management-design.md §1) ─────
+async function ownReport(id: number, companyId: number) {
+  const r = await db.report.findFirst({ where: { id, companyId } });
+  if (!r) throw new Error('Not found');
+  return r;
+}
+/** Hidden from the lists and the public link answers 404; the share setting stays as it was. */
+export async function archiveReport(id: number, companyId: number) {
+  const r = await ownReport(id, companyId);
+  return r.archivedAt ? r : db.report.update({ where: { id: r.id }, data: { archivedAt: new Date() } });
+}
+export async function restoreReport(id: number, companyId: number) {
+  const r = await ownReport(id, companyId);
+  return db.report.update({ where: { id: r.id }, data: { archivedAt: null } });
+}
+/** Permanent: only an archived report, and only with its title typed exactly. */
+export async function deleteArchivedReport(id: number, companyId: number, typedName: string) {
+  const r = await ownReport(id, companyId);
+  if (!r.archivedAt) throw new Error('Archive the report before deleting it');
+  if (typedName !== r.title) throw new Error('Type the report name exactly to delete it');
+  await db.report.delete({ where: { id: r.id } });
 }
 
 /**

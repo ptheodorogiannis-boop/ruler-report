@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { unlockCookie } from '@/lib/share';
+import { publicReportWhere, unlockCookie } from '@/lib/share';
 import { CLIENT_ASK_DAILY, aiConfigured, askClient } from '@/lib/ai/insights';
 import { localeForPublic, t } from '@/lib/i18n';
 import { reportView } from '@/lib/layout/service';
@@ -20,7 +20,7 @@ const Body = z.object({ question: z.string().trim().min(2).max(300), lang: z.str
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const r = await db.report.findFirst({ where: { shareToken: token, shareEnabled: true }, include: { project: true } });
+  const r = await db.report.findFirst({ where: publicReportWhere(token), include: { project: true } });
   if (!r) return NextResponse.json({ message: 'Not found' }, { status: 404 });
   if (!aiConfigured()) return NextResponse.json({ message: 'Questions are not available on this server' }, { status: 503 });
   if (!r.clientAsk) return NextResponse.json({ message: 'Questions are switched off for this report' }, { status: 403 });

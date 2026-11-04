@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 import { PublicReport } from '@/components/public-report';
 import { db } from '@/lib/db';
+import { publicReportWhere } from '@/lib/share';
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
   const { token } = await params;
-  const r = await db.report.findFirst({ where: { shareToken: token, kind: 'report', shareEnabled: true }, select: { title: true, subtitle: true, startDate: true, endDate: true, project: { select: { name: true } } } });
+  const r = await db.report.findFirst({ where: publicReportWhere(token, 'report'), select: { title: true, subtitle: true, startDate: true, endDate: true, project: { select: { name: true } } } });
   if (!r) return { title: 'Report' };
   const description = `${r.project.name}: ${r.subtitle}, ${r.startDate} to ${r.endDate}.`;
   return { title: r.title, description, alternates: { canonical: `/r/${token}` }, openGraph: { title: r.title, description, images: ['/opengraph-image'] }, twitter: { title: r.title, description, images: ['/opengraph-image'] } };

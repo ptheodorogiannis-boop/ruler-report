@@ -175,6 +175,9 @@ model Report {
   shareEnabled     Boolean   @default(true)
   password         String?   // optional share-link password (hash)
   clientAsk        Boolean   @default(false) // the client may ask questions on the shared link (docs/superpowers/specs/2026-11-04-map-search-ask-layout-design.md §3)
+  // archived (docs/superpowers/specs/2026-11-04-editor-report-management-design.md §1): hidden from the lists, the public
+  // link answers 404; null = active. shareEnabled is left as it was, so Restore brings the link back unchanged
+  archivedAt       DateTime?
   views            Int       @default(0)
   createdBy        Int?
   automationId     Int?
@@ -183,6 +186,8 @@ model Report {
 
   timeline         TimelineEvent[]
   clientQuestions  ClientQuestion[]
+
+  @@index([companyId, kind, archivedAt])
 }
 
 model Automation {

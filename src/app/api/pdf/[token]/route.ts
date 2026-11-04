@@ -2,7 +2,7 @@
 // the same unlock cookie protects a password report, and the service answers 503 when Chromium is not available.
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { unlockCookie } from '@/lib/share';
+import { publicReportWhere, unlockCookie } from '@/lib/share';
 import { PdfBusyError, PdfTimeoutError, pdfAvailable, pdfBaseFor, pdfContentDisposition, pdfPageUrl, renderPdf } from '@/lib/services/pdf';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +12,7 @@ export const maxDuration = 60;
 export async function GET(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const layout = req.nextUrl.searchParams.get('layout') === 'pages' ? 'pages' : 'flow';
-  const r = await db.report.findFirst({ where: { shareToken: token, shareEnabled: true }, select: { id: true, kind: true, title: true, password: true } });
+  const r = await db.report.findFirst({ where: publicReportWhere(token), select: { id: true, kind: true, title: true, password: true } });
   if (!r) return NextResponse.json({ message: 'Not found' }, { status: 404 });
   const cookieName = `rr_pw_${r.id}`;
   const cookie = req.cookies.get(cookieName)?.value;

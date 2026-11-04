@@ -1,4 +1,8 @@
+import type { Prisma } from '@prisma/client';
 import { sha256 } from '@/lib/crypto';
+
+/** The one rule for every public lookup (page, PDF, Ask, actions): the link is shared and the report is not archived. */
+export const publicReportWhere = (token: string, kind?: 'report' | 'dashboard'): Prisma.ReportWhereInput => ({ shareToken: token, shareEnabled: true, archivedAt: null, ...(kind ? { kind } : {}) });
 
 /** Value of the cookie that proves a visitor typed the share-link password (hash of the stored password hash). */
 export const unlockCookie = (reportId: number, pwHash: string) => sha256(`unlock:${reportId}:${pwHash}`);

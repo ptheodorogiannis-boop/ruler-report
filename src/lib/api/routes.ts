@@ -94,6 +94,7 @@ const sReport = (r: Report) => ({
   created_at: iso(r.createdAt),
   internal_url: `${base()}/${r.kind === 'report' ? 'reports' : 'dashboards'}/${r.id}`,
   external_url: r.shareEnabled ? shareUrl(r.kind, r.shareToken) : null,
+  archived_at: r.archivedAt ? iso(r.archivedAt) : null,
 });
 const sTemplate = (t: Template, detail = false) => ({ id: t.id, title: t.title, description: t.description, kind: t.kind, is_default: t.isDefault, used_count: t.usedCount, created_at: iso(t.createdAt), updated_at: iso(t.updatedAt), ...(detail ? { sections: (t.sections as unknown as TemplateSection[]).map((s) => ({ id: s.id, title: s.title, widgets: s.widgets })) } : {}) });
 const sWebhook = (w: Webhook) => ({ id: w.id, url: w.url, event_type: w.eventType, source: w.source, company_id: w.companyId, project_id: w.projectId, status: w.status, created_at: iso(w.createdAt), updated_at: iso(w.updatedAt) });
