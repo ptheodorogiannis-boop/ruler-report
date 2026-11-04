@@ -49,6 +49,11 @@ Evidence references (§) point into [`EVIDENCE.md`](EVIDENCE.md). “Parity” =
 | Custom block with title, colour, icon, header (§3.4) | Partial (title; mixes any account's metrics) | `LayoutBlock.integrationId = 0` |
 | Save as template (§3.6) | Parity (+ keeps positions and settings) | `saveAsTemplate()` in `layout/service.ts`, `TemplateWidgetRef.custom/layout` |
 | Generate widget query (§3.2) | Parity | settings drawer → `POST /metrics/get-data` body |
+| Right-click "Add metric here", Duplicate, Remove | Extension | `block-menu.tsx`, `insertAfter()` in `layout/grid.ts` |
+| One metric picker: search, KPI/chart/table chips, ordered collapsible groups, only metrics the account can return | Extension | `metric-picker.tsx`, `catalog/groups.ts`, `catalog/pickable.ts`, `/metrics?pickable=1` |
+| Change the report period in the editor (re-pull, AI text rewritten) | Extension | `period-control.tsx`, `services/report-period.ts` |
+| Star table rows (tinted on the client link and PDF) | Extension | `custom.starredRows`, `star-row.tsx` |
+| Archive / restore / delete from the reports list | Extension | `Report.archivedAt`, `report-row-menu.tsx`, `publicReportWhere()` |
 
 ## API v2 (§4)
 

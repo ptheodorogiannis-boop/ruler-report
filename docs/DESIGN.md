@@ -827,3 +827,41 @@ minutes, and a cache-bypassing button on a public page would let anyone trigger 
 
 **Gotcha found on the way.** Tailwind drops a component class it cannot find written out in the source: a tone built as
 `` `tone-${tone}` `` silently lost `.tone-solid`. Class names that come from data go through a literal map (`TONE_CLASS`).
+
+# Editor and report management (2026-11-04)
+
+Spec `docs/superpowers/specs/2026-11-04-editor-report-management-design.md`, plan `docs/superpowers/plans/2026-11-04-editor-report-management.md`.
+
+**Archive and delete.** `Report.archivedAt` (reports and dashboards). The list has an Active / Archived switch and a "⋯"
+menu per row: Open, Duplicate, Archive; from Archived, Restore and Delete permanently, which asks for the report's name
+typed exactly (checked again on the server). Every public lookup (page, PDF, Ask, actions) goes through
+`publicReportWhere()` in `src/lib/share.ts`: shared and not archived. Archiving never touches `shareEnabled`, so Restore
+brings the link back as it was. Search, the project page and refresh skip archived reports; the API still lists them,
+with `archived_at`.
+
+**Period.** The editor toolbar's date control (reports only): the app's presets or two dates, and what to compare with
+(the default is read from the stored comparison: previous period, previous year, none or custom). Apply saves pending
+layout edits first, then `changeReportPeriod()` (`src/lib/services/report-period.ts`) rebuilds the snapshot in memory,
+aborts if an account that had numbers now returns only errors (named in the message), rewrites AI cards for the new
+dates, keeps text a person wrote (cards and text widgets) with a "Written for …" note for the writer only, and saves it
+all in one write. Widgets with their own period keep it.
+
+**Metric picker.** One component (`metric-picker.tsx`) for the panel and the right-click box: accent-free search over title
+and description, KPI / chart / table chips, groups in a fixed order per archetype (`src/lib/catalog/groups.ts`,
+translated), collapsible with counts, ticks on metrics already in the report. It reads `/metrics?pickable=1`, which drops
+metrics the connector says it cannot provide; the "… on Facebook / Instagram" variants belong to Meta Ads only, so Google
+Ads offers the 38 widgets that load.
+
+**Right-click.** In a channel block: "Add metric here" (the picker at the cursor; the pick goes right of the clicked
+widget, or under it, or at the end of the block from empty space), Duplicate, Remove. Shift + right-click and text
+fields keep the browser's menu.
+
+**Row stars.** A star on a table row (and a campaign row) in the editor; the names are kept on the widget
+(`custom.starredRows`, at most 100). The client link, dashboards and the PDF show those rows with the report accent faintly
+behind them (`--row-star`) and a heavier weight; print uses a grey.
+
+**Ask your data.** Up to three suggested questions for the agency: the best ad when there is an ads source, what to tell
+the client this month, then the client's own suggestions. Its strings are translated.
+
+**Rule found on the way.** Sloplint counts a `→` written between two JSX expressions as an arrow glued to a label; date
+ranges are written as one template literal (`` {`${start} → ${end}`} ``), as the rest of the app does.
