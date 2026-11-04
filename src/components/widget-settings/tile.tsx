@@ -7,7 +7,7 @@ import { X } from 'lucide-react';
 import type { RenderedBlock } from '@/lib/engine/types';
 import type { MetricRef, SourceInfo, TileKind, WidgetCustom } from '@/lib/layout/types';
 import { ICONS, ICON_NAMES } from '../infographic';
-import { FormatPick, MetricSelect, Segmented, SourceSelect, sourceLabel, useCatalog } from './common';
+import { FormatPick, MetricSelect, Segmented, SourceSelect, sourceLabel, useCatalog, type CatalogMetric } from './common';
 import type { PanelProps } from './custom-chart';
 
 const KINDS: { value: TileKind; label: string }[] = [
@@ -18,11 +18,11 @@ const KINDS: { value: TileKind; label: string }[] = [
 ];
 
 /** An account + metric picker that writes a MetricRef. */
-export function RefPicker({ sources, value, component, onChange, label }: { sources: SourceInfo[]; value: MetricRef | undefined; component: 'number_v1' | 'datatable_v1'; onChange: (r: MetricRef | undefined) => void; label: string }) {
+export function RefPicker({ sources, value, component, filter, placeholder, onChange, label }: { sources: SourceInfo[]; value: MetricRef | undefined; component?: 'number_v1' | 'datatable_v1'; /** wins over `component` (the map lists only country breakdowns) */ filter?: (m: CatalogMetric) => boolean; placeholder?: string; onChange: (r: MetricRef | undefined) => void; label: string }) {
   const t = useT();
   const [srcId, setSrcId] = useState<number | null>(value?.integrationId ?? sources[0]?.id ?? null);
   const source = sources.find((s) => s.id === srcId) ?? null;
-  const { metrics, loading } = useCatalog(source, (m) => m.component === component);
+  const { metrics, loading } = useCatalog(source, filter ?? ((m) => m.component === component));
   return (
     <div className="space-y-1">
       <div className="label">{label}</div>
@@ -41,7 +41,7 @@ export function RefPicker({ sources, value, component, onChange, label }: { sour
         </div>
       )}
       <SourceSelect sources={sources} value={srcId} onChange={setSrcId} />
-      <MetricSelect metrics={metrics} value={value && value.integrationId === srcId ? value.key : null} onChange={(k) => onChange(k && source ? { integrationId: source.id, key: k } : undefined)} loading={loading} placeholder={source ? (component === 'number_v1' ? t('editor.numberMetricPlaceholder') : t('editor.tablePlaceholder')) : 'Pick an account first'} />
+      <MetricSelect metrics={metrics} value={value && value.integrationId === srcId ? value.key : null} onChange={(k) => onChange(k && source ? { integrationId: source.id, key: k } : undefined)} loading={loading} placeholder={source ? (placeholder ?? (component === 'number_v1' ? t('editor.numberMetricPlaceholder') : t('editor.tablePlaceholder'))) : 'Pick an account first'} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 // Writes public/geo/world-110m.json, the country shapes the map widget draws (src/components/map-card.tsx):
-// { width, height, countries: [{ id: ISO numeric, d: SVG path, box: [x0, y0, x1, y1] }] }, projected once with Equal Earth
+// { width, height, countries: [{ id: ISO numeric, d: SVG path, box: [x0, y0, x1, y1] of the largest landmass }] }, projected once with Equal Earth
 // into a 1000 × 500 box, so the app ships no map library. Source: Natural Earth 1:110m (public domain) through the
 // world-atlas package (ISC). Antarctica is left out. Regenerate (scratch dependencies, never in package.json):
 //   cd E:\Claude\tmp\geo-build && npm i d3-geo topojson-client world-atlas
@@ -23,10 +23,22 @@ const all = feature(topo, topo.objects.countries).features.filter((f) => f.id &&
 const projection = geoEqualEarth().fitSize([WIDTH, HEIGHT], { type: 'FeatureCollection', features: all });
 const draw = geoPath(projection).digits(1);
 const r = (n) => Math.round(n * 10) / 10;
+// a country's box is its largest landmass, so overseas parts (French Guiana, Alaska, Hawaii) do not stretch the map's zoom
+const mainBox = (f) => {
+  if (f.geometry.type !== 'MultiPolygon') return draw.bounds(f);
+  let best = null;
+  let most = -1;
+  for (const coordinates of f.geometry.coordinates) {
+    const p = { type: 'Polygon', coordinates };
+    const a = draw.area(p);
+    if (a > most) [best, most] = [p, a];
+  }
+  return draw.bounds(best);
+};
 
 const countries = all
   .map((f) => {
-    const [[x0, y0], [x1, y1]] = draw.bounds(f);
+    const [[x0, y0], [x1, y1]] = mainBox(f);
     return { id: String(f.id).padStart(3, '0'), d: draw(f), box: [r(x0), r(y0), r(x1), r(y1)] };
   })
   .filter((c) => c.d);

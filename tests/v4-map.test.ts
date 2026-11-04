@@ -85,3 +85,21 @@ test('map widget through the layout: normalised, composed into a map value, a se
   assert.equal(v.type, 'map');
   assert.equal(out.sections[0].blocks[0].widget.label, 'Map');
 });
+
+test('catalog: country breakdowns for visits, users, conversions and revenue (GA4) and spend, clicks and conversions (Meta Ads) for the map', async () => {
+  const { findWidget } = await import('../src/lib/catalog/build');
+  for (const [slug, key] of [
+    ['google_analytics_4', 'sessions_by_country'],
+    ['google_analytics_4', 'users_by_country'],
+    ['google_analytics_4', 'conversions_by_country'],
+    ['google_analytics_4', 'revenue_by_country'],
+    ['facebook_ads', 'spend_by_country'],
+    ['facebook_ads', 'clicks_by_country'],
+    ['facebook_ads', 'conversions_by_country'],
+  ]) {
+    const w = findWidget(slug, key);
+    assert.ok(w, `${slug}:${key}`);
+    assert.equal((w!.calc as any).kind, 'chart_breakdown', key);
+    assert.equal((w!.calc as any).dimension, 'country', key);
+  }
+});

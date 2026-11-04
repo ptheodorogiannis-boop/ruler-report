@@ -12,6 +12,8 @@ export interface CatalogMetric {
   title: string;
   component: Component;
   group?: string;
+  /** the breakdown dimension of a chart (`country` for the map widget's metrics) */
+  dimensions?: string[];
 }
 const cache = new Map<number, Promise<CatalogMetric[]>>();
 
@@ -28,7 +30,7 @@ export function useCatalog(source: SourceInfo | null, filter?: (m: CatalogMetric
     if (!p) {
       p = fetch(`/api/v2/metrics?integration_slug=${encodeURIComponent(source.slug)}&integration_id=${source.id}&per_page=200`, { credentials: 'same-origin' })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-        .then((j) => (j.data ?? []).map((d: { reference_key: string; component: Component; references: { title: string; group?: string } }) => ({ key: d.reference_key.split(':').slice(1).join(':'), title: d.references.title, component: d.component, group: d.references.group })))
+        .then((j) => (j.data ?? []).map((d: { reference_key: string; component: Component; dimensions?: unknown[]; references: { title: string; group?: string } }) => ({ key: d.reference_key.split(':').slice(1).join(':'), title: d.references.title, component: d.component, group: d.references.group, dimensions: (d.dimensions ?? []).filter((x): x is string => typeof x === 'string') })))
         .catch(() => [] as CatalogMetric[]);
       cache.set(source.id, p);
     }
