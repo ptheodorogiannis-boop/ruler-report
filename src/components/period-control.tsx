@@ -38,7 +38,7 @@ export function PeriodControl({ range, comparison, timezone, onApply }: { range:
   return (
     <div className="relative">
       <button type="button" className={`btn ${open ? 'border-brand text-brand' : ''}`} onClick={() => setOpen((v) => !v)} aria-expanded={open} data-period>
-        <CalendarRange size={14} /> <span className="num">{range.start} → {range.end}</span>
+        <CalendarRange size={14} /> <span className="num">{`${range.start} → ${range.end}`}</span>
       </button>
       {open && (
         <div className="card rmenu-pop absolute left-0 top-full z-40 mt-1 w-80 space-y-3 p-3" data-period-panel>
