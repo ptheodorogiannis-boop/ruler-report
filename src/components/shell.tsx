@@ -6,9 +6,9 @@ import { logoutAction } from '@/app/actions/auth';
 import { setUserLocaleAction } from '@/app/actions/app';
 import { LOCALES, dictFor, t } from '@/lib/i18n';
 import { I18nProvider } from './i18n-provider';
+import { APP_NAMESPACES } from '@/lib/i18n/namespaces';
 
 /** The namespaces client components of the app read through useT(); e-mails, public pages and the signed-out pages ship their own. */
-const APP_NAMESPACES = ['analysis', 'automations', 'campaigns', 'common', 'connect', 'editor', 'goals', 'health', 'integrations', 'look', 'media', 'metrics', 'nav', 'notifications', 'overview', 'presets', 'projects', 'public', 'reports', 'settings', 'share', 'templates', 'timeline', 'tones', 'wizard'];
 import { setServerLocale } from '@/lib/i18n/server';
 import { NavButton, NavLink } from './nav-link';
 import { PillNav, SideRail, TabBar } from './top-nav';

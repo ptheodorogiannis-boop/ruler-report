@@ -1,0 +1,2 @@
+/** The dictionary namespaces every app page (AppShell) ships to the client; a client component's keys must be in one. */
+export const APP_NAMESPACES = ['analysis', 'askbox', 'automations', 'campaigns', 'catalog', 'common', 'connect', 'editor', 'goals', 'health', 'integrations', 'look', 'media', 'metrics', 'nav', 'notifications', 'overview', 'presets', 'projects', 'public', 'reports', 'settings', 'share', 'templates', 'timeline', 'tones', 'wizard'];
