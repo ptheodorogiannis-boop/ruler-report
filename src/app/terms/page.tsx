@@ -32,13 +32,13 @@ export default function TermsPage() {
             </a>{' '}
             and{' '}
             <a href="https://www.facebook.com/legal/terms" className={ext}>
-              Meta's Terms
+              Meta’s Terms
             </a>
             . {LEGAL.product} reads data from them and does not change anything in them.
           </p>
         </LegalSection>
         <LegalSection title="Acceptable use">
-          <p>Do not try to reach other workspaces' data, break the service's security, or use it to send unsolicited messages.</p>
+          <p>Do not try to reach other workspaces' data, break the service’s security, or use it to send unsolicited messages.</p>
         </LegalSection>
         <LegalSection title="Your data">
           <p>

@@ -53,11 +53,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               </div>
               <div>
                 <label className="label">{t('settings.brandColour')}</label>
-                <input name="brandColor" type="color" defaultValue={company.brandColor} className="h-9 w-full cursor-pointer rounded-lg border border-[var(--line)]" />
+                <input name="brandColor" type="color" defaultValue={company.brandColor} className="swatch-field" />
               </div>
               <div>
                 <label className="label">{t('look.accent')}</label>
-                <input name="accentColor" type="color" defaultValue={company.accentColor} className="h-9 w-full cursor-pointer rounded-lg border border-[var(--line)]" />
+                <input name="accentColor" type="color" defaultValue={company.accentColor} className="swatch-field" />
               </div>
               <div>
                 <label className="label">{t('settings.customDomain')}</label>
@@ -90,7 +90,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <li>{t('settings.wlDomain')}</li>
               <li>{t('settings.wlEmbed')}</li>
             </ul>
-            <div className="mt-3 text-xs text-slate-400">{t('settings.wlNote')}</div>
           </div>
         </div>
       )}

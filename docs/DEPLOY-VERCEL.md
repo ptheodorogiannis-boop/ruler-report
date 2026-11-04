@@ -10,7 +10,7 @@ The app runs on Vercel with a hosted Postgres database from Neon. Local developm
 | Schema changes | Applied by every build with `prisma db push`; a change that would drop data stops the build | `npm run setup` / `prisma db push` |
 | Uploaded images | Stored in the database (`MEDIA_STORE=db`), up to 4 MB each | `data/uploads` on disk, up to 5 MB |
 | Automations, goals, health checks | A Vercel cron calls `/api/cron/tick` once a day at 06:00 UTC (`vercel.json`) | In-process scheduler |
-| PDF export | Off (no Chromium in Vercel functions); the PDF menu is hidden | Chromium through Playwright |
+| PDF export | The serverless Chromium of `@sparticuz/chromium`, traced into the PDF route and the cron tick only (see PDFs below) | Chromium through Playwright |
 | Links in e-mails and the API docs | The project's production address (a preview: its branch address), unless `APP_URL` is set | `APP_URL` |
 
 Each default can be overridden with its own variable: `MEDIA_STORE=db|disk`, `ENABLE_SCHEDULER=0|1`, `PDF_ENABLED=off|auto`.
@@ -39,3 +39,14 @@ Each default can be overridden with its own variable: `MEDIA_STORE=db|disk`, `EN
 - **A missing database stops the build.** A deployment without a Postgres `DATABASE_URL` or `APP_SECRET` stops with a message that names what is missing.
 - **A sleeping database can time out.** Neon's free databases sleep when idle. If a build or the first request fails with `P1001: Can't reach database server`, add `connect_timeout=15` to the connection string, as Neon's Prisma guide suggests.
 - **Checking the Postgres path locally:** point `DATABASE_URL` at a Postgres database (in `.env` or the shell), set `APP_SECRET`, and run `npm run build`. The generated `prisma/postgres/` folder is not committed. Run `npx prisma generate` afterwards to go back to the SQLite client.
+- **A schema change reaches the shared database on the next build.** Preview and Production share one Neon database, and every build runs `prisma db push`. Additive changes, such as `Automation.reviewBeforeSend` (approve before sending), arrive with the first build that has them, preview or production.
+
+## PDFs
+
+- **Download PDF on the client link works on Vercel.** `/api/pdf/[token]` launches the Chromium that `@sparticuz/chromium` unpacks to `/tmp` on its first use, opens the public page in print mode and returns the file. The first download after a quiet spell takes about 10 seconds; the route allows 60 (`maxDuration`).
+- **The binary is traced into two routes only** (`outputFileTracingIncludes` in `next.config.mjs`): the PDF route and `/api/cron/tick`, which attaches PDFs to scheduled emails. Other functions stay small.
+- **The page is rendered from the address the download was asked on,** so a preview renders the preview and the production domain renders itself, even before `APP_URL` points at it. Only the app's own hosts are accepted: `APP_URL`, the Vercel addresses of the deployment and any `*.vercel.app` host. A custom domain that is not `APP_URL` goes in `PDF_ALLOWED_HOSTS` (comma-separated host names); anything else falls back to `APP_URL`, so a forged Host header cannot point the browser elsewhere. `PDF_BASE_URL` overrides all of this.
+- **Protected previews:** the route forwards the visitor's `_vercel_jwt` cookie to the render, so a preview behind Vercel Authentication still prints.
+- **Embedded PDF widgets** are drawn by pdf.js before the page is printed; the render waits until every one reports it is ready (up to 15 seconds).
+- `PDF_ENABLED=off` removes the download everywhere.
+

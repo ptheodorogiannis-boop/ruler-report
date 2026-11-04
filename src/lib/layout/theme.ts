@@ -7,12 +7,16 @@ import type { PaletteName, ReportLayout, ReportTheme } from './types';
  * (docs/DESIGN.md › Ruler glass pass). Every grey is at least 3:1 against white except the last two, used only for a
  * sixth and seventh series. */
 const GREYS = ['#575756', '#a1a19f', '#333332', '#7c7c7a', '#c5c5c3', '#2a2a29', '#8a8a88'];
+/** The accent a report falls back to when neither the report nor the workspace sets one: Ruler red. */
+export const DEFAULT_ACCENT = '#db0100';
 /** The chart palette when a report has no theme (the same list charts.tsx starts from). */
-export const DEFAULT_PALETTE = ['#db0100', ...GREYS];
+export const DEFAULT_PALETTE = [DEFAULT_ACCENT, ...GREYS];
+/** The icon colour of a platform the catalog has no colour for: the Ruler muted grey. */
+export const GREY_FALLBACK = '#575756';
 export const PALETTES: Record<Exclude<PaletteName, 'brand'>, string[]> = {
   vivid: ['#2563eb', '#f43f5e', '#f59e0b', '#10b981', '#8b5cf6', '#06b6d4', '#84cc16', '#ec4899'],
   calm: ['#3b5b8c', '#6d8fb3', '#2f6f6a', '#6aa39d', '#b08968', '#9fb8d1', '#d4b483', '#8a5a44'],
-  mono: ['#101418', '#3a414a', '#636d7c', '#8c95a3', '#b4bbc5', '#4b5563', '#cfd4dc', '#1f2937'],
+  mono: ['#0e0e0e', '#333332', '#575756', '#7c7c7a', '#a1a19f', '#2a2a29', '#c5c5c3', '#8a8a88'],
 };
 
 export function paletteFor(name: PaletteName | undefined, accent: string): string[] {
@@ -51,7 +55,7 @@ export function withBlockColor(layout: ReportLayout, blockId: string, color: str
 }
 
 // ───────────── colour maths ─────────────
-const INK = '#101418';
+const INK = '#0e0e0e';
 const rgb = (hex: string): [number, number, number] => {
   const h = hex.replace('#', '');
   const v = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;

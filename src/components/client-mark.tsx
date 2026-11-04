@@ -14,8 +14,8 @@ const firstGrapheme = (name: string) => {
 };
 
 export function ClientMark({ name, logo, color, size = 32, className }: { name: string; logo?: string | null; color?: string; size?: MarkSize; className?: string }) {
-  // without a colour the mark inherits the frame's --brand (the agency colour)
-  const style = { ['--cm' as string]: `${size}px`, ...(color ? { ['--brand' as string]: color, ['--brand-soft' as string]: `${color}1a` } : {}) } as React.CSSProperties;
+  // without a colour the initial is quiet ink (the app lists); with one (the report cover) it takes the client colour
+  const style = { ['--cm' as string]: `${size}px`, ...(color ? { ['--cm-fg' as string]: color, ['--cm-bg' as string]: `${color}1a` } : {}) } as React.CSSProperties;
   if (logo)
     return (
       <span className={clsx('cmark', className)} style={style} title={name}>

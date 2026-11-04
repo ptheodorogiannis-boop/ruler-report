@@ -23,7 +23,7 @@ export function StudioDeck({ slides, title }: { slides: Slide[]; title: string }
         <div className={`card flex flex-col justify-between overflow-hidden p-8 ${full ? 'h-full' : 'min-h-[460px]'}`}>
           <div>
             <div className="mb-1 text-xs font-medium text-brand">{title}</div>
-            <h2 className="text-3xl font-bold tracking-tight">{s.title}</h2>
+            <h2 className="text-3xl font-normal tracking-tight">{s.title}</h2>
             {s.bullets.length > 0 && (
               <ul className="mt-4 list-disc space-y-1.5 pl-5 text-lg text-slate-700">
                 {s.bullets.map((b, j) => (
@@ -36,7 +36,7 @@ export function StudioDeck({ slides, title }: { slides: Slide[]; title: string }
                 {s.kpis.map((k, j) => (
                   <div key={j} className="rounded-xl border border-[var(--line)] p-4">
                     <div className="text-xs text-slate-500">{k.label}</div>
-                    <div className="mt-1 text-2xl font-bold">{k.value}</div>
+                    <div className="num mt-1 text-2xl font-light">{k.value}</div>
                     {k.change && <div className={`text-xs font-semibold ${k.change.startsWith('-') ? 'text-red-600' : 'text-emerald-600'}`}>{k.change}</div>}
                   </div>
                 ))}

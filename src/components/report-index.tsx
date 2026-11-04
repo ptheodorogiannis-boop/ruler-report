@@ -65,7 +65,7 @@ export async function ReportIndex({ kind, q, project, page }: { kind: 'report' |
       {total > per && (
         <div className="mt-6 flex items-center justify-between text-sm">
           <span className="num text-ink-2">
-            {(pg - 1) * per + 1}–{Math.min(pg * per, total)} of {total}
+            {t('common.pageRange', { from: (pg - 1) * per + 1, to: Math.min(pg * per, total), total })}
           </span>
           <div className="flex gap-2">
             {pg > 1 && (

@@ -11,6 +11,7 @@ import type { Connector } from '@/lib/engine/types';
 import { notify, sendEmail } from './messaging';
 import { emitEvent } from './webhooks';
 import { reconnectUrl } from '@/lib/health-url';
+import { MAIL, mailButton, mailTitle, mailWrap } from './email-style';
 
 export { reconnectUrl };
 
@@ -92,7 +93,7 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 export function healthEmailHtml(i: { name: string; projectName: string }, alert: Alert, error: string | null, url: string, loc: Locale = 'en'): string {
   const what = alert === 'failing' ? t(loc, 'email.failingWhat', { error: error ? `: <em>${esc(error)}</em>` : '' }) : alert === 'expiring1' ? t(loc, 'email.expiring1What') : t(loc, 'email.expiring7What');
-  return `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:auto"><h2 style="margin:0 0 8px">${esc(alertTitle(alert, i.name, loc))}</h2><p style="color:#475569;margin:0 0 12px">${esc(t(loc, 'email.project', { name: i.projectName }))}</p><p>${what}</p><p><a href="${esc(url)}" style="display:inline-block;background:#1a36e6;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">${esc(t(loc, 'email.reconnectButton'))} ${esc(i.name)}</a></p><p style="color:#94a3b8;font-size:12px">${esc(t(loc, 'email.healthFooter'))}</p></div>`;
+  return `${mailWrap(560)}${mailTitle(esc(alertTitle(alert, i.name, loc)))}<p style="color:${MAIL.muted};margin:0 0 12px">${esc(t(loc, 'email.project', { name: i.projectName }))}</p><p>${what}</p><p>${mailButton(esc(url), `${esc(t(loc, 'email.reconnectButton'))} ${esc(i.name)}`)}</p><p style="color:${MAIL.muted};font-size:12px">${esc(t(loc, 'email.healthFooter'))}</p></div>`;
 }
 
 type DueRow = HealthRow & Pick<Integration, 'companyId' | 'projectId' | 'health' | 'healthAlertKind' | 'healthAlertAt' | 'tokenExpiresAt'> & { project: { name: string } };

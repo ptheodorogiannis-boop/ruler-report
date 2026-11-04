@@ -45,7 +45,7 @@ export default function PrivacyPage() {
 
         <LegalSection title="Google user data">
           <p>
-            When you choose <em className="not-italic font-medium">Connect with Google</em>, you sign in on Google's own page and grant access.
+            When you choose <em className="not-italic font-medium">Connect with Google</em>, you sign in on Google’s own page and grant access.
             {` ${LEGAL.product}`} only reads, and only what is needed to show the data in reports:
           </p>
           <div className="overflow-x-auto">
@@ -67,7 +67,7 @@ export default function PrivacyPage() {
             </table>
           </div>
           <p>
-            Google's consent screen describes the Google Ads and Business Profile permissions as seeing, editing, creating and deleting, because
+            Google’s consent screen describes the Google Ads and Business Profile permissions as seeing, editing, creating and deleting, because
             those products offer no read-only permission. {LEGAL.product} never uses them to change anything.
           </p>
           <p>We also receive your email address from Google, to show which Google account a connection belongs to.</p>
@@ -94,7 +94,7 @@ export default function PrivacyPage() {
             <a href="https://www.youtube.com/t/terms" className={ext}>
               YouTube Terms of Service
             </a>
-            , and Google's handling of the data is described in the{' '}
+            , and Google’s handling of the data is described in the{' '}
             <a href="https://policies.google.com/privacy" className={ext}>
               Google Privacy Policy
             </a>
@@ -116,7 +116,7 @@ export default function PrivacyPage() {
             <li>The people the workspace chooses to share a report or dashboard with, by link or by email.</li>
             <li>
               Service providers that run {LEGAL.product} for us under contract: hosting and database providers, the email provider that sends scheduled
-              reports and, only where AI analysis is switched on, Anthropic, which receives the report's figures and labels to write commentary. They
+              reports and, only where AI analysis is switched on, Anthropic, which receives the report’s figures and labels to write commentary. They
               receive no account passwords or Google or Meta tokens.
             </li>
           </ul>

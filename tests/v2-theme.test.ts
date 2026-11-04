@@ -23,9 +23,9 @@ test('theme rendering: CSS variables for the accent, block colours clamped to 3:
   assert.equal(blockColorOf({ blocks: { b: { color: '#0e9f8e' } } }, 'b', '#1877f2'), '#0e9f8e');
   assert.equal(blockColorOf({ blocks: { b: { color: '#0e9f8e' } } }, 'other', '#1877f2'), '#1877f2', 'a block without a colour keeps the platform colour');
   assert.equal(blockColorOf(undefined, 'b', '#1877f2'), '#1877f2', 'a readable colour is left alone');
-  assert.equal(blockColorOf(undefined, 'b', '#ffffff'), '#939597', 'white is mixed with 45% ink so badges and highlights stay visible');
-  assert.equal(blockColorOf(undefined, 'b', '#fde68a'), '#928857', 'a pale yellow (1.3:1 on white) is clamped too');
-  assert.ok(contrastOnWhite('#928857') >= 3 && contrastOnWhite('#939597') >= 3, 'clamped colours reach 3:1');
+  assert.equal(blockColorOf(undefined, 'b', '#ffffff'), '#939393', 'white is mixed with 45% ink so badges and highlights stay visible');
+  assert.equal(blockColorOf(undefined, 'b', '#fde68a'), '#918552', 'a pale yellow (1.3:1 on white) is clamped too');
+  assert.ok(contrastOnWhite('#918552') >= 3 && contrastOnWhite('#939393') >= 3, 'clamped colours reach 3:1');
   assert.deepEqual(blockVars(undefined, 'b', '#1877f2'), { '--block': '#1877f2' });
   // icons and block colours match the report: without an own colour a block takes the accent, unless the look asks for platform colours
   assert.equal(blockColorOf(undefined, 'b', '#1877f2', '#db0100'), '#db0100');

@@ -8,6 +8,7 @@ import { toCtx } from '@/lib/engine/report';
 import { addDays, diffDays, parseDate, today, fmtDate } from '@/lib/util/dates';
 import { emitEvent } from './webhooks';
 import { notify, sendEmail } from './messaging';
+import { MAIL, mailButton, mailTitle, mailWrap } from './email-style';
 
 export type Situation = 'high' | 'ideal' | 'average' | 'low' | 'no_data';
 
@@ -101,7 +102,7 @@ const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').re
 export const goalMissedLine = (loc: Locale, value: number | string | null | undefined, target: number, start: string, end: string) => t(loc, 'email.goalMissedShort', { value: value ?? t(loc, 'email.noData'), target, start, end });
 
 export function goalEmailHtml(subject: string, body: string, url: string, loc: Locale = 'en'): string {
-  return `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:auto"><h2 style="margin:0 0 8px">${escHtml(subject)}</h2><p>${escHtml(body)}</p><p><a href="${escHtml(url)}" style="display:inline-block;background:#1a36e6;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">${escHtml(t(loc, 'email.openGoals'))}</a></p><p style="color:#94a3b8;font-size:12px">${escHtml(t(loc, 'email.goalFooter'))}</p></div>`;
+  return `${mailWrap(560)}${mailTitle(escHtml(subject))}<p>${escHtml(body)}</p><p>${mailButton(escHtml(url), escHtml(t(loc, 'email.openGoals')))}</p><p style="color:${MAIL.muted};font-size:12px">${escHtml(t(loc, 'email.goalFooter'))}</p></div>`;
 }
 async function goalMail(g: Pick<GoalFull, 'alertEmails' | 'projectId'>, companyId: number, subject: string, body: string, loc: Locale = 'en') {
   const to = Array.isArray(g.alertEmails) ? (g.alertEmails as string[]).filter((e) => typeof e === 'string' && e.includes('@')) : [];

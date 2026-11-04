@@ -49,7 +49,7 @@ export function AnalysisPanel({ reportId, cards, editable }: { reportId: number;
     <section className="space-y-3">
       {(cards.length > 0 || editable) && (
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">{t('analysis.title')}</h2>
+          <h2 className="text-lg font-medium">{t('analysis.title')}</h2>
           {editable && (
             <div className="no-print flex flex-wrap items-center gap-2">
               <select className="input w-32 py-1" value={lang} onChange={(e) => setLang(e.target.value)} data-ai-language aria-label="AI language">

@@ -22,8 +22,8 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   const days = [7, 14, 30, 90].includes(Number(sp.days)) ? Number(sp.days) : 30;
   const { range, rows } = await companyOverview(p, days);
-  const projects = await db.project.findMany({ where: { companyId: p.companyId, ...(p.projectIds ? { id: { in: p.projectIds } } : {}) }, select: { id: true, decimalSeparatorFormat: true, dateFormat: true } });
-  const dec = new Map(projects.map((x) => [x.id, x.decimalSeparatorFormat]));
+  // the agency board reads in one number format (each client keeps its own in its reports); currencies stay per client
+  const projects = await db.project.findMany({ where: { companyId: p.companyId, ...(p.projectIds ? { id: { in: p.projectIds } } : {}) }, select: { id: true, dateFormat: true } });
   const anomalies = rows.flatMap((r) => r.anomalies.map((a) => ({ project: r.name, id: r.project_id, ...a })));
   const broken = rows.filter((r) => r.broken > 0);
   const prevLen = days;
@@ -54,16 +54,16 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
               <li key={`a${i}`}>
                 <Link href={`/projects/${a.id}`} className="link font-semibold">
                   {a.project}
-                </Link>{' '}
-                · {a.metric} {a.direction === 'drop' ? 'dropped' : 'spiked'} <span className="num">{Math.abs(a.pctVsMean)}%</span> {t('overview.vsAverage')}
+                </Link>
+                : {a.metric} {a.direction === 'drop' ? t('overview.dropped') : t('overview.spiked')} <span className="num">{Math.abs(a.pctVsMean)}%</span> {t('overview.vsAverage')}
               </li>
             ))}
             {broken.map((r) => (
               <li key={`b${r.project_id}`} className="text-down">
                 <Link href={`/projects/${r.project_id}?tab=integrations`} className="link font-semibold">
                   {r.name}
-                </Link>{' '}
-                · {r.broken} {r.broken === 1 ? t('overview.attentionOne') : t('overview.attentionMany')}
+                </Link>
+                : {r.broken} {r.broken === 1 ? t('overview.attentionOne') : t('overview.attentionMany')}
               </li>
             ))}
           </ul>
@@ -100,7 +100,7 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
                           {r.name}
                         </Link>
                         <span className="board-sub num">
-                          {r.integrations} {r.integrations === 1 ? 'account' : 'accounts'}
+                          {r.integrations === 1 ? t('overview.accountOne') : t('overview.accountMany', { count: r.integrations })}
                         </span>
                       </span>
                     </span>
@@ -115,7 +115,7 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
                       <td key={k.id} className="board-cell">
                         {v ? (
                           <div className="readout">
-                            <span className="readout-value display num">{formatValue(v.value, k.format, { currency: r.currency, decimalSeparatorFormat: dec.get(r.project_id) })}</span>
+                            <span className="readout-value display num">{formatValue(v.value, k.format, { currency: r.currency })}</span>
                             <span className="readout-delta">
                               <Delta pct={v.change_pct} diff={diff} />
                             </span>
@@ -129,7 +129,7 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
                             )}
                           </div>
                         ) : (
-                          <span className="text-ink-3">—</span>
+                          <span className="text-xs text-ink-3">{t('common.noValue')}</span>
                         )}
                       </td>
                     );

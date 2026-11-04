@@ -60,7 +60,7 @@ function GoalCard({ g, fmt, df }: { g: GoalsPageGoal; fmt: { currency: string; d
           </div>
         </dl>
         <div className="mt-2 text-[11px] text-ink-3">
-          {formatDisplayDate(pr.period.start, df)} – {formatDisplayDate(pr.period.end, df)}
+          {formatDisplayDate(pr.period.start, df)} → {formatDisplayDate(pr.period.end, df)}
           {pr.daysRemaining > 0 ? ` · ${tr('public.daysLeft', { count: pr.daysRemaining })}` : ''}
         </div>
       </div>

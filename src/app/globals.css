@@ -2,6 +2,11 @@
  * critique: ink on glass over a grey ground with one glow; the accent marks one place at a time; numbers are set large and light
  * built: the project · redesign: full (keeps content and wiring) · v2.0.0 */
 /* Hallmark · waive 26b · the pressed and disabled states of .btn, .btn-primary and .btn-accent are defined in this file · components press and disable through the shared button classes, not TSX class strings */
+/* Hallmark · dismissed 41 · .card and .public-panel are light glass (white at 62 percent) in the shipped theme; the dark values are defined but not switched on */
+/* Hallmark · answered F5 · the 40px glass circle of .icon-btn is the icon button of the locked Ruler Hub system (design-system.md), drawn in ink, never tinted */
+/* Hallmark · answered F7 · navigation, the tab bar and the block toolbar are pills in the locked Ruler Hub system; tiles and media keep the 24px tile radius */
+/* Hallmark · answered F24 · overlays are glass in the locked system: a light glass edge over a soft shadow, the one place blur is kept */
+/* Hallmark · dismissed 74 · tailwind.config.js re-points slate, red, amber and emerald at the Ruler greys and feedback colours, so those class names are the theme tokens */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -32,13 +37,28 @@
   --ink-3: #575756;
   --line: var(--hairline);
   --line-strong: rgba(14, 14, 14, 0.24);
-  --brand: #db0100; /* Ruler red; the shell sets the workspace colour, a report sets its accent */
+  --brand: #db0100; /* Ruler red in the app chrome; a report canvas re-points it at the report's accent */
   --brand-soft: color-mix(in srgb, var(--brand) 10%, transparent);
   --up: #166534;
   --down: #a80100;
   --warning: #7d5200;
   --info: #0b6471;
   --focus: #0e0e0e;
+  /* states and fixed surfaces */
+  --on-dark: #ffffff; /* text on the accent, on ink fills and on photographs */
+  --night: #0e0e0e; /* a cover with no photograph; dark in both themes */
+  --glass-hover: rgba(255, 255, 255, 0.86);
+  --glass-press: rgba(255, 255, 255, 0.7);
+  --field: rgba(255, 255, 255, 0.72);
+  --ink-hover: #2a2a29;
+  --ink-press: #1c1c1b;
+  --line-on-dark: rgba(255, 255, 255, 0.14);
+  --paper-on-dark: rgba(255, 255, 255, 0.08);
+  --grid-line: rgba(14, 14, 14, 0.07);
+  --scrim: rgba(14, 14, 14, 0.84);
+  --scrim-mid: rgba(14, 14, 14, 0.38);
+  --print-paper: #ffffff;
+  --print-line: #d8d8d6;
   /* legacy names, re-pointed */
   --paper: rgba(14, 14, 14, 0.05); /* a quiet fill inside a tile: chips, tracks, hover rows */
   --card: var(--glass);
@@ -52,6 +72,9 @@
   --r-chip: 6px;
   --shadow-card: 0 1px 2px rgba(14, 14, 14, 0.04), 0 24px 48px -28px rgba(14, 14, 14, 0.35);
   --shadow-pop: 0 16px 40px -16px rgba(14, 14, 14, 0.4);
+  --shadow-card-hover: 0 1px 2px rgba(14, 14, 14, 0.05), 0 32px 56px -28px rgba(14, 14, 14, 0.45);
+  --shadow-lift: 0 12px 32px -8px rgba(14, 14, 14, 0.35); /* a tile being dragged or resized */
+  --shadow-chip: 0 2px 8px rgba(14, 14, 14, 0.08);
   --ease-brand: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-track: var(--ease-brand);
   --font-display: var(--font-sans);
@@ -81,6 +104,12 @@
   --info: #5fbec9;
   --focus: #ffffff;
   --paper: rgba(255, 255, 255, 0.06);
+  --glass-hover: rgba(255, 255, 255, 0.12);
+  --glass-press: rgba(255, 255, 255, 0.09);
+  --field: rgba(255, 255, 255, 0.06);
+  --ink-hover: #e2e2e0;
+  --ink-press: #c5c5c3;
+  --grid-line: rgba(255, 255, 255, 0.07);
 }
 
 html,
@@ -120,7 +149,6 @@ body {
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
-  border-radius: 8px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -156,13 +184,13 @@ body {
   }
   .tone-smoke {
     background: var(--smoke);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    border: 1px solid var(--line-on-dark);
     color: var(--smoke-fg);
     --ink: var(--smoke-fg);
     --ink-2: var(--smoke-muted);
     --ink-3: var(--smoke-muted);
-    --line: rgba(255, 255, 255, 0.16);
-    --paper: rgba(255, 255, 255, 0.1);
+    --line: var(--line-on-dark);
+    --paper: var(--paper-on-dark);
   }
   .tone-solid {
     background: var(--solid);
@@ -171,8 +199,8 @@ body {
     --ink: var(--solid-fg);
     --ink-2: var(--solid-muted);
     --ink-3: var(--solid-muted);
-    --line: rgba(255, 255, 255, 0.14);
-    --paper: rgba(255, 255, 255, 0.08);
+    --line: var(--line-on-dark);
+    --paper: var(--paper-on-dark);
   }
   .tone-inset {
     background: var(--inset);
@@ -205,11 +233,11 @@ body {
     transition: background-color 0.2s var(--ease-brand), border-color 0.2s var(--ease-brand), color 0.2s var(--ease-brand);
   }
   .btn:hover {
-    background: rgba(255, 255, 255, 0.86);
+    background: var(--glass-hover);
     border-color: var(--line-strong);
   }
   .btn:active {
-    background: rgba(255, 255, 255, 0.7);
+    background: var(--glass-press);
   }
   .btn:disabled,
   .btn[aria-disabled='true'] {
@@ -226,11 +254,11 @@ body {
     transition: background-color 0.2s var(--ease-brand), border-color 0.2s var(--ease-brand);
   }
   .btn-primary:hover {
-    background: #2a2a29;
-    border-color: #2a2a29;
+    background: var(--ink-hover);
+    border-color: var(--ink-hover);
   }
   .btn-primary:active {
-    background: #000;
+    background: var(--ink-press);
   }
   .btn-primary:disabled,
   .btn-primary[aria-disabled='true'] {
@@ -243,14 +271,17 @@ body {
     border-radius: 999px;
     border: 1px solid var(--brand);
     background: var(--brand);
-    color: #fff;
+    color: var(--on-dark);
     transition: filter 0.2s var(--ease-brand);
   }
   .btn-accent:hover {
     filter: brightness(0.9);
   }
-  .btn-accent:disabled {
+  .btn-accent:disabled,
+  .btn-accent[aria-disabled='true'] {
     opacity: 0.5;
+    filter: none;
+    cursor: not-allowed;
   }
   .btn-danger {
     @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-4 text-[13px] font-medium;
@@ -279,29 +310,31 @@ body {
     transition: background-color 0.2s var(--ease-brand), color 0.2s var(--ease-brand);
   }
   .icon-btn:hover {
-    background: rgba(255, 255, 255, 0.86);
+    background: var(--glass-hover);
     color: var(--ink);
   }
   .icon-btn.is-active {
     background: var(--brand);
     border-color: var(--brand);
-    color: #fff;
+    color: var(--on-dark);
   }
   .input {
     @apply w-full px-3 text-sm outline-none;
     min-height: 38px;
     border-radius: var(--r-input);
     border: 1px solid var(--line-strong);
-    background: rgba(255, 255, 255, 0.72);
+    background: var(--field);
     color: var(--ink);
-    transition: border-color 0.2s var(--ease-brand), box-shadow 0.2s var(--ease-brand);
+    transition: border-color 0.2s var(--ease-brand);
   }
   .input::placeholder {
     color: var(--ink-3);
   }
-  .input:focus {
+  /* the ring appears at once (not transitioned); the border darkens with it */
+  .input:focus-visible {
     border-color: var(--ink);
-    box-shadow: 0 0 0 3px rgba(14, 14, 14, 0.1);
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
   }
   .input[aria-invalid='true'] {
     border-color: var(--down);
@@ -405,7 +438,7 @@ body {
 }
 .rgrid-edit > .ritem-dragging > .card,
 .rgrid-edit > .ritem-resizing > .card {
-  box-shadow: 0 12px 32px -8px rgba(16, 20, 24, 0.35);
+  box-shadow: var(--shadow-lift);
   outline: 2px solid var(--brand);
 }
 .rplaceholder {
@@ -443,8 +476,8 @@ body {
   padding: 2px;
   border-radius: 0.5rem;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.97);
-  box-shadow: 0 2px 8px rgba(16, 20, 24, 0.08);
+  background: var(--glass-solid);
+  box-shadow: var(--shadow-chip);
   opacity: 0;
   transition: opacity 0.15s;
   user-select: none;
@@ -475,7 +508,7 @@ body {
 }
 .ritem-hidden > .card {
   opacity: 0.45;
-  background-image: repeating-linear-gradient(135deg, transparent 0 10px, rgba(99, 109, 124, 0.12) 10px 20px);
+  background-image: repeating-linear-gradient(135deg, transparent 0 12px, var(--paper) 12px 24px);
 }
 
 /* ───────────── KPI ───────────── */
@@ -512,8 +545,11 @@ body {
 }
 
 /* ───────────── ruler band (signature, src/components/ruler-band.tsx) ───────────── */
-.rband {
+/* zero specificity: a margin utility on the band (mb-12) still applies */
+:where(.rband) {
   margin: 0;
+}
+.rband {
   width: 100%;
 }
 .rband-svg {
@@ -560,7 +596,7 @@ body {
   justify-content: space-between;
   align-items: baseline;
   gap: 12px;
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: 12px;
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
@@ -599,12 +635,12 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .recharts-cartesian-grid line {
-  stroke: #eceeea;
+  stroke: var(--grid-line);
 }
 .recharts-default-tooltip {
   border-radius: 10px !important;
   border: 1px solid var(--line) !important;
-  box-shadow: 0 8px 24px -8px rgba(16, 20, 24, 0.25);
+  box-shadow: var(--shadow-pop);
   font-size: 12px;
 }
 
@@ -629,20 +665,20 @@ body {
   position: absolute;
   right: 0;
   z-index: 20;
-  margin-top: 6px;
+  margin-top: 8px;
   min-width: 200px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--card);
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+  padding: 4px;
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-input);
+  background: var(--card-solid);
+  box-shadow: var(--shadow-pop);
 }
 .pdf-menu-list a,
 .pdf-menu-list button {
   display: block;
   width: 100%;
-  padding: 8px 10px;
-  border-radius: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
   text-align: left;
   font-size: 13px;
   color: inherit;
@@ -658,7 +694,7 @@ body {
   }
   html,
   body {
-    background: #fff !important;
+    background: var(--print-paper) !important;
   }
   .card {
     break-inside: avoid;
@@ -698,6 +734,7 @@ body {
 /* ───────────── the caliper: a KPI measures itself ───────────── */
 .caliper {
   position: relative;
+  container-type: inline-size;
   height: 10px;
   margin-top: 8px;
   width: 100%;
@@ -753,10 +790,10 @@ body {
 /* replay the measurement on hover / focus: the marker travels from the previous value, the bracket extends behind it */
 @keyframes caliper-travel {
   from {
-    left: calc(var(--prev) * 100%);
+    translate: calc((var(--prev) - var(--cur)) * 100cqw - 50%) 0;
   }
   to {
-    left: calc(var(--cur) * 100%);
+    translate: -50% 0;
   }
 }
 @keyframes caliper-extend {
@@ -853,7 +890,7 @@ body {
 }
 @media (max-width: 479px) {
   .public-panel {
-    padding: 28px 20px 22px;
+    padding: 28px 20px 24px;
   }
 }
 .public-title {
@@ -864,13 +901,13 @@ body {
   overflow-wrap: break-word;
 }
 .public-sub {
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: 14px;
   color: var(--ink-2);
 }
 .public-hint {
   margin-top: 20px;
-  padding: 10px 12px;
+  padding: 12px 16px;
   border-radius: 12px;
   background: var(--paper);
   text-align: center;
@@ -884,9 +921,9 @@ body {
   color: var(--ink-2);
 }
 .form-error {
-  padding: 10px 12px;
+  padding: 12px 16px;
   border-radius: 12px;
-  background: rgba(168, 1, 0, 0.1);
+  background: color-mix(in srgb, var(--down) 10%, transparent);
   color: var(--down);
   font-size: 13px;
 }
@@ -900,10 +937,10 @@ body {
   left: 12px;
   top: -40px;
   z-index: 100;
-  padding: 6px 10px;
+  padding: 8px 12px;
   border-radius: 8px;
   background: var(--ink);
-  color: #fff;
+  color: var(--ground);
   font-size: 13px;
 }
 .skip-link:focus {
@@ -935,7 +972,7 @@ body {
 }
 @media (min-width: 1024px) {
   .topbar {
-    padding: 14px 28px;
+    padding: 12px 28px;
   }
 }
 .topbar-brand {
@@ -1007,7 +1044,7 @@ body {
 }
 .pillnav-item.is-active {
   background: var(--brand);
-  color: #fff;
+  color: var(--on-dark);
 }
 /* body: the icon rail beside the page */
 .frame-body {
@@ -1035,7 +1072,7 @@ body {
 .siderail-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1050,7 +1087,7 @@ body {
   left: calc(100% + 10px);
   top: 50%;
   translate: 0 -50%;
-  padding: 5px 10px;
+  padding: 4px 12px;
   border-radius: 999px;
   background: var(--ink);
   color: var(--ground);
@@ -1126,7 +1163,7 @@ body {
   z-index: 50;
 }
 .lang-chip {
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: 999px;
   color: var(--ink-2);
 }
@@ -1142,7 +1179,7 @@ body {
 .navlink {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-height: 40px;
   padding: 0 12px;
   border-radius: 12px;
@@ -1159,7 +1196,7 @@ body {
   background: var(--hairline);
 }
 .navlink.is-active {
-  color: #fff;
+  color: var(--on-dark);
   background: var(--brand);
 }
 /* phones: no pill menu and no rail; a floating glass tab bar carries the places */
@@ -1169,7 +1206,7 @@ body {
 @media (max-width: 767px) {
   .topbar {
     min-height: 64px;
-    padding: 10px 16px;
+    padding: 8px 16px;
   }
   .topbar .pillnav,
   .siderail {
@@ -1194,7 +1231,7 @@ body {
     justify-content: space-between;
     gap: 2px;
     margin: 0;
-    padding: 6px;
+    padding: 8px;
     list-style: none;
     border-radius: 999px;
     border: 1px solid var(--glass-line);
@@ -1233,7 +1270,7 @@ body {
   }
   .tabbar-item.is-active {
     background: var(--brand);
-    color: #fff;
+    color: var(--on-dark);
   }
   .tabbar-more {
     position: relative;
@@ -1267,7 +1304,7 @@ body {
   display: inline-flex;
   flex-wrap: nowrap;
   gap: 2px;
-  padding: 3px;
+  padding: 4px;
   border-radius: 999px;
   border: 1px solid var(--glass-line);
   background: var(--glass);
@@ -1276,9 +1313,9 @@ body {
 .segments button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-height: 32px;
-  padding: 0 14px;
+  padding: 0 16px;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
@@ -1298,24 +1335,24 @@ body {
   color: var(--ground);
 }
 .seg-count {
-  padding: 0 7px;
+  padding: 0 8px;
   border-radius: 999px;
   background: var(--hairline);
   font-size: 11px;
 }
 .segments .is-active .seg-count {
-  background: rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--ground) 20%, transparent);
 }
 
 /* notes (attention list) */
 .notes-list {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   font-size: 14px;
   color: var(--ink-2);
 }
 .notes-list li {
-  padding-left: 14px;
+  padding-left: 16px;
   position: relative;
 }
 .notes-list li::before {
@@ -1335,7 +1372,7 @@ body {
 }
 .board thead th {
   text-align: left;
-  padding: 0 12px 10px 0;
+  padding: 0 12px 8px 0;
   font-size: 11px;
   font-weight: 600;
   color: var(--ink-3);
@@ -1468,12 +1505,12 @@ body {
   grid-template-columns: 110px 1fr auto;
   gap: 16px 24px;
   align-items: start;
-  padding: 18px 0;
+  padding: 20px 0;
   border-bottom: 1px solid var(--line);
   transition: background-color 0.25s var(--ease-track);
 }
 .rlist-date {
-  padding-top: 6px;
+  padding-top: 4px;
   font-size: 12px;
   color: var(--ink-3);
 }
@@ -1489,8 +1526,8 @@ body {
 .rlist-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 14px;
-  margin-top: 6px;
+  gap: 4px 16px;
+  margin-top: 8px;
   font-size: 12px;
   color: var(--ink-3);
 }
@@ -1531,11 +1568,11 @@ body {
   scale: 1;
 }
 .rcover {
-  padding: 16px 18px 14px;
+  padding: 16px 20px;
   border-radius: 12px;
-  background: var(--card);
+  background: var(--card-solid);
   border: 1px solid var(--line);
-  box-shadow: 0 24px 48px -20px rgba(16, 20, 24, 0.35);
+  box-shadow: var(--shadow-pop);
 }
 .rlist-cover-inline {
   grid-column: 1 / -1;
@@ -1633,10 +1670,10 @@ body {
 }
 @keyframes caliper-travel-again {
   from {
-    left: calc(var(--prev) * 100%);
+    translate: calc((var(--prev) - var(--cur)) * 100cqw - 50%) 0;
   }
   to {
-    left: calc(var(--cur) * 100%);
+    translate: -50% 0;
   }
 }
 @keyframes caliper-extend-again {
@@ -1788,12 +1825,13 @@ body {
   left: 0;
   top: calc(100% + 8px);
   z-index: 50;
-  width: min(360px, calc(100vw - 32px));
-  padding: 14px;
-  box-shadow: 0 16px 40px -16px rgba(16, 20, 24, 0.35);
+  width: 360px;
+  max-width: calc(100dvw - 32px);
+  padding: 16px;
+  box-shadow: var(--shadow-pop);
 }
 .mpick-drop {
-  padding: 18px 12px;
+  padding: 20px 12px;
   border: 1px dashed var(--line-strong);
   border-radius: 10px;
   text-align: center;
@@ -1806,7 +1844,7 @@ body {
 .mpick-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  gap: 8px;
 }
 .mpick-cell {
   aspect-ratio: 1;
@@ -1827,7 +1865,7 @@ body {
   width: var(--cm, 32px);
   height: var(--cm, 32px);
   flex: none;
-  padding: 3px;
+  padding: 4px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--card);
@@ -1844,13 +1882,14 @@ body {
   border: 0;
   font-size: 9px;
 }
+/* an initial: quiet ink on a light fill in the app; a client colour when one is passed (the report cover) */
 .cmark-mono {
   padding: 0;
   border-color: transparent;
-  background: var(--brand-soft);
-  color: var(--brand);
+  background: var(--cm-bg, var(--paper));
+  color: var(--cm-fg, var(--ink-2));
   font-family: var(--font-display), var(--font-sans), sans-serif;
-  font-weight: 600;
+  font-weight: 500;
   font-size: calc(var(--cm, 32px) * 0.5);
   line-height: 1;
 }
@@ -1863,7 +1902,7 @@ body {
   height: var(--pm, 16px);
   flex: none;
   border-radius: 25%;
-  font-weight: 700;
+  font-weight: 600;
   font-size: calc(var(--pm, 16px) * 0.42);
   line-height: 1;
   letter-spacing: -0.02em;
@@ -1877,6 +1916,28 @@ body {
   border-radius: 6px;
   background: none;
   cursor: pointer;
+}
+/* a colour field in a form: a 64 by 40 swatch on the input radius, the swatch inset 4px */
+.swatch-field {
+  display: block;
+  width: 64px;
+  height: 40px;
+  padding: 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-input);
+  background: var(--field);
+  cursor: pointer;
+}
+.swatch-field::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.swatch-field::-webkit-color-swatch {
+  border: 0;
+  border-radius: 8px;
+}
+.swatch-field::-moz-color-swatch {
+  border: 0;
+  border-radius: 8px;
 }
 .swatches {
   display: inline-flex;
@@ -1937,7 +1998,7 @@ body {
 .tile-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1946,7 +2007,7 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 7rem) 1fr auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-size: 12px;
 }
 .tile-row-label {
@@ -2020,6 +2081,11 @@ body {
   }
 }
 /* images inside analysis cards (spec §7) */
+/* emphasis in analysis text (written by the AI or the rules) is weight, never italic */
+.analysis em {
+  font-style: normal;
+  font-weight: 500;
+}
 .analysis img {
   display: block;
   max-width: 100%;
@@ -2038,9 +2104,9 @@ body {
 }
 /* integration health (v3 §1.1): the Reconnect button stands out when the row needs it */
 .btn-attention {
-  border-color: #d97a1d;
-  color: #92400e;
-  background: #fffbeb;
+  border-color: var(--warning);
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 8%, var(--glass-solid));
 }
 /* "About these numbers" (v3 §1.4): a small i control in block headers; footnotes only in print */
 .data-note {
@@ -2065,7 +2131,7 @@ body {
 }
 .data-note[open] > summary {
   background: var(--ink);
-  color: #fff;
+  color: var(--ground);
   border-color: var(--ink);
 }
 .data-note-body {
@@ -2074,11 +2140,11 @@ body {
   top: 22px;
   left: 0;
   width: min(360px, 80vw);
-  padding: 12px 14px;
-  background: var(--card);
+  padding: 12px 16px;
+  background: var(--card-solid);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(16, 20, 24, 0.12);
+  border-radius: var(--r-input);
+  box-shadow: var(--shadow-pop);
   font-size: 12px;
   line-height: 1.5;
   color: var(--ink-2);
@@ -2118,7 +2184,7 @@ body {
 }
 .ctable th,
 .ctable td {
-  padding: 6px 8px;
+  padding: 8px;
   border-bottom: 1px solid var(--line);
   text-align: right;
   white-space: nowrap;
@@ -2145,13 +2211,13 @@ body {
   height: 8px;
   border-radius: 999px;
   flex: none;
-  background: #cfd4dc;
+  background: var(--line-strong);
 }
 .ctable-dot-active {
-  background: #0e9f8e;
+  background: var(--up);
 }
 .ctable-dot-paused {
-  background: #d97a1d;
+  background: var(--warning);
 }
 .ctable-delta {
   display: block;
@@ -2184,7 +2250,7 @@ body {
   aspect-ratio: 21 / 9;
   overflow: hidden;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--brand) 0%, #101418 100%);
+  background: color-mix(in srgb, var(--brand) 24%, var(--night));
 }
 .cover-hero .cover-hero-img,
 .cover-hero .cover-hero-img img {
@@ -2198,7 +2264,7 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(10, 14, 20, 0.84) 0%, rgba(10, 14, 20, 0.38) 45%, rgba(10, 14, 20, 0) 100%);
+  background: linear-gradient(to top, var(--scrim) 0%, var(--scrim-mid) 45%, transparent 100%);
 }
 .cover-hero-text {
   position: absolute;
@@ -2210,7 +2276,7 @@ body {
 .cover-hero .cover-eyebrow,
 .cover-hero .cover-title,
 .cover-hero .cover-subtitle {
-  color: #fff;
+  color: var(--on-dark);
 }
 .cover-head-inline {
   margin-bottom: 8px;
@@ -2288,7 +2354,7 @@ body {
 /* print and the PDF service: white paper, no ground, no glow, no blur, hairline tiles */
 @media print {
   html {
-    background: #fff !important;
+    background: var(--print-paper) !important;
   }
   .ground::before {
     display: none !important;
@@ -2296,8 +2362,8 @@ body {
   .card,
   .overlay,
   .public-panel {
-    background: #fff !important;
-    border-color: #d8d8d6 !important;
+    background: var(--print-paper) !important;
+    border-color: var(--print-line) !important;
     box-shadow: none !important;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
@@ -2320,8 +2386,8 @@ body {
   transition: transform 0.35s var(--ease-brand), box-shadow 0.35s var(--ease-brand), border-color 0.2s var(--ease-brand);
 }
 .card-link:hover {
-  border-color: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 1px 2px rgba(14, 14, 14, 0.05), 0 32px 56px -28px rgba(14, 14, 14, 0.45);
+  border-color: var(--glass-hover);
+  box-shadow: var(--shadow-card-hover);
 }
 @media (prefers-reduced-motion: no-preference) {
   .card-link:hover {
@@ -2337,7 +2403,7 @@ body {
   border-radius: var(--r-tile);
   outline: 2px dashed transparent;
   outline-offset: 8px;
-  transition: outline-color 0.2s var(--ease-brand), background-color 0.2s var(--ease-brand);
+  transition: background-color 0.2s var(--ease-brand);
 }
 .rgrid-drop.is-empty {
   min-height: 136px;
@@ -2410,7 +2476,7 @@ html[data-rr-drag] .newblock-drop {
 .rtoolbar {
   top: 8px;
   right: 8px;
-  padding: 3px;
+  padding: 4px;
   border-radius: 999px;
   border: 1px solid var(--glass-line);
   background: color-mix(in srgb, var(--glass-solid) 92%, transparent);
@@ -2503,14 +2569,14 @@ html[data-rr-drag] .newblock-drop {
 .compare-cols {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
+  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .compare-col {
   min-width: 0;
-  padding: 12px 14px;
+  padding: 12px 16px;
   border-radius: 16px;
 }
 .compare-col.is-base {
@@ -2525,7 +2591,7 @@ html[data-rr-drag] .newblock-drop {
   overflow-wrap: anywhere;
 }
 .compare-bar {
-  margin-top: 10px;
+  margin-top: 12px;
   height: 6px;
   border-radius: 999px;
   background: var(--paper);
@@ -2569,7 +2635,7 @@ html[data-rr-drag] .newblock-drop {
   margin: 0;
   border-radius: 12px;
   overflow: hidden;
-  background: #fff;
+  background: var(--print-paper);
   box-shadow: 0 0 0 1px var(--hairline);
 }
 .pdf-page canvas {
@@ -2610,14 +2676,14 @@ html[data-rr-drag] .newblock-drop {
     grid-column: 1 / -1;
   }
 }
-/* a variable token in the text card's editor: code set in mono, as a chip */
+/* a variable token in the text card's editor: a quiet chip in the body face */
 .var-chip {
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: 999px;
   border: 1px solid var(--line-strong);
   background: var(--inset);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
   color: var(--ink-2);
 }
 .var-chip:hover {

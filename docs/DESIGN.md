@@ -719,3 +719,73 @@ Printed, not changed (app-wide, outside this pass): 44 Floor findings in `global
 tokens, 7 pure #fff, 4 keyframes animating `left` on the caliper, 3 tracked-caps labels on the band and board table,
 1 `100vw` width on the media picker).
 
+
+# Ruler glass pass (2026-11-04): the Ruler Hub design system, unslop + Hallmark
+
+**Source.** `design-system.md` (Ruler Hub), the `design/` mockups (`hub-frame-v3.html`, the Quantix and codexr
+references) and the Figma file RULEEEER, page DESIGN SYSTEM (read in the browser, view only). The system is locked:
+where Hallmark or unslop disagree with it, the system wins and the stamp in `globals.css` says why.
+
+**System, as built.**
+- Ground `#E4E4E2` with one glow (from `--brand`) at the top right and a faint ink glow at the bottom left, drawn once in
+  `.ground::before`; page wrappers stay transparent so it shows.
+- Tiles are glass without blur (white at 62 %, a light edge, a soft shadow); blur is kept for the few overlays (menus,
+  the account menu, the public sign-in panel). Tones: glass, smoke, solid, inset.
+- Manrope (variable) for everything. Titles large and light (400, tight tracking), figures 300 with tabular numbers.
+- Buttons are pills: ink is the primary, red (`.btn-accent`) is for one call to action, rarely. Icon buttons are 40 px
+  glass circles with an 18 px Lucide icon at 1.5 stroke.
+- Red `#DB0100` marks the active place only: the current item in the pill navigation, the side rail and the tab bar.
+- Frame: top bar (wordmark, workspace name, pill navigation, notifications, account menu), an icon rail on the left
+  for the secondary places, a tab bar with a More sheet on phones.
+
+**Rulings.**
+- **Labels are sentence case and untracked.** The Hub document draws a tracked uppercase eyebrow; Figma DS-08 says no
+  letter-spaced or all-caps text, and so do Hallmark and unslop. DS-08 wins.
+- **Two reds, never side by side.** The app chrome uses `--brand` = Ruler red. A report canvas re-points `--brand` at the
+  report's accent (theme accent, else the workspace brand colour), so a client report never shows Ruler red next to
+  the client's own colour. A workspace that wants red reports sets its brand colour to `#DB0100` in Settings.
+- **Icon and block colours follow the report.** "Make the icons a different colour to match the report" is read as:
+  platform icons and block colours take the report's colour by default (`theme.colors = 'report'`). The Look panel
+  keeps a switch to the platforms' own colours ("Platform colours"). The brand palette is the accent plus Ruler greys,
+  so one series leads and the rest are quiet.
+- **Client initials are neutral in the app** (ink on a light fill) and take the client's colour only on their own
+  report cover and goals page. The red accent stays rare.
+- **The agency board reads in one number format.** Each client keeps its own decimal format in its reports; the
+  Overview uses one format for every row so the columns compare (currencies stay per client).
+
+**Features in this pass.** Bigger drop targets in the editor (every block shows a dashed drop area with two rows of room
+while a metric is dragged, a "new block" zone after each block, size presets in the block toolbar); the comparison
+container (one metric across up to four periods or eight accounts); a PDF widget that draws the pages inside the
+report (pdf.js, also in the server PDF); "Download PDF" straight from the client link, on Vercel too
+(`@sparticuz/chromium`); and, from the competitor research: approve before sending (automations), text variables in
+the text card (`{client}`, `{period}`, `{fb_ads:spend.change}` …) and project timeline events drawn on time charts.
+
+**unslop + Hallmark sweep.** Light slop, polish mode, the direction taken from the system above. Fixed:
+- every colour in `globals.css` through a token (29 literals and the pure `#fff` / `#000` lifted into `:root`), the old
+  slate-blue shadows (`rgba(16, 20, 24, …)`) replaced by the ink shadows;
+- the last pieces of the old blue palette: `#1a36e6` fallbacks in the editor and pickers (now `DEFAULT_ACCENT`), the
+  old greys of the "Mono" palette, the share image (now the Ruler wordmark, grey ground, red for the current period),
+  and the emails: an indigo `#4f46e5` button on the report email and old-blue buttons on goal and health alerts are now
+  one ink pill (`src/lib/services/email-style.ts`), figures at weight 400;
+- the caliper travels by `translate` in container units instead of animating `left`;
+- focus: the ring follows each element's own radius (the global rule set `border-radius: 8px`, which squared a pill
+  button on keyboard focus), inputs show an outline ring instead of a border and a shadow, the editor drop outline is
+  no longer transitioned;
+- copy: no dashes standing in for words (a missing change shows nothing, an empty board cell says "No data", ranges
+  use the app's arrow), no eyebrow on the 404, no dot-joined meta on the project header or the API page, typographic
+  apostrophes on the public pages, and English left in the Greek UI ("dropped", "spiked", "accounts", "stay under",
+  "reach", "Alerts to", raw goal states such as `no_data`) translated;
+- goal states: white-on-colour badges → quiet text in the colour of the meaning ("Behind", "Slightly behind",
+  "Ahead"), the bar beside it carries the fill;
+- weights: bold headings (analysis, timeline, studio, API page, project KPIs, the report cover title) → 400 to 500;
+- analysis text: emphasis is weight, never italic;
+- a lettermark bug: a platform without a glyph (Klaviyo) drew its tile and its letters in the ground colour, so the mark
+  was invisible;
+- the overview band's bottom margin (a `margin: 0` rule overrode `mb-12`, so "Needs attention" touched the band);
+- spacing on the 4 px scale (rows, cards, lists, the comparison container, the segmented control, chips);
+- Settings: colour fields as swatches, and a developer note about Reportei's white-label support removed from the UI.
+
+`sloplint --scope app` on `src/`: 0 FAIL, 0 WARN, with three Finish items answered and one warning dismissed on the
+record in the stamp (round glass icon buttons, pills for navigation and toolbars, glass overlays; the Tailwind palette
+names are re-pointed at the Ruler tokens). The render tier did not run (no `puppeteer-core`); screenshots at 1440 and
+390 were checked instead.

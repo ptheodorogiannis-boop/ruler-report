@@ -10,6 +10,15 @@ import { formatValue } from '@/lib/util/format';
 export const dynamic = 'force-dynamic';
 
 const COLORS: Record<string, string> = { high: 'bg-emerald-500', ideal: 'bg-emerald-400', average: 'bg-amber-400', low: 'bg-red-500', no_data: 'bg-slate-300' };
+/** A goal's standing as quiet text in the colour of its meaning (the bar beside it carries the fill). */
+const SITUATION: Record<string, { label: string; tone: string }> = {
+  high: { label: 'public.situationHigh', tone: 'text-up' },
+  ideal: { label: 'public.situationIdeal', tone: 'text-up' },
+  average: { label: 'public.situationAverage', tone: 'text-[var(--warning)]' },
+  low: { label: 'public.situationLow', tone: 'text-down' },
+  no_data: { label: 'public.situationNoData', tone: 'text-ink-3' },
+};
+
 
 export default async function GoalsPage() {
   const { t } = await getT();
@@ -39,7 +48,7 @@ export default async function GoalsPage() {
               <div className="min-w-0 flex-1">
                 <div className="font-medium">{g.title}</div>
                 <Link href={`/projects/${g.projectId}?tab=goals`} className="text-xs text-slate-500 hover:text-brand">
-                  {g.integration.project.name} · {g.frequency}
+                  {g.integration.project.name} · {g.frequency === 'weekly' ? t('automations.weekly') : t('automations.monthly')}
                 </Link>
               </div>
               <div className="w-56">
@@ -51,7 +60,7 @@ export default async function GoalsPage() {
                   <span>{pr?.progressPct ?? 0}%</span>
                 </div>
               </div>
-              <span className={`badge text-white ${COLORS[pr?.situation ?? 'no_data']}`}>{pr?.situation ?? 'no_data'}</span>
+              <span className={`w-32 text-right text-sm font-medium ${SITUATION[pr?.situation ?? 'no_data'].tone}`}>{t(SITUATION[pr?.situation ?? 'no_data'].label)}</span>
             </div>
           ))}
         </div>

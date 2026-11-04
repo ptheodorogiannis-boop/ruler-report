@@ -62,12 +62,12 @@ export function CompareCard({ b, fmt, grid }: CardProps & { b: RenderedBlock }) 
                   ) : (
                     <>
                       <span>{tr('public.compareNow')}</span>
-                      {absolute ? <span className="num font-medium text-ink-2">{col.absolute == null ? '—' : `${sign(col.absolute)}${formatValue(Math.abs(col.absolute), col.format ?? v.format, { ...o, currency: col.currency ?? o.currency })}`}</span> : <Delta pct={col.change_pct} diff={w.diff_type} />}
+                      {absolute ? <span className="num font-medium text-ink-2">{col.absolute == null ? null : `${sign(col.absolute)}${formatValue(Math.abs(col.absolute), col.format ?? v.format, { ...o, currency: col.currency ?? o.currency })}`}</span> : <Delta pct={col.change_pct} diff={w.diff_type} />}
                     </>
                   )
                 ) : (
                   <>
-                    {absolute ? <span className="num font-medium text-ink-2">{col.absolute == null ? '—' : `${sign(col.absolute)}${formatValue(Math.abs(col.absolute), col.format ?? v.format, { ...o, currency: col.currency ?? o.currency })}`}</span> : <Delta pct={col.change_pct} diff={w.diff_type} />}
+                    {absolute ? <span className="num font-medium text-ink-2">{col.absolute == null ? null : `${sign(col.absolute)}${formatValue(Math.abs(col.absolute), col.format ?? v.format, { ...o, currency: col.currency ?? o.currency })}`}</span> : <Delta pct={col.change_pct} diff={w.diff_type} />}
                     <span>{tr('public.compareVsPrevious')}</span>
                   </>
                 )}

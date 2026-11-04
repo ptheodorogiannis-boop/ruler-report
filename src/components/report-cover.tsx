@@ -39,7 +39,7 @@ export function ReportCover(p: ReportCoverProps) {
     <>
       <ClientMark name={p.projectName} logo={p.logo} color={p.brandColor} size={48} className="mb-3" />
       <div className="eyebrow cover-eyebrow">{p.projectName}</div>
-      <h1 className="display cover-title mt-2 text-[clamp(28px,2.6vw,36px)] font-semibold leading-[1.05] tracking-[-0.02em]">{p.title}</h1>
+      <h1 className="display cover-title mt-2 text-[clamp(28px,2.6vw,36px)] font-normal leading-[1.05] tracking-[-0.02em]">{p.title}</h1>
       {p.subtitle && <p className="cover-subtitle mt-3 text-sm text-ink-2">{p.subtitle}</p>}
     </>
   );

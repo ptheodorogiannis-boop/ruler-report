@@ -26,6 +26,16 @@ import { db } from '@/lib/db';
 import { goalProgress } from '@/lib/services/goals';
 import { companyOverview, OVERVIEW_KPIS } from '@/lib/services/overview';
 import { formatValue } from '@/lib/util/format';
+import { formatDisplayDate } from '@/lib/util/dates';
+/** A goal's standing as quiet text in the colour of its meaning (the bar beside it carries the fill). */
+const SITUATION: Record<string, { label: string; tone: string }> = {
+  high: { label: 'public.situationHigh', tone: 'text-up' },
+  ideal: { label: 'public.situationIdeal', tone: 'text-up' },
+  average: { label: 'public.situationAverage', tone: 'text-[var(--warning)]' },
+  low: { label: 'public.situationLow', tone: 'text-down' },
+  no_data: { label: 'public.situationNoData', tone: 'text-ink-3' },
+};
+
 import { shareUrl } from '@/lib/services/reports';
 import { pdfAvailable } from '@/lib/services/pdf';
 import { requestBaseUrl } from '@/lib/share';
@@ -77,7 +87,13 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
     <AppShell active="/projects">
       <PageHeader
         title={project.name}
-        subtitle={`${project.timezone} · ${project.currency} · ${t('projects.activeIntegrations', { count: integrations.filter((i) => i.status === 'active').length })}`}
+        subtitle={
+          <span className="flex flex-wrap gap-x-4">
+            <span>{project.timezone}</span>
+            <span>{project.currency}</span>
+            <span>{t('projects.activeIntegrations', { count: integrations.filter((i) => i.status === 'active').length })}</span>
+          </span>
+        }
         actions={
           <>
             {write && (
@@ -593,7 +609,7 @@ async function OverviewTab({ p, projectId }: { p: Awaited<ReturnType<typeof requ
   return (
     <div className="space-y-5">
       <div className="text-xs text-slate-500">
-        {t('projects.last30vs', { start: range.start, end: range.end })}
+        {t('projects.last30vs', { start: formatDisplayDate(range.start, project.dateFormat), end: formatDisplayDate(range.end, project.dateFormat) })}
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {OVERVIEW_KPIS.map((k) => {
@@ -603,7 +619,7 @@ async function OverviewTab({ p, projectId }: { p: Awaited<ReturnType<typeof requ
               <div className="text-xs font-medium text-slate-500">{t(k.labelKey)}</div>
               {v ? (
                 <>
-                  <div className="mt-1 text-xl font-bold">{formatValue(v.value, k.format, fmt)}</div>
+                  <div className="num mt-1 text-xl font-light">{formatValue(v.value, k.format, fmt)}</div>
                   <div className="mt-1">
                     <Delta pct={v.change_pct} diff={k.goodUp ? 'positive_good' : 'neutral'} />
                   </div>
@@ -711,11 +727,11 @@ async function GoalsTab({ goals, write, options, projectId, fmt, share }: { goal
                   <div>
                     <div className="font-semibold">{g.title}</div>
                     <div className="text-xs text-slate-500">
-                      {g.frequency} · {g.direction === 'lower_better' ? 'stay under' : 'reach'} {formatValue(g.target, 'number', fmt)}
+                      {g.frequency === 'weekly' ? t('automations.weekly') : t('automations.monthly')} · {t(g.direction === 'lower_better' ? 'goals.stayUnderTarget' : 'goals.reachTarget', { target: formatValue(g.target, 'number', fmt) })}
                     </div>
-                    {Array.isArray(g.alertEmails) && g.alertEmails.length > 0 && <div className="text-xs text-slate-500" data-goal-alerts>Alerts to {g.alertEmails.join(', ')}</div>}
+                    {Array.isArray(g.alertEmails) && g.alertEmails.length > 0 && <div className="text-xs text-slate-500" data-goal-alerts>{t('goals.alertsTo', { emails: g.alertEmails.join(', ') })}</div>}
                   </div>
-                  <span className={`badge text-white ${colors[pr?.situation ?? 'no_data']}`}>{pr?.situation ?? 'no_data'}</span>
+                  <span className={`text-sm font-medium ${SITUATION[pr?.situation ?? 'no_data'].tone}`}>{t(SITUATION[pr?.situation ?? 'no_data'].label)}</span>
                 </div>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
                   <div className={`h-full rounded-full ${colors[pr?.situation ?? 'no_data']}`} style={{ width: `${Math.min(100, pr?.progressPct ?? 0)}%` }} />

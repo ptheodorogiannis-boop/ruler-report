@@ -20,7 +20,7 @@ import { scopeSummary, type CampaignScope } from '@/lib/engine/campaigns';
 import { listCampaignsAction } from '@/app/actions/app';
 import { AnalyseAllButton, BlockAnalyseMenu } from './block-analyse';
 import { ICONS, ICON_NAMES } from './infographic';
-import { blockColorOf, blockVars, paletteFor, themeVars, withBlockColor } from '@/lib/layout/theme';
+import { DEFAULT_ACCENT, GREY_FALLBACK, blockColorOf, blockVars, paletteFor, themeVars, withBlockColor } from '@/lib/layout/theme';
 import { PlatformIcon } from '@/components/platform-icon';
 import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -368,7 +368,7 @@ export function ReportEditor(props: EditorProps) {
   const panel = panelBlock ? layout.blocks.find((b) => b.id === panelBlock) : undefined;
 
   return (
-    <div className="report-root space-y-6" style={themeVars(layout.theme, brand ?? '#1a36e6')}>
+    <div className="report-root space-y-6" style={themeVars(layout.theme, brand ?? DEFAULT_ACCENT)}>
       {/* ───── toolbar ───── */}
       <div className="no-print overlay editor-toolbar sticky top-3 z-20 flex flex-wrap items-center gap-2 px-3 py-2">
         <SaveIndicator state={saveState} onRetry={() => void doSave()} />
@@ -408,7 +408,7 @@ export function ReportEditor(props: EditorProps) {
         </div>
       )}
       {templateDialog && <SaveTemplateDialog reportId={reportId} defaultTitle={`${props.title} template`} onClose={() => setTemplateDialog(false)} />}
-      {lookOpen && !preview && <LookPanel theme={layout.theme} clientColor={brand ?? '#1a36e6'} onChange={(t) => mutate((l) => (t ? { ...l, theme: t } : (({ theme: _t, ...rest }) => rest)(l)), { coalesce: 'theme' })} onClose={() => setLookOpen(false)} />}
+      {lookOpen && !preview && <LookPanel theme={layout.theme} clientColor={brand ?? DEFAULT_ACCENT} onChange={(t) => mutate((l) => (t ? { ...l, theme: t } : (({ theme: _t, ...rest }) => rest)(l)), { coalesce: 'theme' })} onClose={() => setLookOpen(false)} />}
 
       {/* ───── body: [add-metrics drawer] [blocks] [settings drawer] ───── */}
       {preview ? (
@@ -422,7 +422,7 @@ export function ReportEditor(props: EditorProps) {
           {layout.blocks.map((b, bi) => {
             const sec = composed.sections.find((s) => s.id === b.id);
             const src = sec?.source;
-            const platformColor = (src && getIntegrationDef(src.slug)?.color) || '#636d7c';
+            const platformColor = (src && getIntegrationDef(src.slug)?.color) || GREY_FALLBACK;
             const accent = layout.theme?.accent ?? brand ?? '#db0100';
             const blockColor = blockColorOf(layout.theme, b.id, platformColor, accent);
             const palette = paletteFor(layout.theme?.palette, accent);

@@ -87,8 +87,8 @@ export function heuristicAnalysis(data: ReportData, projectName: string): string
   }
   void impact;
   const next: string[] = [];
-  if (risks[0]) next.push(`Investigate the drop in <em>${risks[0].f.platform} – ${risks[0].f.label}</em> (${pctText(risks[0].f.change!)}).`);
-  if (wins[0]) next.push(`Double down on what worked: <em>${wins[0].f.platform} – ${wins[0].f.label}</em> (${pctText(wins[0].f.change!)}).`);
+  if (risks[0]) next.push(`Investigate the drop in <strong>${risks[0].f.platform} – ${risks[0].f.label}</strong> (${pctText(risks[0].f.change!)}).`);
+  if (wins[0]) next.push(`Double down on what worked: <strong>${wins[0].f.platform} – ${wins[0].f.label}</strong> (${pctText(wins[0].f.change!)}).`);
   next.push('Set goals for the headline metrics so deviations trigger alerts mid-month.');
 
   return [

@@ -6,7 +6,7 @@ import type { WidgetCustom } from '@/lib/layout/types';
 import { formatValue, type FormatOpts } from '@/lib/util/format';
 import { getIntegrationDef } from '@/lib/catalog/integrations';
 import { PlatformIcon } from './platform-icon';
-import { blockColorOf, blockVars, paletteFor } from '@/lib/layout/theme';
+import { GREY_FALLBACK, blockColorOf, blockVars, paletteFor } from '@/lib/layout/theme';
 import type { ReportTheme } from '@/lib/layout/types';
 import { CategoryChart, TimeChart } from './charts-lazy';
 import { ImageCard } from './image-card';
@@ -56,7 +56,8 @@ export function caliper(cur: number | null | undefined, prev: number | null | un
 
 /** Change versus the comparison period: arrow glyph + percentage, coloured by meaning (direction is also carried by the glyph). */
 export function Delta({ pct, diff }: { pct: number | null | undefined; diff: string }) {
-  if (pct == null) return <span className="text-xs text-ink-3">—</span>;
+  // no comparison value: nothing to show (an empty line, never a dash standing in for a number)
+  if (pct == null) return null;
   const up = pct > 0;
   const flat = pct === 0;
   const good = diff === 'neutral' ? null : diff === 'positive_bad' ? !up : up;
@@ -272,7 +273,7 @@ export function PlatformBadge({ slug, name }: { slug: string; name: string }) {
   const def = getIntegrationDef(slug);
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-2">
-      <span className="inline-flex" style={{ color: `var(--block, ${def?.color ?? '#575756'})` }}>
+      <span className="inline-flex" style={{ color: `var(--block, ${def?.color ?? GREY_FALLBACK})` }}>
         <PlatformIcon slug={slug} size={14} tone="ink" />
       </span>
       {name}
@@ -313,7 +314,7 @@ export function BlockHeader({ s, dataNotes, editor }: { s: RenderedSection; data
 function LayoutSection({ s, fmt, brand, theme, dataNotes, events }: { s: RenderedSection; fmt: Fmt; brand?: string; theme?: ReportTheme; dataNotes?: boolean; events?: { date: string; title: string }[] }) {
   // the block's colour (its own, else the report's accent, or the platform's when the look asks) drives the icon, the
   // KPI highlights and the first chart series
-  const platformColor = (s.source && getIntegrationDef(s.source.slug)?.color) || '#636d7c';
+  const platformColor = (s.source && getIntegrationDef(s.source.slug)?.color) || GREY_FALLBACK;
   const accent = theme?.accent ?? brand ?? '#db0100';
   const blockColor = blockColorOf(theme, s.id, platformColor, accent);
   const palette = paletteFor(theme?.palette, accent);

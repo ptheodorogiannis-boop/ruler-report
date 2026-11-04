@@ -14,8 +14,7 @@ export default async function NotFound() {
         {t('notfound.skip')}
       </a>
       <StaticAvatar seed={WORKSPACE_SEED} size={120} expression="far-right-glance" label={t('notfound.face')} className="mb-6" />
-      <div className="eyebrow">404</div>
-      <h1 className="display mt-2 text-[clamp(30px,5vw,48px)] font-semibold leading-[1.05]">{t('notfound.title')}</h1>
+      <h1 className="public-title">{t('notfound.title')}</h1>
       <p className="mt-3 max-w-md text-sm text-ink-2">{t('notfound.body')}</p>
       <svg className="mt-8 w-full max-w-md" height="28" aria-hidden="true">
         <line x1="0" y1="27" x2="100%" y2="27" className="rband-base" />

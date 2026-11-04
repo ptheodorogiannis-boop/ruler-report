@@ -189,7 +189,7 @@ export async function InternalReport({ id, kind }: { id: number; kind: 'report' 
         )}
         {timeline.length > 0 && (
           <section className="print-section space-y-2">
-            <h2 className="text-lg font-bold">{t('common.timeline')}</h2>
+            <h2 className="text-lg font-medium">{t('common.timeline')}</h2>
             <ol className="space-y-2">
               {timeline.map((t) => (
                 <li key={t.id} className="card p-3">

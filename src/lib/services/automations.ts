@@ -13,6 +13,7 @@ import { reconnectUrl } from '@/lib/health-url';
 import { localeForPublic, t } from '@/lib/i18n';
 import { regenerateSource } from '@/lib/engine/report';
 import { formatValue } from '@/lib/util/format';
+import { MAIL, mailButton, mailTitle, mailWrap } from './email-style';
 
 export const FREQUENCIES = ['daily', 'weekly', 'biweekly', 'monthly'] as const;
 export const CHANNELS = ['email', 'in-app', 'whatsapp', 'slack', 'teams', 'discord', 'telegram'] as const;
@@ -118,12 +119,12 @@ function emailHtml(project: Project, title: string, url: string, data: ReportDat
       const v = b.widget.value as any;
       const ch = v.comparison?.change_pct;
       const good = ch == null ? null : b.widget.diff_type === 'positive_bad' ? ch < 0 : ch > 0;
-      return `<td style="padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px"><div style="font-size:11px;color:#64748b">${b.platform} · ${metricLabel({ reference_key: b.widget.reference_key, title: b.widget.label }, loc)}</div><div style="font-size:20px;font-weight:700">${formatValue(v.value, b.widget.format, { currency: b.widget.currency })}</div>${ch != null ? `<div style="font-size:12px;color:${good ? '#16a34a' : '#dc2626'}">${ch > 0 ? '▲' : '▼'} ${Math.abs(ch).toFixed(1)}%</div>` : ''}</td>`;
+      return `<td style="padding:12px 16px;border:1px solid ${MAIL.line};border-radius:12px"><div style="font-size:12px;color:${MAIL.muted}">${b.platform} · ${metricLabel({ reference_key: b.widget.reference_key, title: b.widget.label }, loc)}</div><div style="font-size:22px;font-weight:400">${formatValue(v.value, b.widget.format, { currency: b.widget.currency })}</div>${ch != null ? `<div style="font-size:12px;color:${good ? MAIL.up : MAIL.down}">${ch > 0 ? '▲' : '▼'} ${Math.abs(ch).toFixed(1)}%</div>` : ''}</td>`;
     })
     .reduce<string[][]>((rows, c, i) => (i % 2 === 0 ? [...rows, [c]] : (rows[rows.length - 1].push(c), rows)), [])
     .map((r) => `<tr>${r.join('')}</tr>`)
     .join('');
-  return `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:640px;margin:auto"><h2>${title}</h2><p style="color:#475569">${data.range.start} → ${data.range.end}</p><table cellspacing="8" style="width:100%">${cells}</table>${analysisHtml ?? ''}<p style="margin-top:20px"><a href="${url}" style="background:#4f46e5;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">${t(loc, 'email.openFullReport')}</a></p></div>`;
+  return `${mailWrap(640)}${mailTitle(title)}<p style="color:${MAIL.muted}">${data.range.start} → ${data.range.end}</p><table cellspacing="8" style="width:100%">${cells}</table>${analysisHtml ?? ''}<p style="margin-top:20px">${mailButton(url, t(loc, 'email.openFullReport'))}</p></div>`;
 }
 
 /** The sources whose fetch failed in a generated report (spec v3 §3.2). */
@@ -189,7 +190,7 @@ async function failureAlert(a: AutomationFull, report: Report, failed: SourceSta
   const list = failed
     .map((s) => `<li><strong>${esc(s.platform)}</strong> · ${esc(s.account_name)}: ${esc(s.error ?? t(loc, 'email.failedToLoad'))} — <a href="${base}${reconnectUrl({ id: s.integrationId, projectId: project.id, slug: s.slug })}">${t(loc, 'email.reconnect')}</a></li>`)
     .join('');
-  const html = `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:auto"><h2 style="margin:0 0 8px">${esc(held ? t(loc, 'email.heldTitle') : t(loc, 'email.sentMissingTitle'))}</h2><p style="color:#475569">${esc(project.name)} · ${esc(report.title)}</p><p>${t(loc, held ? 'email.heldIntro' : 'email.sentMissingIntro')}</p><ul>${list}</ul><p><a href="${base}/reports/${report.id}">${t(loc, 'email.openReport')}</a>${held ? t(loc, 'email.heldOutro') : '.'}</p></div>`;
+  const html = `${mailWrap(560)}${mailTitle(esc(held ? t(loc, 'email.heldTitle') : t(loc, 'email.sentMissingTitle')))}<p style="color:${MAIL.muted}">${esc(project.name)} · ${esc(report.title)}</p><p>${t(loc, held ? 'email.heldIntro' : 'email.sentMissingIntro')}</p><ul>${list}</ul><p><a href="${base}/reports/${report.id}">${t(loc, 'email.openReport')}</a>${held ? t(loc, 'email.heldOutro') : '.'}</p></div>`;
   await notify(project.companyId, project.id, title, failed.map((s) => `${s.platform} · ${s.account_name}`).join(', '), `/projects/${project.id}?tab=automations`);
   const to = await alertRecipients(project.companyId);
   if (to.length) await sendEmail(to, `[Ruler Reports] ${title}`, html, { companyId: project.companyId });
@@ -201,7 +202,7 @@ async function reviewAlert(a: AutomationFull, report: Report) {
   const base = process.env.APP_URL || 'http://localhost:3100';
   const loc = localeForPublic(project);
   const title = t(loc, 'email.reviewSubject', { title: report.title });
-  const html = `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:auto"><h2 style="margin:0 0 8px">${esc(t(loc, 'email.reviewTitle'))}</h2><p style="color:#475569">${esc(project.name)} · ${esc(report.title)}</p><p>${esc(t(loc, 'email.reviewIntro'))}</p><p><a href="${base}/reports/${report.id}">${t(loc, 'email.openReport')}</a> · <a href="${base}/automations">${esc(t(loc, 'email.reviewApprove'))}</a></p></div>`;
+  const html = `${mailWrap(560)}${mailTitle(esc(t(loc, 'email.reviewTitle')))}<p style="color:${MAIL.muted}">${esc(project.name)} · ${esc(report.title)}</p><p>${esc(t(loc, 'email.reviewIntro'))}</p><p><a href="${base}/reports/${report.id}">${t(loc, 'email.openReport')}</a> · <a href="${base}/automations">${esc(t(loc, 'email.reviewApprove'))}</a></p></div>`;
   await notify(project.companyId, project.id, title, a.title, `/automations`);
   const to = await alertRecipients(project.companyId);
   if (to.length) await sendEmail(to, `[Ruler Reports] ${title}`, html, { companyId: project.companyId });

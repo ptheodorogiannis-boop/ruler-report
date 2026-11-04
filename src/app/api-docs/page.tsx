@@ -17,7 +17,7 @@ export default async function ApiDocs() {
       <PageHeader title="API, webhooks & MCP" subtitle="REST API v2 is endpoint-compatible with Reportei’s v2, plus extensions for automations, goals, blended metrics and pushed data." />
       <div className="space-y-6">
         <section className="card space-y-3 p-5">
-          <h2 className="font-bold">Authentication</h2>
+          <h2 className="block-title">Authentication</h2>
           <p className="text-sm text-slate-600">
             Create a token in Settings → API tokens, then send it as a bearer token. Base URL: <code>{base}/api/v2</code>
           </p>
@@ -31,7 +31,7 @@ export default async function ApiDocs() {
         </section>
 
         <section className="card space-y-3 p-5">
-          <h2 className="font-bold">Fetch metric values</h2>
+          <h2 className="block-title">Fetch metric values</h2>
           <pre className={code}>{`# 1. discover widgets for an integration type
 curl "${base}/api/v2/metrics?integration_slug=facebook_ads&search=spend" -H "Authorization: Bearer $TOKEN"
 
@@ -44,7 +44,7 @@ curl -X POST ${base}/api/v2/metrics/get-data -H "Authorization: Bearer $TOKEN" -
         </section>
 
         <section className="card space-y-3 p-5">
-          <h2 className="font-bold">Push API (Make · Zapier · n8n · call trackers · CRMs)</h2>
+          <h2 className="block-title">Push API: Make, Zapier, n8n, call trackers and CRMs</h2>
           <p className="text-sm text-slate-600">
             Create a “Push API” integration on a project, then post rows. Numeric fields become metrics, text fields become breakdowns; the widget catalog updates automatically.
           </p>
@@ -57,7 +57,7 @@ curl -X POST ${base}/api/v2/metrics/get-data -H "Authorization: Bearer $TOKEN" -
         </section>
 
         <section className="card space-y-3 p-5">
-          <h2 className="font-bold">Webhooks</h2>
+          <h2 className="block-title">Webhooks</h2>
           <p className="text-sm text-slate-600">
             Events: {WEBHOOK_EVENTS.map((e) => <code key={e} className="mr-1">{e}</code>)}. Each delivery is a JSON POST with <code>X-RulerReports-Event</code> and <code>X-RulerReports-Signature: sha256=&lt;hex&gt;</code> (HMAC-SHA256 of the raw body with the webhook secret).
           </p>
@@ -68,7 +68,7 @@ const ok = timingSafeEqual(Buffer.from(expected), Buffer.from(req.headers['x-rul
         </section>
 
         <section className="card space-y-3 p-5">
-          <h2 className="font-bold">MCP server</h2>
+          <h2 className="block-title">MCP server</h2>
           <p className="text-sm text-slate-600">Give Claude (or any MCP client) access to your reporting data. It talks to this API with your token.</p>
           <pre className={code}>{`{
   "mcpServers": {
@@ -83,7 +83,7 @@ const ok = timingSafeEqual(Buffer.from(expected), Buffer.from(req.headers['x-rul
         </section>
 
         <section className="card overflow-hidden">
-          <div className="px-5 pt-4 font-bold">All endpoints ({routes.length})</div>
+          <div className="px-5 pt-4 font-medium">All endpoints ({routes.length})</div>
           <table className="mt-2 w-full">
             <tbody className="divide-y divide-[var(--line)]">
               {routes.map((r, i) => (

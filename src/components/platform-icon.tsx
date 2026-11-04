@@ -58,7 +58,13 @@ export function PlatformIcon({ slug, size = 16, tone = 'ink', className }: { slu
     );
   }
   const letters = lettermark(def.name);
-  const style = { ['--pm' as string]: `${size}px`, background: tone === 'white' ? 'transparent' : tone === 'brand' ? brand : 'currentColor', color: tone === 'brand' || tone === 'white' ? '#fff' : 'var(--ground)' } as React.CSSProperties;
+  // the ink tile takes the inherited colour (currentColor), so the letters are painted with text-fill instead of `color`:
+  // setting `color` here would turn the tile itself into the ground colour and hide the mark
+  const style = (
+    tone === 'ink'
+      ? { ['--pm' as string]: `${size}px`, background: 'currentColor', WebkitTextFillColor: 'var(--ground)' }
+      : { ['--pm' as string]: `${size}px`, background: tone === 'white' ? 'transparent' : brand, color: '#fff' }
+  ) as React.CSSProperties;
   return (
     <span className={['pmark', className].filter(Boolean).join(' ')} data-lettermark={letters} aria-hidden="true" style={style}>
       {letters}

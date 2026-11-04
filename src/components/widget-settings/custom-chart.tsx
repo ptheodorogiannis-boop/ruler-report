@@ -6,6 +6,7 @@ import { useT } from '@/components/i18n-provider';
 import { X } from 'lucide-react';
 import type { ChartType, GroupBy, SourceInfo, WidgetCustom } from '@/lib/layout/types';
 import { formatTyped, parseTyped } from '@/lib/layout/typed-data';
+import { DEFAULT_ACCENT } from '@/lib/layout/theme';
 import { MetricSelect, Segmented, SourceSelect, sourceLabel, useCatalog } from './common';
 
 export interface PanelProps {
@@ -75,7 +76,7 @@ export function CustomChartSettings({ c, sources, decimal, onChange }: PanelProp
                 </div>
                 <div className="mt-1 flex items-center gap-2">
                   <input className="input" value={s.label ?? ''} placeholder={t('editor.seriesName')} onChange={(e) => patchSeries(i, { label: e.target.value || undefined })} />
-                  <input type="color" className="swatch-input" value={s.color ?? '#1a36e6'} onChange={(e) => patchSeries(i, { color: e.target.value })} aria-label={t('editor.seriesColour')} />
+                  <input type="color" className="swatch-input" value={s.color ?? DEFAULT_ACCENT} onChange={(e) => patchSeries(i, { color: e.target.value })} aria-label={t('editor.seriesColour')} />
                 </div>
               </div>
             );

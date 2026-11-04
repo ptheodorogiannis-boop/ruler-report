@@ -85,7 +85,7 @@ export function LookPanel({ theme, clientColor, projectId, onChange, onClose }: 
             ))}
           </div>
           <div className="mt-2 flex items-center gap-2">
-            <input type="color" name="coverText" aria-label={t('look.titleColour')} className="swatch-input" value={th.coverText ?? '#101418'} onChange={(e) => set({ coverText: e.target.value })} />
+            <input type="color" name="coverText" aria-label={t('look.titleColour')} className="swatch-input" value={th.coverText ?? '#0e0e0e'} onChange={(e) => set({ coverText: e.target.value })} />
             <code className="num text-xs text-ink-3">{th.coverText ?? 'ink'}</code>
             <button type="button" className="btn py-1" disabled={!th.coverText} onClick={() => set({ coverText: undefined })}>
               {t('look.useInk')}
