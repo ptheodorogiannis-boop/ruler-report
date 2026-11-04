@@ -45,7 +45,7 @@ Evidence references (§) point into [`EVIDENCE.md`](EVIDENCE.md). “Parity” =
 | `datatable_v1` custom: `hidden_columns`, `originalOrder`, `sort[]`, `max_number_of_rows` (§3.3) | Parity; filters, dimension change, custom columns missing | `applyTableCustom()` |
 | `calculated_v1` formula with + − × ÷ and parentheses (§3.3) | Parity (no `magic:` groups) | `calculated` widget → `engine/formula.ts` |
 | `empty_v1` manual metric, `wysiwyg_v1` analysis card (§3.3) | Parity (sanitised HTML, no images) | `manual` / `analysis` widgets |
-| `container_v1` campaign containers (§3.3) | **Gap** | — |
+| `container_v1` campaign containers (§3.3) | Parity (+ Ad sets and Ads levels on Meta Ads, with each ad's image and its result type) | `layout/container.ts`, `container-card.tsx`, `widget-settings/container.tsx` |
 | Custom block with title, colour, icon, header (§3.4) | Partial (title; mixes any account's metrics) | `LayoutBlock.integrationId = 0` |
 | Save as template (§3.6) | Parity (+ keeps positions and settings) | `saveAsTemplate()` in `layout/service.ts`, `TemplateWidgetRef.custom/layout` |
 | Generate widget query (§3.2) | Parity | settings drawer → `POST /metrics/get-data` body |
@@ -54,6 +54,9 @@ Evidence references (§) point into [`EVIDENCE.md`](EVIDENCE.md). “Parity” =
 | Change the report period in the editor (re-pull, AI text rewritten) | Extension | `period-control.tsx`, `services/report-period.ts` |
 | Star table rows (tinted on the client link and PDF) | Extension | `custom.starredRows`, `star-row.tsx` |
 | Archive / restore / delete from the reports list | Extension | `Report.archivedAt`, `report-row-menu.tsx`, `publicReportWhere()` |
+| Source dropdown in Add metrics (every account of the report); a metric from another account shows its platform mark | Extension | `source-select.tsx`, `Title` in `widgets.tsx` |
+| Ad images and result types, kept in snapshots; post images and links on Facebook / Instagram tables | Extension | `connectors/meta.ts`, `connectors/meta-results.ts`, `media/thumbs.ts`, `row-thumb.tsx` |
+| Matomo goals as their own metrics, renamed in the tool | Extension | `catalog/matomo-goals.ts`, `services/matomo.ts`, `matomo-goals.tsx` |
 
 ## API v2 (§4)
 
@@ -89,11 +92,12 @@ Evidence references (§) point into [`EVIDENCE.md`](EVIDENCE.md). “Parity” =
 
 | Reportei | Here |
 |---|---|
-| 42 named platforms on its public list (docs/EVIDENCE.md §9) | every one has a slug — 47 slugs because pages/ads and CRM/marketing products are split (`catalog/integrations.ts`); 8 live connectors, the rest synthetic |
+| 42 named platforms on its public list (docs/EVIDENCE.md §9) | every one has a slug — 47 slugs because pages/ads and CRM/marketing products are split (`catalog/integrations.ts`); 10 platforms read live (Meta Ads, Facebook, Instagram, Google Ads, GA4, Search Console, Business Profile, YouTube, WooCommerce, Matomo) plus the custom data sources, the rest synthetic |
 | Google Sheets as custom data source | Parity — auto-detected columns, EU/US numbers and dates |
 | Overview across projects | Parity (+anomalies) — `/overview` |
 | Sharing: link, PDF, WhatsApp | link + print-to-PDF + WhatsApp via automation webhook |
 | Flux (post scheduling), Sync (to Sheets), Academy | not built |
+| Matomo | Live: address + API token, sites picked from the token's list, one integration per site, goals per site — `connectors/matomo.ts`, `matomo-connect.tsx`. Tested against a stand-in (`scripts/mock-providers.mjs`); **not verified against a real Matomo** |
 | One-click account connection with account picker | Equivalent for Google (GA4, Search Console, Business Profile, YouTube) and Meta (ad accounts, Pages, Instagram) — `lib/oauth/*`, `api/oauth/*`, `connect/[slug]/pick`; buttons only when `GOOGLE_CLIENT_ID/SECRET` / `META_APP_ID/SECRET` are set, paste-token forms remain. Tested against mock token/list endpoints only; **not verified live**; other platforms still paste tokens |
 
 ## Extensions beyond Reportei

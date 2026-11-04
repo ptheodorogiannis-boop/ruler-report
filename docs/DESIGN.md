@@ -865,3 +865,38 @@ the client this month, then the client's own suggestions. Its strings are transl
 
 **Rule found on the way.** Sloplint counts a `→` written between two JSX expressions as an arrow glued to a label; date
 ranges are written as one template literal (`` {`${start} → ${end}`} ``), as the rest of the app does.
+
+## Ad previews, sources and Matomo goals (2026-11-04)
+
+Spec: `docs/superpowers/specs/2026-11-04-ads-previews-sources-matomo-design.md`.
+
+**Ads table levels.** A Meta Ads campaign table has a Level in its settings: Campaigns, Ad sets or Ads. At the Ads level
+each row starts with the ad's image (the creative's `image_url`, else its `thumbnail_url`, else a quiet placeholder) and
+the header says Ad. Results and Cost per result count the event each ad set optimises for, read from its optimisation goal
+and promoted object (purchase, add to cart, a custom conversion, a lead form, link clicks…); the event is written under
+both numbers in small text. They exist only per ad or ad set, so the Campaigns level does not offer them and the picker
+never lists them as KPIs. A failed image or ad-set lookup never fails the table.
+
+**Images that last.** Meta's image addresses expire. A snapshot copies each ad image into the media store once
+(`creative-thumb:<sha1 of the address>`, images only, at most 300 KB, 10 s per download) and points the rows at the copy,
+so frozen reports and their PDFs keep their images; the media library does not list these copies. Facebook and Instagram
+post tables show the post's image and link the post's name to it.
+
+**Source dropdown.** Add metrics always shows the account its metrics come from, opening on the block's own account. The
+list has every account of the report with its platform mark, paid media first, then social, analytics and the rest, and
+works from the keyboard. A metric picked from another account keeps that account; its widget shows that platform's mark
+(14 px, named for screen readers) before its title in the editor, on the client link and in the PDF.
+
+**Matomo.** A real connector over Matomo's Reporting API: every call is a POST to `<address>/index.php` with the token in
+the body, never in an address; https only. Connecting asks for the address and an API token, then "Load sites" lists what
+the token can see; each ticked site becomes its own integration, and a site of the same Matomo already in the project gets
+the new token instead of a second row. A wrong address or token shows Matomo's own message and connects nothing.
+Goals are read on connect and on every health check (a check refreshes only the goals). Each goal is its own set of
+metrics (conversions, per day, rate, revenue) in a Goals group after Conversion, plus "Conversions by goal". The
+Integrations tab lists a Matomo account's goals (ID, Matomo's name, "Show as", at most 60 characters); the shown name is
+used in the picker, widget titles, the client link, the PDF and the AI analysis. A goal deleted in Matomo says so on its
+widget. GA4 and Matomo both gain "Top pages by title". The mock server answers as a Matomo at
+`http://127.0.0.1:3198/matomo` (token `mock-matomo`, three sites, goals Lead, ClickToPhone and Contact form).
+
+**Rule found on the way.** A settings list filtered by a setting of the same widget filters at render: `useCatalog`
+applies its filter once per account, so a filter passed to it never sees a later change of level.
