@@ -2937,3 +2937,54 @@ html[data-rr-drag] .newblock-drop {
   background: var(--inset);
 }
 
+/* ───────────── Quantix tones inside tiles (src/lib/layout/tones.ts) ─────────────
+ * Grey (smoke) headline KPIs and dark (solid) tables and bar charts: lighter feedback colours, gridlines and caliper so
+ * they stay readable on the dark ground; the sticky table head takes the tile's own colour. */
+.tone-smoke,
+.tone-solid {
+  --up: #6fbf8b;
+  --down: #ff8a84;
+  --grid-line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.28);
+  --bar-muted: rgba(255, 255, 255, 0.22);
+}
+.tone-smoke {
+  --card: var(--smoke-solid);
+}
+.tone-solid {
+  --card: var(--solid);
+}
+:root {
+  --bar-muted: #c5c5c3;
+}
+.bar-muted {
+  fill: var(--bar-muted);
+}
+.tone-smoke .caliper-prev,
+.tone-solid .caliper-prev {
+  background: var(--card);
+  border-color: var(--ink-3);
+}
+.tone-solid .recharts-cartesian-axis-line,
+.tone-solid .recharts-cartesian-axis-tick-line {
+  stroke: var(--line-on-dark);
+}
+@media print {
+  .tone-smoke,
+  .tone-solid {
+    background: var(--print-paper) !important;
+    border-color: var(--print-line) !important;
+    color: var(--ink) !important;
+    --ink: #0e0e0e;
+    --ink-2: #333332;
+    --ink-3: #575756;
+    --line: var(--print-line);
+    --paper: rgba(14, 14, 14, 0.05);
+    --card: var(--print-paper);
+    --up: #166534;
+    --down: #a80100;
+    --grid-line: rgba(14, 14, 14, 0.07);
+    --bar-muted: #c5c5c3;
+  }
+}
+

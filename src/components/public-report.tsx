@@ -7,6 +7,7 @@ import { themeVars } from '@/lib/layout/theme';
 import { PlatformIcon } from '@/components/platform-icon';
 import { ReportBody } from '@/components/widgets';
 import { ClientAsk } from '@/components/client-ask';
+import { CopyPageLink } from '@/components/copy-page-link';
 import { clientAskTile } from '@/lib/services/client-ask';
 import { PrintButton } from '@/components/action-form';
 import { ReportCover, coverLayoutOf } from '@/components/report-cover';
@@ -166,7 +167,10 @@ export async function PublicReport({ token, kind, embed, preset, compare, print,
             ) : (
               <span className="display text-[15px] font-semibold">{company.name}</span>
             )}
+            <div className="flex items-center gap-2">
+            <CopyPageLink label={tr('public.copyLink')} done={tr('public.linkCopied')} />
             <PrintButton pdf={pdfAvailable() ? { token, query: { preset: kind === 'dashboard' ? clientPreset(r, preset) : undefined, compare: kind === 'dashboard' ? (comparison ? '1' : '0') : undefined, lang } } : undefined} labels={{ print: tr('public.printPdf'), download: tr('public.downloadPdf'), continuous: tr('public.continuous'), pages: tr('public.onePerPage'), browserPrint: tr('public.browserPrint') }} />
+            </div>
           </div>
         </header>
       )}

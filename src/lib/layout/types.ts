@@ -135,6 +135,8 @@ export interface ReportTheme {
   showPeriod?: boolean;
   /** where icons, block colours and first chart series take their colour: the report's accent (default) or each platform's own */
   colors?: 'report' | 'platform';
+  /** Quantix tones on client pages: grey headline KPIs, dark tables and bar charts (default) or glass everywhere */
+  tones?: 'contrast' | 'glass';
 }
 export const PALETTE_NAMES = ['brand', 'vivid', 'calm', 'mono'] as const;
 export type PaletteName = (typeof PALETTE_NAMES)[number];

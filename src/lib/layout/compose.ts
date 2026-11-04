@@ -580,6 +580,7 @@ export const themeSchema = z
     coverText: hex.optional(),
     showPeriod: z.boolean().optional(),
     colors: z.enum(['report', 'platform']).optional(),
+    tones: z.enum(['contrast', 'glass']).optional(),
     blocks: z.record(z.string().max(64), z.object({ color: hex.optional() }).strict()).refine((b) => Object.keys(b).length <= 100, 'Too many block colours').optional(),
   })
   .strict();

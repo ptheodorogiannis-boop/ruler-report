@@ -15,6 +15,7 @@ import { ICONS, TileCard } from './infographic';
 import { ContainerCard } from './container-card';
 import { CompareCard } from './compare-card';
 import { MapCard } from './map-card';
+import { TONE_CLASS, blockTone, type Tone } from '@/lib/layout/tones';
 import { PdfCard } from './pdf-card';
 import { reconnectUrl } from '@/lib/health-url';
 import { DataNote } from './data-note';
@@ -35,6 +36,8 @@ export interface CardProps {
   palette?: string[];
   /** timeline events drawn on time charts */
   events?: { date: string; title: string }[];
+  /** the Quantix tone of the tile on client pages (src/lib/layout/tones.ts) */
+  tone?: Tone;
 }
 const customOf = (b: RenderedBlock) => (b.custom ?? {}) as WidgetCustom;
 
@@ -72,7 +75,7 @@ export function Delta({ pct, diff }: { pct: number | null | undefined; diff: str
   );
 }
 
-function Kpi({ b, fmt, grid }: CardProps) {
+function Kpi({ b, fmt, grid, tone }: CardProps) {
   const w = b.widget;
   const v = w.value as Extract<WidgetValue, { type: 'number' }>;
   const c = customOf(b);
@@ -84,7 +87,7 @@ function Kpi({ b, fmt, grid }: CardProps) {
   const abs = v.comparison?.absolute;
   const cal = caliper(v.value, v.comparison?.value, w.diff_type);
   return (
-    <div className={clsx('card kpi p-4', grid && 'flex h-full flex-col justify-center overflow-hidden', hl && 'border-l-4')} style={hl ? { borderLeftColor: 'var(--block, var(--brand))' } : undefined} title={w.description}>
+    <div className={clsx('card kpi p-4', tone && TONE_CLASS[tone], grid && 'flex h-full flex-col justify-center overflow-hidden', hl && 'border-l-4')} style={hl ? { borderLeftColor: 'var(--block, var(--brand))' } : undefined} title={w.description}>
       <div className="flex items-center gap-1 text-xs font-medium text-ink-2">
         {hl && <Star size={11} className="shrink-0 fill-brand text-brand" aria-label={tr('public.highlighted')} />}
         <span className="truncate">{labelOf(b)}</span>
@@ -114,7 +117,7 @@ function Kpi({ b, fmt, grid }: CardProps) {
   );
 }
 
-function ChartCard({ b, fmt, brand, grid, palette, events }: CardProps) {
+function ChartCard({ b, fmt, brand, grid, palette, events, tone }: CardProps) {
   const w = b.widget;
   const v = w.value as Extract<WidgetValue, { type: 'chart' }>;
   const c = customOf(b);
@@ -125,7 +128,7 @@ function ChartCard({ b, fmt, brand, grid, palette, events }: CardProps) {
   const colors = seriesColors(c.series, palette); // colours chosen per series in the panel, else the report palette
   const first = c.series?.[0]?.color ?? brand;
   return (
-    <div className={clsx('card flex flex-col p-4', grid && 'h-full overflow-hidden')} title={w.description}>
+    <div className={clsx('card flex flex-col p-4', tone && TONE_CLASS[tone], grid && 'h-full overflow-hidden')} title={w.description}>
       <div className="mb-2 flex items-baseline justify-between gap-2">
         <div className="truncate text-sm font-semibold">{labelOf(b)}</div>
         {c.groupBy && c.groupBy !== 'day' && <span className="eyebrow shrink-0">{c.groupBy === 'week' || c.groupBy === 'month' || c.groupBy === 'quarter' ? tr(`public.by_${c.groupBy}`) : `by ${c.groupBy}`}</span>}
@@ -134,22 +137,22 @@ function ChartCard({ b, fmt, brand, grid, palette, events }: CardProps) {
         {v.labels.length === 0 ? (
           <div className="py-10 text-center text-sm text-slate-400">{tr('public.noData')}</div>
         ) : isTime ? (
-          <TimeChart labels={v.labels} series={v.series} seriesLabels={v.seriesLabels ?? []} format={w.format} opts={o} comparison={v.comparison?.series} color={first} fill={grid} kind={kind} palette={colors} events={events} />
+          <TimeChart labels={v.labels} series={v.series} seriesLabels={v.seriesLabels ?? []} format={w.format} opts={o} comparison={v.comparison?.series} color={first} fill={grid} kind={kind} palette={colors} events={events} highlight={tone === 'solid' ? (c.groupBy === 'month' ? 'last' : 'max') : undefined} />
         ) : (
-          <CategoryChart labels={v.labels} series={v.series} seriesLabels={v.seriesLabels ?? []} format={w.format} opts={o} pie={pie} donut={c.chartType === 'donut'} stacked={c.chartType === 'stacked'} fill={grid} palette={colors} />
+          <CategoryChart labels={v.labels} series={v.series} seriesLabels={v.seriesLabels ?? []} format={w.format} opts={o} pie={pie} donut={c.chartType === 'donut'} stacked={c.chartType === 'stacked'} fill={grid} palette={colors} highlight={tone === 'solid' ? 'max' : undefined} />
         )}
       </div>
     </div>
   );
 }
 
-function TableCard({ b, fmt, grid }: CardProps) {
+function TableCard({ b, fmt, grid, tone }: CardProps) {
   const w = b.widget;
   const v = w.value as Extract<WidgetValue, { type: 'table' }>;
   const o = { currency: w.currency, ...fmt };
   const heads = tableColumnLabels(getIntegrationDef(b.slug)?.prefix ?? b.slug, v, getRequestLocale());
   return (
-    <div className={clsx('card flex flex-col overflow-hidden', grid ? 'h-full' : 'lg:col-span-2')} title={w.description}>
+    <div className={clsx('card flex flex-col overflow-hidden', tone && TONE_CLASS[tone], grid ? 'h-full' : 'lg:col-span-2')} title={w.description}>
       <div className="flex items-center justify-between px-4 pt-3">
         <div className="truncate text-sm font-semibold">{labelOf(b)}</div>
         <div className="num shrink-0 text-xs text-ink-3">
@@ -313,7 +316,7 @@ export function BlockHeader({ s, dataNotes, editor }: { s: RenderedSection; data
 }
 
 /** A layout block: header + widgets positioned on the 12-column grid. */
-function LayoutSection({ s, fmt, brand, theme, dataNotes, events }: { s: RenderedSection; fmt: Fmt; brand?: string; theme?: ReportTheme; dataNotes?: boolean; events?: { date: string; title: string }[] }) {
+function LayoutSection({ s, fmt, brand, theme, dataNotes, events, headline }: { s: RenderedSection; fmt: Fmt; brand?: string; theme?: ReportTheme; dataNotes?: boolean; events?: { date: string; title: string }[]; /** the first block with KPI tiles: they render grey (spec §4) */ headline?: boolean }) {
   // the block's colour (its own, else the report's accent, or the platform's when the look asks) drives the icon, the
   // KPI highlights and the first chart series
   const platformColor = (s.source && getIntegrationDef(s.source.slug)?.color) || GREY_FALLBACK;
@@ -329,7 +332,7 @@ function LayoutSection({ s, fmt, brand, theme, dataNotes, events }: { s: Rendere
         <div className="rgrid">
           {s.blocks.map((b, i) => (
             <div key={b.id ?? i} className="ritem" style={gridStyle(b.layout!)} data-w={b.layout!.w} data-kind={b.widget.value.type}>
-              <WidgetCard b={b} fmt={fmt} brand={blockColor} palette={palette} grid events={events} />
+              <WidgetCard b={b} fmt={fmt} brand={blockColor} palette={palette} grid events={events} tone={blockTone(!!headline, b, theme?.tones)} />
             </div>
           ))}
         </div>
@@ -443,6 +446,7 @@ export function ReportBody({ data, fmt, brand, sourceActions, dataNotes, cards }
   const known = new Set(data.sections.map((s) => s.id));
   const top = (cards ?? []).filter((c) => !c.blockId || !known.has(c.blockId));
   const forBlock = (id: string) => (cards ?? []).filter((c) => c.blockId === id);
+  const headlineId = data.sections.find((s) => s.source && s.blocks.some((b) => b.widget.value.type === 'number'))?.id;
   return (
     <div className="space-y-8">
       <SourceStatusList sources={data.sources} actions={sourceActions} />
@@ -457,7 +461,7 @@ export function ReportBody({ data, fmt, brand, sourceActions, dataNotes, cards }
       {data.sections.length === 0 && <div className="card p-8 text-center text-sm text-ink-2">{tr('public.noMatchingWidgets')}</div>}
       {data.sections.map((s) => (
         <Fragment key={s.id}>
-          {s.source ? <LayoutSection s={s} fmt={fmt} brand={accent} theme={data.theme} dataNotes={dataNotes} events={data.events} /> : <AutoSection s={s} fmt={fmt} brand={accent} />}
+          {s.source ? <LayoutSection s={s} fmt={fmt} brand={accent} theme={data.theme} dataNotes={dataNotes} events={data.events} headline={s.id === headlineId} /> : <AutoSection s={s} fmt={fmt} brand={accent} />}
           {forBlock(s.id).map((c) => (
             <AnalysisCardView key={c.id} c={c} />
           ))}

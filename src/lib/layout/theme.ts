@@ -35,6 +35,7 @@ export function cleanTheme(t: ReportTheme | undefined): ReportTheme | undefined 
   if (t.coverText) out.coverText = t.coverText;
   if (t.showPeriod === false) out.showPeriod = false;
   if (t.colors === 'platform') out.colors = 'platform';
+  if (t.tones === 'glass') out.tones = 'glass';
   if (t.blocks) {
     const blocks: Record<string, { color?: string }> = {};
     for (const [id, b] of Object.entries(t.blocks)) if (b?.color) blocks[id] = { color: b.color };

@@ -68,6 +68,18 @@ export function LookPanel({ theme, clientColor, projectId, onChange, onClose }: 
             </div>
             <div className="mt-1 text-xs text-ink-3">{t('look.colorsHint')}</div>
           </div>
+          <div className="mt-4" data-tones-option>
+            <div className="label">{t('look.tones')}</div>
+            <div className="segments">
+              <button type="button" aria-pressed={(th.tones ?? 'contrast') === 'contrast'} onClick={() => set({ tones: undefined })}>
+                {t('look.tonesOn')}
+              </button>
+              <button type="button" aria-pressed={th.tones === 'glass'} onClick={() => set({ tones: 'glass' })}>
+                {t('look.tonesOff')}
+              </button>
+            </div>
+            <div className="mt-1 text-xs text-ink-3">{t('look.tonesHint')}</div>
+          </div>
         </div>
         <div>
           <div className="label">{t('look.coverImage')}</div>
