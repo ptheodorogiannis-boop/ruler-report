@@ -4,8 +4,23 @@
 //   meta | gads | ga4 | gsc | woo | sheets | csv | rest | ingest | facebook | instagram | youtube | gbp  → real connector code in src/lib/connectors
 //   demo                                                   → deterministic synthetic data until a real connector is written
 
+import type { Variants } from './helpers';
+
 export type Category = 'social' | 'ads' | 'analytics' | 'seo' | 'crm' | 'email' | 'ecommerce' | 'local' | 'calls' | 'custom';
 export type ConnectorId = 'demo' | 'meta' | 'gads' | 'ga4' | 'gsc' | 'woo' | 'sheets' | 'csv' | 'rest' | 'ingest' | 'facebook' | 'instagram' | 'youtube' | 'gbp';
+
+/** Meta's publisher platforms: the only ads platform whose numbers split by Facebook / Instagram / Messenger / Audience Network */
+const META_VARIANTS: Variants = {
+  dimension: 'publisher_platform',
+  keys: ['reach', 'impressions', 'clicks', 'spend', 'ctr', 'cpc', 'cpm'],
+  values: [
+    { value: 'facebook', suffix: 'facebook', title: 'Facebook' },
+    { value: 'instagram', suffix: 'instagram', title: 'Instagram' },
+    { value: 'messenger', suffix: 'messenger', title: 'Messenger' },
+    { value: 'audience_network', suffix: 'audience_network', title: 'Audience Network' },
+  ],
+};
+
 export type AuthKind = 'oauth_google' | 'oauth_meta' | 'api_key' | 'basic' | 'token' | 'url' | 'none';
 
 export interface IntegrationDef {
@@ -24,6 +39,8 @@ export interface IntegrationDef {
   /** present in Reportei's public list? false = our extension */
   inReportei: boolean;
   region?: string;
+  /** platform-split variants of the archetype's widgets (Meta Ads only) */
+  variants?: Variants;
 }
 
 const d = (
@@ -65,6 +82,7 @@ export const INTEGRATIONS: IntegrationDef[] = [
   d('facebook_ads', 'Meta Ads', 'ads', 'ads', 'fb_ads', 'meta', 'oauth_meta', '#0668e1', true, {
     sourceIdLabel: 'Ad account ID (act_…)',
     currency: true,
+    variants: META_VARIANTS,
     fields: [{ name: 'accessToken', label: 'Marketing API access token', secret: true, help: 'System-user token with ads_read' }],
   }),
   d('google_adwords', 'Google Ads', 'ads', 'ads', 'gads', 'gads', 'oauth_google', '#4285f4', true, {

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { Integration, Project, Report, Template, Webhook, TimelineEvent, Automation, Goal, CustomMetric } from '@prisma/client';
 import { assertProject, canAdmin, canWrite, projectScope, type Principal } from '@/lib/auth';
 import { getCatalog, findWidget, toDefinition } from '@/lib/catalog/build';
+import { pickableMetrics } from '@/lib/catalog/pickable';
 import { INTEGRATIONS, getIntegrationDef } from '@/lib/catalog/integrations';
 import { connectorFor } from '@/lib/connectors';
 import { randomToken, sha256 } from '@/lib/crypto';
@@ -205,7 +206,9 @@ add('GET', '/metrics', async ({ p, query }) => {
     config = i?.config ?? null;
   }
   const pg = pageParams(query, [], 'x');
-  const all = getCatalog(slug, config).map(toDefinition);
+  // pickable=1: what the editor's picker offers (src/lib/catalog/pickable.ts); without it, the whole catalog as before
+  const catalog = getCatalog(slug, config);
+  const all = (query.get('pickable') === '1' ? pickableMetrics(slug, catalog) : catalog).map(toDefinition);
   const search = (query.get('search') ?? '').toLowerCase();
   const filtered = search ? all.filter((w) => `${w.reference_key} ${w.references.title}`.toLowerCase().split(' ').some((_, __, a) => search.split(/\s+/).every((t) => a.join(' ').includes(t)))) : all;
   const per = Math.min(100, Number(query.get('per_page')) || 100);

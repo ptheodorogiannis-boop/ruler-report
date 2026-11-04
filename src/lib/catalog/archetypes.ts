@@ -49,16 +49,6 @@ export const ADS: Archetype = {
     placement: ['Feed', 'Stories', 'Reels', 'Search', 'Right column', 'Network'],
   },
   namedDims: { campaign: { prefix: 'Campaign', count: 7 }, adset: { prefix: 'Ad set', count: 12 }, ad: { prefix: 'Ad', count: 25 } },
-  variants: {
-    dimension: 'publisher_platform',
-    keys: ['reach', 'impressions', 'clicks', 'spend', 'ctr', 'cpc', 'cpm'],
-    values: [
-      { value: 'facebook', suffix: 'facebook', title: 'Facebook' },
-      { value: 'instagram', suffix: 'instagram', title: 'Instagram' },
-      { value: 'messenger', suffix: 'messenger', title: 'Messenger' },
-      { value: 'audience_network', suffix: 'audience_network', title: 'Audience Network' },
-    ],
-  },
   widgets: () => [
     sum('spend', 'Amount spent', 'spend', { ...MONEY, diff: 'neutral', desc: 'Total amount spent on ads during the selected period.', group: 'Investment' }),
     sum('impressions', 'Total impressions', 'impressions', { desc: 'The number of times your ads were on screen.', group: 'Delivery' }),

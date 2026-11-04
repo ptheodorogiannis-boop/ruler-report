@@ -32,8 +32,13 @@ export interface Archetype {
   /** dimensions whose demo categories are free-form names (campaigns, pages…) */
   namedDims?: Record<string, { prefix: string; count: number }>;
   widgets: () => WidgetSpec[];
-  /** platform-split variants: dimension + values + suffix labels */
-  variants?: { dimension: string; values: { value: string; suffix: string; title: string }[]; keys: string[] };
+}
+
+/** Platform-split variants (reach → reach_facebook …): only for a platform that can split its numbers that way. */
+export interface Variants {
+  dimension: string;
+  values: { value: string; suffix: string; title: string }[];
+  keys: string[];
 }
 
 type Opts = {

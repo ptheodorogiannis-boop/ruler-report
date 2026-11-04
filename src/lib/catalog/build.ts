@@ -58,17 +58,17 @@ export function getCatalog(slug: string, config?: { columns?: CustomColumn[] } |
   for (const w of base) out.push({ ...w, slug, prefix: def.prefix, reference_key: `${def.prefix}:${w.key}`, tags: tagsFor(w, def.category) });
 
   // platform-split variants: reach → reach_facebook, reach_instagram …  (this is why Reportei's catalog has hundreds of entries)
-  if (arch.variants) {
-    for (const key of arch.variants.keys) {
+  if (def.variants) {
+    for (const key of def.variants.keys) {
       const w = base.find((x) => x.key === key);
       if (!w) continue;
-      for (const v of arch.variants.values) {
+      for (const v of def.variants.values) {
         out.push({
           ...w,
           key: `${key}_${v.suffix}`,
           title: `${w.title} on ${v.title}`,
           description: `${w.title}, taking into account only what ran on ${v.title}.`,
-          filter: { dimension: arch.variants.dimension, value: v.value },
+          filter: { dimension: def.variants.dimension, value: v.value },
           slug,
           prefix: def.prefix,
           reference_key: `${def.prefix}:${key}_${v.suffix}`,
