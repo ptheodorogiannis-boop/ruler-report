@@ -27,6 +27,8 @@ export const ADS: Archetype = {
     conversions: { of: 'link_clicks', rate: 0.045, vol: 0.18 },
     conversion_value: { of: 'conversions', rate: 38, vol: 0.25, decimals: 2 },
     engagements: { of: 'impressions', rate: 0.035, vol: 0.12 },
+    // Meta's per-ad results (its ad set's own event; meta-extra.ts): demo rows use the conversions share
+    results: { of: 'link_clicks', rate: 0.06, vol: 0.2 },
   },
   virtual: {
     ctr: { num: 'clicks', den: 'impressions', mult: 100 },

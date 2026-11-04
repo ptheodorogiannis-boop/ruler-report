@@ -36,7 +36,7 @@ const scopeSuffix = (scope?: CampaignScope) => {
 export function valueKey(w: Pick<LayoutWidget, 'slug' | 'key' | 'integrationId' | 'custom'>, scope?: CampaignScope): string | null {
   if (w.slug === 'manual' || w.slug === 'analysis' || w.slug === 'calculated' || w.slug === 'custom_chart' || w.slug === 'infographic' || w.slug === 'image' || w.slug === 'compare' || w.slug === 'pdf' || w.slug === 'map') return null;
   // a campaign table's value depends on the metrics chosen, so they are part of the key
-  if (w.slug === 'container') return `${w.integrationId}:container:${hashText((w.custom?.metrics ?? []).join(','))}${periodSuffix(w.custom?.period)}${scopeSuffix(scope)}`;
+  if (w.slug === 'container') return `${w.integrationId}:container:${hashText((w.custom?.metrics ?? []).join(','))}${w.custom?.level && w.custom.level !== 'campaign' ? `:${w.custom.level}` : ''}${periodSuffix(w.custom?.period)}${scopeSuffix(scope)}`;
   return `${w.integrationId}:${w.key}${periodSuffix(w.custom?.period)}${scopeSuffix(scope)}`;
 }
 /** Store key of a value: `integrationId:key[@start..end][#scopeHash]` — the scope hash keeps two campaign scopes of one account apart. */
@@ -560,6 +560,7 @@ export const customSchema = z
     // analysis_v1 text kept through a period change: the range it was written for (cleared on the next edit)
     staleFor: z.object({ start: z.string().max(10), end: z.string().max(10) }).strict().optional(),
     starredRows: z.array(z.string().max(STAR_NAME_MAX)).max(STARS_MAX).optional(),
+    level: z.enum(['campaign', 'adset', 'ad']).optional(),
   })
   .strict();
 

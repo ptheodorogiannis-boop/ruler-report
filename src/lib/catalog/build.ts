@@ -53,7 +53,7 @@ export function getCatalog(slug: string, config?: { columns?: CustomColumn[] } |
   const hit = cache.get(ck);
   if (hit) return hit;
   const arch = ARCHETYPES[def.archetype];
-  const base = arch.widgets();
+  const base = [...arch.widgets(), ...(def.extraWidgets?.() ?? [])];
   const out: CatalogWidget[] = [];
   for (const w of base) out.push({ ...w, slug, prefix: def.prefix, reference_key: `${def.prefix}:${w.key}`, tags: tagsFor(w, def.category) });
 

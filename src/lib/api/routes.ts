@@ -241,7 +241,7 @@ add('POST', '/metrics/get-data', async ({ p, body }) => {
     else if (v.type === 'funnel') out[id] = { values: { steps: v.steps } };
     else if (v.type === 'text') out[id] = { values: { html: v.html } };
     else if (v.type === 'tile') out[id] = { values: { kind: v.kind, value: v.value ?? null, target: v.target ?? null, items: v.items ?? [] } };
-    else if (v.type === 'container') out[id] = { values: { metrics: v.metrics.map((m) => m.key), rows: v.rows.map((r) => ({ id: r.id, name: r.name, status: r.status, ...Object.fromEntries(v.metrics.map((m, i) => [m.key, r.values[i]])) })), truncated: v.truncated } };
+    else if (v.type === 'container') out[id] = { values: { metrics: v.metrics.map((m) => m.key), rows: v.rows.map((r) => ({ id: r.id, name: r.name, status: r.status, ...(r.thumb !== undefined ? { thumb: r.thumb } : {}), ...(r.resultType !== undefined ? { result_type: r.resultType } : {}), ...Object.fromEntries(v.metrics.map((m, i) => [m.key, r.values[i]])) })), truncated: v.truncated } };
     else if (v.type === 'pdf') out[id] = { values: { url: v.url, pages: v.pages ?? null, caption: v.caption ?? '' } };
     else if (v.type === 'map') out[id] = { values: { metrics: v.metrics.map((m) => ({ label: m.label, format: m.format, currency: m.currency ?? null, platform: m.platform, error: m.error ?? null })), countries: v.countries.map((c) => ({ code: c.code, name: c.name, values: c.values, previous: c.previous })), unmatched: v.unmatched } };
     else if (v.type === 'compare') out[id] = { values: { mode: v.mode, columns: v.columns.map((c) => ({ label: c.label, period: c.range ?? null, value: c.value, difference: c.change_pct ?? null, absoluteDifference: c.absolute ?? null, base: !!c.base })), total: v.total ?? null } };

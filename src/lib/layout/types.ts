@@ -41,6 +41,8 @@ export interface WidgetCustom {
   metrics?: string[];
   showStatus?: boolean;
   hiddenCampaigns?: string[];
+  /** campaign table rows: campaigns (default), ad sets or ads (docs/superpowers/specs/2026-11-04-ads-previews-sources-matomo-design.md §1) */
+  level?: 'campaign' | 'adset' | 'ad';
   // chart_v1
   chartType?: ChartType;
   groupBy?: GroupBy;

@@ -4,7 +4,9 @@
 //   meta | gads | ga4 | gsc | woo | sheets | csv | rest | ingest | facebook | instagram | youtube | gbp  → real connector code in src/lib/connectors
 //   demo                                                   → deterministic synthetic data until a real connector is written
 
+import type { WidgetSpec } from '@/lib/engine/types';
 import type { Variants } from './helpers';
+import { metaExtraWidgets } from './meta-extra';
 
 export type Category = 'social' | 'ads' | 'analytics' | 'seo' | 'crm' | 'email' | 'ecommerce' | 'local' | 'calls' | 'custom';
 export type ConnectorId = 'demo' | 'meta' | 'gads' | 'ga4' | 'gsc' | 'woo' | 'sheets' | 'csv' | 'rest' | 'ingest' | 'facebook' | 'instagram' | 'youtube' | 'gbp';
@@ -41,6 +43,8 @@ export interface IntegrationDef {
   region?: string;
   /** platform-split variants of the archetype's widgets (Meta Ads only) */
   variants?: Variants;
+  /** widgets this platform adds to its archetype's (Meta Ads: Results, Cost per result) */
+  extraWidgets?: () => WidgetSpec[];
 }
 
 const d = (
@@ -83,6 +87,7 @@ export const INTEGRATIONS: IntegrationDef[] = [
     sourceIdLabel: 'Ad account ID (act_…)',
     currency: true,
     variants: META_VARIANTS,
+    extraWidgets: metaExtraWidgets,
     fields: [{ name: 'accessToken', label: 'Marketing API access token', secret: true, help: 'System-user token with ads_read' }],
   }),
   d('google_adwords', 'Google Ads', 'ads', 'ads', 'gads', 'gads', 'oauth_google', '#4285f4', true, {

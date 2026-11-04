@@ -48,6 +48,8 @@ export function containerFromRows(
         name: camp?.name ?? r.label ?? r.key,
         status: camp?.status ?? ('other' as const),
         values: keys.map((k) => valueOf(r, k)),
+        ...(r.thumb !== undefined ? { thumb: r.thumb } : {}),
+        ...(r.resultType !== undefined ? { resultType: r.resultType } : {}),
         ...(prevBy ? { comparison: keys.map((k) => (p ? valueOf(p, k) : null)) } : {}),
       };
     });
@@ -71,9 +73,11 @@ export async function resolveContainer(
   const metrics: ContainerMetric[] = widgets.map((wd) => ({ key: wd.key, label: wd.title, format: wd.format }));
   const plan = planPrims(ctx.slug, [...new Set(widgets.flatMap((wd) => widgetPrims(wd.calc)))]);
   const sortBy = plan.real[0];
-  const scoped = (rs: BreakdownRow[]) => (campaignIds ? rs.filter((r) => campaignIds.includes(r.key)) : rs);
-  const rows = scoped(await session.getBreakdown(ctx, 'campaign', plan.real, range, sortBy, campaignIds));
-  const prev = comparison ? scoped(await session.getBreakdown(ctx, 'campaign', plan.real, comparison, sortBy, campaignIds)) : null;
+  const level = c.level ?? 'campaign';
+  // below campaigns the rows are ads or ad sets: the scope narrows the connector's call, never the row keys
+  const scoped = (rs: BreakdownRow[]) => (campaignIds && level === 'campaign' ? rs.filter((r) => campaignIds.includes(r.key)) : rs);
+  const rows = scoped(await session.getBreakdown(ctx, level, plan.real, range, sortBy, campaignIds));
+  const prev = comparison ? scoped(await session.getBreakdown(ctx, level, plan.real, comparison, sortBy, campaignIds)) : null;
   const byKey = new Map(widgets.map((wd) => [wd.key, wd]));
   const valueOf: ValueOf = (row, key) => {
     const wd = byKey.get(key);
@@ -89,5 +93,6 @@ export async function resolveContainer(
     return prim ? rowValue(row, prim, plan) : null;
   };
   // the full row set is stored; hidden / sort / rows are applied at compose time so a settings change never re-fetches (review C1)
-  return containerFromRows(rows, prev, metrics, { rows: MAX_CONTAINER_ROWS }, campaigns, valueOf);
+  const value = containerFromRows(rows, prev, metrics, { rows: MAX_CONTAINER_ROWS }, campaigns, valueOf);
+  return level === 'campaign' ? value : { ...value, level };
 }

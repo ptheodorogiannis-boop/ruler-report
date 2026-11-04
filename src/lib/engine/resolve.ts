@@ -245,6 +245,7 @@ export async function resolveWidget(inp: ResolveInput): Promise<WidgetValue> {
   const calc = widget.calc;
   const filter = widget.filter;
   const ids = inp.campaignIds;
+  if (widget.containerOnly) return { type: 'error', code: 'invalid_metrics_combination', message: 'Only in the campaign table (Ads or Ad sets level).' };
   const scopeRows = (rows: BreakdownRow[], dimension: string) => (inp.campaignIds && dimension === 'campaign' ? rows.filter((r) => inp.campaignIds!.includes(r.key)) : rows);
   try {
     const plan = planPrims(integration.slug, widgetPrims(calc));

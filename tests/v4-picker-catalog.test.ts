@@ -12,7 +12,7 @@ test('platform variants exist on Meta Ads only', async () => {
   assert.ok(getCatalog('facebook_ads').some((w) => w.key === 'reach_facebook'));
   for (const slug of ['google_adwords', 'tiktok_ads', 'linkedin_ads']) assert.equal(getCatalog(slug).filter((w) => VARIANT.test(w.key)).length, 0, slug);
   assert.equal(getCatalog('google_adwords').length, 38);
-  assert.equal(getCatalog('facebook_ads').length, 66);
+  assert.equal(getCatalog('facebook_ads').length, 68, '66 + Results and Cost per result (2026-11-04 ads spec)');
 });
 
 test('group ids', async () => {

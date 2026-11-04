@@ -36,6 +36,8 @@ export interface WidgetSpec {
   canAggregate?: boolean;
   tags?: Partial<WidgetTags>;
   group?: string; // UI grouping in the picker
+  /** only meaningful per row of the campaign table (Results): not offered as a KPI, refused outside the table */
+  containerOnly?: boolean;
 }
 
 export interface WidgetTags {
@@ -126,8 +128,10 @@ export interface ImageValue {
 export interface ContainerValue {
   type: 'container';
   metrics: { key: string; label: string; format: Format }[];
-  rows: { id: string; name: string; status: 'active' | 'paused' | 'other'; values: (number | null)[]; comparison?: (number | null)[] }[];
+  rows: { id: string; name: string; status: 'active' | 'paused' | 'other'; values: (number | null)[]; comparison?: (number | null)[]; /** ads: the creative */ thumb?: string | null; /** ads / ad sets: the action type that counts as a result */ resultType?: string | null }[];
   truncated: number;
+  /** campaigns (absent), ad sets or ads */
+  level?: 'campaign' | 'adset' | 'ad';
 }
 /**
  * Comparison container (compare_v1): one metric across chosen periods (this period against the previous one, the same

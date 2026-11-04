@@ -12,5 +12,6 @@ export function pickableMetrics(slug: string, widgets: CatalogWidget[]): Catalog
   if (!def || def.archetype === 'custom') return widgets;
   const unsupported = new Set(getConnector(def.connector).unsupported ?? []);
   const loads = (w: CatalogWidget) => !unsupported.size || !planPrims(slug, widgetPrims(w.calc)).real.some((p) => unsupported.has(p));
-  return sortByGroup(def.archetype, widgets.filter(loads));
+  // Results / Cost per result only exist per row of the campaign table
+  return sortByGroup(def.archetype, widgets.filter((w) => !w.containerOnly && loads(w)));
 }

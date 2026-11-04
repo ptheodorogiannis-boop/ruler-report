@@ -8,10 +8,16 @@ import { DEFAULT_CONTAINER_METRICS, MAX_CONTAINER_ROWS } from '@/lib/layout/type
 import { useCatalog } from './common';
 import type { PanelProps } from './custom-chart';
 
+const PER_ROW_ONLY = ['results', 'cost_per_result'];
+const LEVEL_LABEL = { campaign: 'editor.levelCampaign', adset: 'editor.levelAdset', ad: 'editor.levelAd' } as const;
+
 export function ContainerSettings({ c, sources, integrationId, rendered, onChange }: Pick<PanelProps, 'c' | 'sources' | 'onChange'> & { integrationId: number; rendered?: RenderedBlock }) {
   const t = useT();
   const source = sources.find((s) => s.id === integrationId) ?? null;
-  const { metrics, loading } = useCatalog(source, (m) => m.component === 'number_v1');
+  const level = c.level ?? 'campaign';
+  // Results / Cost per result count each ad set's own event: only per ad or ad set (spec 2026-11-04 ads §1)
+  const { metrics, loading } = useCatalog(source, (m) => m.component === 'number_v1' && (level !== 'campaign' || !PER_ROW_ONLY.includes(m.key)));
+  const levels = source?.slug === 'facebook_ads' ? (['campaign', 'adset', 'ad'] as const) : null;
   const chosen = c.metrics?.length ? c.metrics : DEFAULT_CONTAINER_METRICS;
   const toggle = (key: string) => onChange({ metrics: chosen.includes(key) ? chosen.filter((k) => k !== key) : [...chosen, key] });
   const value = rendered?.widget.value;
@@ -20,6 +26,20 @@ export function ContainerSettings({ c, sources, integrationId, rendered, onChang
   const hidden = c.hiddenCampaigns ?? [];
   return (
     <div className="space-y-4" data-panel="container">
+      {levels && (
+        <div>
+          <label className="label" htmlFor="container-level">
+            {t('editor.level')}
+          </label>
+          <select id="container-level" className="input" value={level} onChange={(e) => onChange({ level: e.target.value === 'campaign' ? undefined : (e.target.value as 'adset' | 'ad'), hiddenCampaigns: undefined })} data-container-level>
+            {levels.map((l) => (
+              <option key={l} value={l}>
+                {t(LEVEL_LABEL[l])}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div>
         <div className="label">{t('editor.containerMetrics')}</div>
         {loading && <div className="text-xs text-ink-3">{t('editor.loadingCatalog')}</div>}
@@ -57,7 +77,7 @@ export function ContainerSettings({ c, sources, integrationId, rendered, onChang
       </label>
       {(rows.length > 0 || hidden.length > 0) && (
         <div>
-          <div className="label">{t('editor.hideCampaigns')}</div>
+          <div className="label">{t('editor.hiddenRows')}</div>
           <ul className="max-h-40 overflow-auto rounded-lg border border-[var(--line)] text-sm">
             {rows.map((r) => (
               <li key={r.id}>
