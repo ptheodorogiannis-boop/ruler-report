@@ -106,6 +106,9 @@ export function ReportEditor(props: EditorProps) {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [panelBlock, setPanelBlock] = useState<string | null>(null);
+  // a period change is running: the canvas is locked until the page remounts with the new numbers
+  const locked = useRef(false);
+  const [periodBusy, setPeriodBusy] = useState(false);
   // right-click in a block (spec 2026-11-04 editor §4): where, and on which widget (null = empty space)
   const [menu, setMenu] = useState<{ blockId: string; widgetId: string | null; x: number; y: number } | null>(null);
   const closeMenu = useCallback(() => setMenu(null), []);
@@ -173,9 +176,21 @@ export function ReportEditor(props: EditorProps) {
   }, [doSave]);
   const router = useRouter();
   const applyPeriod = async (input: { start: string; end: string; comparison: ComparisonChoice }): Promise<string | null> => {
-    if (!(await flush())) return t('editor.saveFailed');
+    // lock first: no edit can land between the save below and the re-pull (the flush saves directly, past the lock)
+    locked.current = true;
+    setPeriodBusy(true);
+    if (!(await flush())) {
+      locked.current = false;
+      setPeriodBusy(false);
+      return t('editor.saveFailed');
+    }
     const r = await changeReportPeriodAction({ reportId, ...input });
-    if (!r.ok) return r.error;
+    if (!r.ok) {
+      locked.current = false;
+      setPeriodBusy(false);
+      return r.error;
+    }
+    // stays locked: the refresh remounts the editor with the new snapshot
     router.refresh();
     return null;
   };
@@ -198,6 +213,7 @@ export function ReportEditor(props: EditorProps) {
 
   const commit = useCallback(
     (next: ReportLayout, opts: { coalesce?: string; immediate?: boolean } = {}) => {
+      if (locked.current) return;
       if (!opts.coalesce || lastCoalesce.current !== opts.coalesce) {
         history.current = [...history.current.slice(-19), latest.current];
         future.current = [];
@@ -211,6 +227,7 @@ export function ReportEditor(props: EditorProps) {
   );
   const mutate = (fn: (l: ReportLayout) => ReportLayout, opts?: { coalesce?: string; immediate?: boolean }) => commit(fn(latest.current), opts);
   const undo = useCallback(() => {
+    if (locked.current) return;
     const prev = history.current.pop();
     if (!prev) return;
     future.current.push(latest.current);
@@ -221,6 +238,7 @@ export function ReportEditor(props: EditorProps) {
     schedule(400);
   }, [schedule]);
   const redo = useCallback(() => {
+    if (locked.current) return;
     const next = future.current.pop();
     if (!next) return;
     history.current.push(latest.current);
@@ -452,7 +470,7 @@ export function ReportEditor(props: EditorProps) {
       {preview ? (
         <ReportBody data={composeReport(data, layout, ctx)} fmt={fmt} brand={brand} cards={cards} />
       ) : (
-        <div className="flex items-start gap-5">
+        <div className={clsx('flex items-start gap-5', periodBusy && 'editor-locked')} {...(periodBusy ? { 'data-locked': '', inert: true } : {})}>
           {panel && <AddMetricsPanel block={panel} sources={sources} customMetrics={customMetrics} existing={inReport} onAdd={(p) => addWidget(panel.id, p)} onClose={() => setPanelBlock(null)} />}
           <div className="min-w-0 flex-1 space-y-8">
           {layout.blocks.length === 0 && <div className="card p-8 text-center text-sm text-slate-500">{t('editor.noBlocks')}</div>}

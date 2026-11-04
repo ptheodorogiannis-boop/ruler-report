@@ -1616,6 +1616,11 @@ tr:hover .row-star,
     background: color-mix(in srgb, var(--print-line) 50%, var(--print-paper));
   }
 }
+/* the canvas while a period change re-pulls the numbers */
+.editor-locked {
+  opacity: 0.6;
+  pointer-events: none;
+}
 .written-for-inline {
   margin-top: 8px;
   font-size: 12px;

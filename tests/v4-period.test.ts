@@ -11,11 +11,19 @@ import type { ReportLayout } from '../src/lib/layout/types';
 // re-pulled for the new dates, AI cards are rewritten, text a person wrote is kept and marked with the old period, and a
 // source that only errors leaves everything as it was.
 
-// a stand-in for the Anthropic API: a fixed answer, or 500 when `fail` is set
+// a stand-in for the Anthropic API: a fixed answer, or 500 when `fail` is set; `before` runs before it answers (a
+// concurrent edit), `delay` holds the answer back, and every request body is kept
 let fail = false;
+let before: (() => Promise<void>) | null = null;
+let delay = 0;
+const bodies: any[] = [];
 const stub = http.createServer((req, res) => {
-  req.resume();
-  req.on('end', () => {
+  let body = '';
+  req.on('data', (c) => (body += c));
+  req.on('end', async () => {
+    bodies.push(JSON.parse(body || '{}'));
+    if (before) await before();
+    if (delay) await new Promise((r) => setTimeout(r, delay));
     if (fail) return res.writeHead(500).end('boom');
     res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ content: [{ type: 'text', text: '<p>New text.</p>' }] }));
   });
@@ -193,4 +201,25 @@ test('editing clears the written-for note', async () => {
   const card = withoutStale({ id: 'c', staleFor: { start: '2026-09-01', end: '2026-09-30' } });
   assert.equal('staleFor' in card, false);
   assert.equal(card.id, 'c');
+});
+
+test('an edit saved while the numbers update is never overwritten: the change stops and asks to try again', async () => {
+  const { changeReportPeriod } = await import('../src/lib/services/report-period');
+  const { company, report } = await setup();
+  const edited = { ...(report.layout as any), blocks: (report.layout as any).blocks.map((b: any, i: number) => (i === 0 ? { ...b, title: 'Renamed during the update' } : b)) };
+  before = async () => {
+    before = null;
+    await db.report.update({ where: { id: report.id }, data: { layout: edited } });
+  };
+  try {
+    await assert.rejects(
+      withStub(() => changeReportPeriod(report.id, company.id, { start: '2026-10-01', end: '2026-10-31', comparison: 'previous_period' })),
+      /changed while the numbers were updating/
+    );
+  } finally {
+    before = null;
+  }
+  const r = await db.report.findUniqueOrThrow({ where: { id: report.id } });
+  assert.equal((r.layout as any).blocks[0].title, 'Renamed during the update', 'the edit is kept');
+  assert.equal(r.startDate, report.startDate, 'the period is unchanged');
 });

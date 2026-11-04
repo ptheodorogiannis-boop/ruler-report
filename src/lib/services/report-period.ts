@@ -85,9 +85,9 @@ export async function changeReportPeriod(reportId: number, companyId: number, in
     })),
   };
 
-  // 5. one write
-  await db.report.update({
-    where: { id: r.id },
+  // 5. one write, and only over the report as it was read: an edit saved meanwhile (another tab, a teammate) is kept
+  const written = await db.report.updateMany({
+    where: { id: r.id, updatedAt: r.updatedAt },
     data: {
       startDate: range.start,
       endDate: range.end,
@@ -99,5 +99,6 @@ export async function changeReportPeriod(reportId: number, companyId: number, in
       ...(nextLayout ? { layout: nextLayout as any } : {}),
     },
   });
+  if (written.count === 0) throw new Error('The report changed while the numbers were updating. Your changes are kept: apply the period again.');
   return { rewritten, failed, stale };
 }

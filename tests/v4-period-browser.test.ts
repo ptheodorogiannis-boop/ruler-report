@@ -42,6 +42,7 @@ test('period control: re-pull for Last 90 days, the just-added widget stays, the
     await page.locator('[data-period-preset]').selectOption('last_90d');
     await page.locator('[data-period-apply]').click();
     await page.getByText('Updating numbers…').waitFor();
+    assert.equal(await page.locator('[data-locked]').count(), 1, 'the canvas is locked while the numbers update');
     await page.getByText('Updating numbers…').waitFor({ state: 'detached', timeout: 120000 });
 
     const r = await db.report.findUniqueOrThrow({ where: { id: copy.id } });
