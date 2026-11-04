@@ -5,6 +5,7 @@ import type { BreakdownRow, Connector, ConnectorContext, DailyData, DateRange } 
 import { goalName, type MatomoGoal } from '@/lib/catalog/matomo-goals';
 import { countryName } from '@/lib/geo/countries';
 import { eachDay } from '@/lib/util/dates';
+import { readCapped } from '@/lib/util/read-capped';
 
 export interface MatomoCreds {
   baseUrl: string;
@@ -14,8 +15,10 @@ type Call = { method: string; params: Record<string, string> };
 
 const LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])$/;
 const TIMEOUT_MS = 30_000;
+/** The largest answer read; a Matomo report answer is far smaller. */
+export const MAX_ANSWER_BYTES = 20 * 1024 * 1024;
 
-/** <address>/index.php; https only (a local test server may use http). */
+/** <address>/index.php; https only (outside production a test server on this machine may use http). */
 function endpoint(baseUrl: string): string {
   let u: URL;
   try {
@@ -23,7 +26,8 @@ function endpoint(baseUrl: string): string {
   } catch {
     throw new Error('Matomo: the address is not a valid URL');
   }
-  if (u.protocol !== 'https:' && !(u.protocol === 'http:' && LOCAL.test(u.hostname))) throw new Error('Matomo: use the https:// address of your Matomo');
+  const localTest = process.env.NODE_ENV !== 'production' && u.protocol === 'http:' && LOCAL.test(u.hostname);
+  if (u.protocol !== 'https:' && !localTest) throw new Error('Matomo: use the https:// address of your Matomo');
   return `${u.origin}${u.pathname.replace(/\/index\.php$/, '').replace(/\/+$/, '')}/index.php`;
 }
 
@@ -49,10 +53,18 @@ function check<T>(j: T): T {
 async function post(creds: MatomoCreds, body: URLSearchParams, fetchFn: typeof fetch): Promise<unknown> {
   if (!creds?.baseUrl || !creds?.tokenAuth) throw new Error('invalid_token: no Matomo address or token stored');
   body.set('token_auth', creds.tokenAuth);
-  const res = await fetchFn(endpoint(creds.baseUrl), { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body, signal: AbortSignal.timeout(TIMEOUT_MS) });
+  const url = endpoint(creds.baseUrl);
+  // never follow a redirect: a 307/308 would send the body, token included, to wherever it points
+  const res = await fetchFn(url, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body, redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT_MS) });
+  if (res.status >= 300 && res.status < 400) {
+    const to = res.headers.get('location');
+    throw new Error(`Matomo redirected to ${to ? new URL(to, url).href : 'another address'}; use that address`);
+  }
   if (res.status === 401 || res.status === 403) throw new Error(`invalid_token: Matomo refused the token (HTTP ${res.status})`);
   if (!res.ok) throw new Error(`Matomo: HTTP ${res.status}`);
-  const text = await res.text();
+  const raw = await readCapped(res, MAX_ANSWER_BYTES);
+  if (!raw) throw new Error('Matomo: the answer is too large');
+  const text = raw.toString('utf8');
   try {
     return check(JSON.parse(text));
   } catch (e) {

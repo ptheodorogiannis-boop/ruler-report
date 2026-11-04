@@ -9,6 +9,7 @@ import type { DateRange, ReportData, TemplateSection } from '@/lib/engine/types'
 import { componentOfValue, composeReport, indexValues, layoutToSections, normalizeLayout, sectionsFromData, seedLayout, sizeOfValue, storeKey, type ComponentLookup, type SizeLookup } from './compose';
 import type { ReportLayout, SourceInfo } from './types';
 import { widgetRefIds } from './refs';
+import { keepThumbnails } from '@/lib/media/thumbs';
 
 type ReportFull = Report & { project: Project };
 
@@ -131,8 +132,10 @@ export async function saveLayout(report: ReportFull, input: unknown): Promise<Sa
     db.integration.findMany({ where: { id: { in: integrationIds }, projectId: report.projectId } }),
     db.customMetric.findMany({ where: { companyId: report.companyId, OR: [{ projectId: null }, { projectId: report.projectId }] } }),
   ]);
-  const { data, added } = await ensureWidgetValues({ layout, data: raw, project: report.project, integrations, customMetrics, range, comparison });
-  const changed = added > 0 || JSON.stringify(data.widgets ?? {}) !== JSON.stringify(raw.widgets ?? {});
+  const ensured = await ensureWidgetValues({ layout, data: raw, project: report.project, integrations, customMetrics, range, comparison });
+  const changed = ensured.added > 0 || JSON.stringify(ensured.data.widgets ?? {}) !== JSON.stringify(raw.widgets ?? {});
+  // a frozen report keeps its own copy of new row images, as a snapshot does (Meta's image links expire)
+  const data = changed ? await keepThumbnails(ensured.data, report.companyId) : ensured.data;
   if (changed) await db.report.update({ where: { id: report.id }, data: { data: data as any } });
   return { layout, data, range, comparison };
 }

@@ -15,6 +15,7 @@ import { GoalForm, type GoalOption } from '@/components/goal-form';
 import { Delta } from '@/components/widgets';
 import { PlatformTile } from '@/components/platform-tile';
 import { decryptJson } from '@/lib/crypto';
+import { usesSampleData } from '@/lib/connectors';
 import { addTimelineAction, checkIntegrationAction, updateIntegrationCampaignsAction, sendHeldRunAction, deleteAutomationAction, updateProjectAction, deleteGoalAction, deleteProjectAction, deleteTimelineAction, refreshColumnsAction, removeIntegrationAction, runAutomationAction, saveAutomationAction, saveGoalAction, shareGoalsAction, toggleAutomationAction, toggleIntegrationAction } from '@/app/actions/app';
 import { assertProject, canAdmin, canWrite, requirePrincipal } from '@/lib/auth';
 import { getCatalog } from '@/lib/catalog/build';
@@ -157,7 +158,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                 .map((i) => {
                   const def = getIntegrationDef(i.slug);
                   // sample data: a platform without a live connector, or an account connected with "use synthetic data"
-                  const sample = !def || def.connector === 'demo' || !!decryptJson<{ demo?: boolean }>(i.credentials)?.demo;
+                  const sample = usesSampleData(i.slug, decryptJson<Record<string, any>>(i.credentials));
                   return { i, def, sample };
                 })
                 // just added first, then live before sample; the sort is stable, so platform order stays within each group

@@ -86,13 +86,15 @@ test('one stored copy per image, the rows point at it; failures keep the placeho
   const out = await keepThumbnails(data(), company.id);
   const rows = (out.sections[0].blocks[0].widget.value as any).rows;
   assert.match(rows[0].thumb, /^\/api\/media\//);
-  assert.equal(rows[1].thumb, rows[0].thumb, 'the same image under another signature is one copy');
+  // the full address names a copy: proxied images differ only in their query, so two queries are two copies (final review)
+  assert.match(rows[1].thumb, /^\/api\/media\//);
+  assert.notEqual(rows[1].thumb, rows[0].thumb, 'another query is another image');
   assert.equal(rows[2].thumb, null, 'an HTML answer');
   assert.equal(rows[3].thumb, null, 'a 404');
   assert.equal(rows[4].thumb, null, 'over 300 KB');
   assert.equal(rows[5].thumb, '/demo/creative-1.svg');
-  assert.equal((out.widgets!['2:top_posts'].widget.value as any).thumbs[0], rows[0].thumb);
-  assert.equal(await db.media.count({ where: { companyId: company.id, name: { startsWith: THUMB_PREFIX } } }), 1);
+  assert.match((out.widgets!['2:top_posts'].widget.value as any).thumbs[0], /^\/api\/media\//);
+  assert.equal(await db.media.count({ where: { companyId: company.id, name: { startsWith: THUMB_PREFIX } } }), 3);
 });
 
 test('the media library never lists stored thumbnails, and a second snapshot fetches nothing new', async () => {

@@ -38,9 +38,21 @@ export function registerConnector(id: string, c: Connector) {
 export function getConnector(id: string): Connector {
   return REGISTRY[id] ?? demoConnector;
 }
-/** Integrations flagged demo (credentials.demo) always use synthetic data, even on slugs that have a real connector. */
+/**
+ * Sample data: an account flagged demo (credentials.demo), a platform without a live connector, or a Matomo row with no
+ * address and token — every Matomo row was sample data before its connector (2026-11-04), whatever its flag, and stays so
+ * until it is connected with an address and a token.
+ */
+export function usesSampleData(slug: string, credentials: Record<string, any> | null | undefined): boolean {
+  if (credentials?.demo) return true;
+  const def = getIntegrationDef(slug);
+  if (!def || def.connector === 'demo') return true;
+  if (def.connector === 'matomo') return !(credentials?.baseUrl && credentials?.tokenAuth);
+  return false;
+}
+/** Sample-data integrations (usesSampleData) always use synthetic data, even on slugs that have a real connector. */
 export function connectorFor(integration: { slug: string; credentials: Record<string, any> | null }): Connector {
-  if (integration.credentials?.demo) return demoConnector;
+  if (usesSampleData(integration.slug, integration.credentials)) return demoConnector;
   return getConnector(getIntegrationDef(integration.slug)?.connector ?? 'demo');
 }
 export const REAL_CONNECTORS = ['meta', 'gads', 'ga4', 'gsc', 'woo', 'facebook', 'instagram', 'youtube', 'gbp', 'matomo', 'sheets', 'csv', 'rest', 'ingest'];

@@ -551,6 +551,7 @@ export async function regenerateSource(report: ReportFull, integrationId: number
   const layout = layoutOf(report);
   // every account stays in scope so keys other accounts' formulas need are kept, and only the dropped keys are fetched again (review I1)
   if (layout) data = (await ensureWidgetValues({ layout, data, project: report.project, integrations, customMetrics, range, comparison })).data;
+  data = await keepThumbnails(data, report.companyId);
   await db.report.update({ where: { id: report.id }, data: { data: data as any } });
   return data;
 }
