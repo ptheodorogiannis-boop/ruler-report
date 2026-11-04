@@ -86,6 +86,19 @@ test("another company's report is not found", async () => {
   await assert.rejects(deleteArchivedReport(r.id, other.company.id, r.title), /Not found/);
 });
 
+test('app-wide search skips archived reports', async () => {
+  const { archiveReport } = await import('../src/lib/services/reports');
+  const { searchAll } = await import('../src/lib/services/search');
+  const { principalFor } = await import('./principal');
+  const { company, r } = await setup();
+  await db.report.update({ where: { id: r.id }, data: { title: 'Zephyr quarterly' } });
+  const p = await principalFor(company.id, 'admin', null);
+  const titles = async () => (await searchAll(p, 'zephyr')).flatMap((g) => g.items.map((i) => i.label));
+  assert.deepEqual(await titles(), ['Zephyr quarterly']);
+  await archiveReport(r.id, company.id);
+  assert.deepEqual(await titles(), []);
+});
+
 test('the API keeps listing archived reports and says when they were archived', async () => {
   const { archiveReport } = await import('../src/lib/services/reports');
   const { company, token, r } = await setup();

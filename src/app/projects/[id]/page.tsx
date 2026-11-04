@@ -63,8 +63,8 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
 
   const [integrations, reports, dashboards, automations, goals, timeline, templates] = await Promise.all([
     db.integration.findMany({ where: { projectId: project.id }, orderBy: [{ slug: 'asc' }, { name: 'asc' }] }),
-    db.report.findMany({ where: { projectId: project.id, kind: 'report' }, orderBy: { createdAt: 'desc' }, take: 50 }),
-    db.report.findMany({ where: { projectId: project.id, kind: 'dashboard' }, orderBy: { createdAt: 'desc' } }),
+    db.report.findMany({ where: { projectId: project.id, kind: 'report', archivedAt: null }, orderBy: { createdAt: 'desc' }, take: 50 }),
+    db.report.findMany({ where: { projectId: project.id, kind: 'dashboard', archivedAt: null }, orderBy: { createdAt: 'desc' } }),
     db.automation.findMany({ where: { projectId: project.id }, orderBy: { createdAt: 'desc' }, include: { runs: { orderBy: { startedAt: 'desc' }, take: 1 } } }),
     db.goal.findMany({ where: { projectId: project.id }, include: { integration: { include: { project: true } } } }),
     db.timelineEvent.findMany({ where: { projectId: project.id }, orderBy: { date: 'desc' }, take: 50 }),
@@ -606,7 +606,7 @@ async function OverviewTab({ p, projectId }: { p: Awaited<ReturnType<typeof requ
   const { rows, range } = await companyOverview(p, 30, projectId);
   const row = rows[0];
   const project = await db.project.findUniqueOrThrow({ where: { id: projectId } });
-  const recent = await db.report.findMany({ where: { projectId }, orderBy: { createdAt: 'desc' }, take: 5 });
+  const recent = await db.report.findMany({ where: { projectId, archivedAt: null }, orderBy: { createdAt: 'desc' }, take: 5 });
   const timeline = await db.timelineEvent.findMany({ where: { projectId }, orderBy: { date: 'desc' }, take: 3 });
   const fmt = { currency: project.currency, decimalSeparatorFormat: project.decimalSeparatorFormat };
   return (

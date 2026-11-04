@@ -1,3 +1,4 @@
+import clsx from 'clsx';
 import Link from 'next/link';
 import { getT } from '@/lib/i18n/server';
 import { Plus } from 'lucide-react';
@@ -8,18 +9,21 @@ import { db } from '@/lib/db';
 import { containsText } from '@/lib/platform';
 import { requestBaseUrl } from '@/lib/share';
 
-export async function ReportIndex({ kind, q, project, page }: { kind: 'report' | 'dashboard'; q?: string; project?: string; page?: string }) {
+export async function ReportIndex({ kind, q, project, page, archived }: { kind: 'report' | 'dashboard'; q?: string; project?: string; page?: string; archived?: string }) {
   const { t } = await getT();
   const p = await requirePrincipal();
   const per = 25;
+  const showArchived = archived === '1';
   const pg = Math.max(1, Number(page) || 1);
   const projects = await db.project.findMany({ where: projectScope(p), orderBy: { name: 'asc' }, select: { id: true, name: true } });
   const where = {
-    AND: [{ companyId: p.companyId, kind }, p.projectIds ? { projectId: { in: p.projectIds } } : {}, project ? { projectId: Number(project) } : {}, q ? { OR: [{ title: containsText(q) }, { subtitle: containsText(q) }] } : {}],
+    AND: [{ companyId: p.companyId, kind, archivedAt: showArchived ? { not: null } : null }, p.projectIds ? { projectId: { in: p.projectIds } } : {}, project ? { projectId: Number(project) } : {}, q ? { OR: [{ title: containsText(q) }, { subtitle: containsText(q) }] } : {}],
   };
   const [items, total, baseUrl] = await Promise.all([db.report.findMany({ where, include: { project: { select: { name: true, dateFormat: true, logo: true } } }, orderBy: { createdAt: 'desc' }, skip: (pg - 1) * per, take: per }), db.report.count({ where }), requestBaseUrl()]);
   const base = kind === 'report' ? '/reports' : '/dashboards';
-  const qs = (n: number) => `${base}?${new URLSearchParams({ ...(q ? { q } : {}), ...(project ? { project } : {}), page: String(n) })}`;
+  const qs = (n: number) => `${base}?${new URLSearchParams({ ...(q ? { q } : {}), ...(project ? { project } : {}), ...(showArchived ? { archived: '1' } : {}), page: String(n) })}`;
+  // the Active / Archived switch keeps the search and the client filter
+  const view = (arch: boolean) => `${base}?${new URLSearchParams({ ...(q ? { q } : {}), ...(project ? { project } : {}), ...(arch ? { archived: '1' } : {}) })}`;
   const rows: ReportRow[] = items.map((r) => ({
     id: r.id,
     kind,
@@ -35,6 +39,7 @@ export async function ReportIndex({ kind, q, project, page }: { kind: 'report' |
     created: r.createdAt.toISOString().slice(0, 10),
     share: r.shareEnabled ? `${baseUrl}/${kind === 'report' ? 'r' : 'd'}/${r.shareToken}` : null,
     dateFormat: r.project.dateFormat,
+    archived: !!r.archivedAt,
   }));
   return (
     <AppShell active={base}>
@@ -59,9 +64,18 @@ export async function ReportIndex({ kind, q, project, page }: { kind: 'report' |
             </option>
           ))}
         </select>
+        {showArchived && <input type="hidden" name="archived" value="1" />}
         <button className="btn">{t('common.filter')}</button>
+        <nav className="ml-auto flex gap-1" aria-label={t('reports.archived')}>
+          <Link href={view(false)} className={clsx('btn', !showArchived && 'border-brand text-brand')} aria-current={!showArchived ? 'page' : undefined}>
+            {t('reports.active')}
+          </Link>
+          <Link href={view(true)} className={clsx('btn', showArchived && 'border-brand text-brand')} aria-current={showArchived ? 'page' : undefined}>
+            {t('reports.archived')}
+          </Link>
+        </nav>
       </form>
-      {rows.length === 0 ? <Empty title={kind === 'report' ? t('reports.noneFoundReports') : t('reports.noneFoundDashboards')} hint={t('reports.noneHint')} /> : <ReportRows items={rows} base={base} />}
+      {rows.length === 0 ? <Empty title={kind === 'report' ? t('reports.noneFoundReports') : t('reports.noneFoundDashboards')} hint={t('reports.noneHint')} /> : <ReportRows items={rows} base={base} canWrite={canWrite(p)} />}
       {total > per && (
         <div className="mt-6 flex items-center justify-between text-sm">
           <span className="num text-ink-2">

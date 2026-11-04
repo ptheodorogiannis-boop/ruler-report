@@ -37,7 +37,7 @@ export async function searchAll(p: Principal, q: string, projectId?: number): Pr
 
   const projects = await db.project.findMany({ where: { companyId: p.companyId, ...(inProjects ? { id: inProjects } : {}) }, select: { id: true, name: true }, orderBy: { name: 'asc' }, take: SCAN });
   const projectName = new Map(projects.map((x) => [x.id, x.name]));
-  const reports = await db.report.findMany({ where: { companyId: p.companyId, ...(inProjects ? { projectId: inProjects } : {}) }, select: { id: true, title: true, kind: true, projectId: true }, orderBy: { createdAt: 'desc' }, take: SCAN });
+  const reports = await db.report.findMany({ where: { companyId: p.companyId, archivedAt: null, ...(inProjects ? { projectId: inProjects } : {}) }, select: { id: true, title: true, kind: true, projectId: true }, orderBy: { createdAt: 'desc' }, take: SCAN });
   const accounts = client ? [] : await db.integration.findMany({ where: { companyId: p.companyId, ...(inProjects ? { projectId: inProjects } : {}) }, select: { id: true, name: true, slug: true, projectId: true }, orderBy: { createdAt: 'desc' }, take: SCAN });
   const here = projectId != null && projectName.has(projectId) ? projectId : null;
 

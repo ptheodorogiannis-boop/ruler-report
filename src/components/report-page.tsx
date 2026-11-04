@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getT } from '@/lib/i18n/server';
 import { notFound } from 'next/navigation';
-import { Copy, Download, ExternalLink, Mail, Presentation, RefreshCw, Trash2 } from 'lucide-react';
+import { Archive, Copy, Download, ExternalLink, Mail, Presentation, RefreshCw } from 'lucide-react';
 import { AppShell, PageHeader } from '@/components/shell';
 import { ClientMark } from '@/components/client-mark';
 import { themeVars } from '@/lib/layout/theme';
@@ -12,7 +12,7 @@ import { AnalysisPanel, type CardView } from '@/components/analysis-panel';
 import { AskBox } from '@/components/ask-box';
 import { aiConfigured } from '@/lib/ai/insights';
 import { ConfirmButton, CopyButton, PrintButton } from '@/components/action-form';
-import { convertReportAction, deleteReportAction, duplicateReportAction, emailReportAction, refreshReportAction, retrySourceAction, updateDashboardPresetAction, updateShareAction } from '@/app/actions/app';
+import { archiveReportAction, convertReportAction, duplicateReportAction, restoreReportAction, emailReportAction, refreshReportAction, retrySourceAction, updateDashboardPresetAction, updateShareAction } from '@/app/actions/app';
 import { canWrite, requirePrincipal } from '@/lib/auth';
 import { db } from '@/lib/db';
 import type { AnalysisCard } from '@/lib/engine/types';
@@ -198,11 +198,11 @@ export async function InternalReport({ id, kind }: { id: number; kind: 'report' 
                   </ConfirmButton>
                 </form>
               </div>
-              <form action={deleteReportAction} className="pt-3">
+              <form action={archiveReportAction} className="pt-3">
                 <input type="hidden" name="id" value={r.id} />
-                <ConfirmButton message={`Delete this ${kind}?`}>
-                  <Trash2 size={14} /> Delete {kind}
-                </ConfirmButton>
+                <button className="btn">
+                  <Archive size={14} /> {t('reports.archive')}
+                </button>
               </form>
             </div>
           </div>
@@ -210,6 +210,17 @@ export async function InternalReport({ id, kind }: { id: number; kind: 'report' 
       )}
 
       <div className="space-y-8">
+        {r.archivedAt && (
+          <div className="card flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm" data-archived-banner>
+            <span className="text-ink-2">{t('reports.archivedBanner')}</span>
+            {write && (
+              <form action={restoreReportAction}>
+                <input type="hidden" name="id" value={r.id} />
+                <button className="btn">{t('reports.restore')}</button>
+              </form>
+            )}
+          </div>
+        )}
         <AnalysisPanel reportId={r.id} cards={cards} editable={write} />
         {write ? (
           <>

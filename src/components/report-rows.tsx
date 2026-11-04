@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { motion, useMotionValue, useSpring } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { ClientMark } from './client-mark';
+import { ReportRowMenu } from './report-row-menu';
 import { RulerBand } from './ruler-band';
 
 export interface ReportRow {
@@ -25,10 +26,11 @@ export interface ReportRow {
   created: string; // YYYY-MM-DD
   share?: string | null;
   dateFormat: string;
+  archived?: boolean;
 }
 
 
-export function ReportRows({ items, base }: { items: ReportRow[]; base: string }) {
+export function ReportRows({ items, base, canWrite = false }: { items: ReportRow[]; base: string; canWrite?: boolean }) {
   const t = useT();
   const [hover, setHover] = useState<number | null>(null);
   const [fine, setFine] = useState(false);
@@ -75,11 +77,14 @@ export function ReportRows({ items, base }: { items: ReportRow[]; base: string }
                 </span>
               </div>
             </div>
-            {r.share && (
-              <a href={r.share} target="_blank" rel="noreferrer" className="rlist-share">
-                {t('share.clientLink')}
-              </a>
-            )}
+            <div className="rlist-actions">
+              {r.share && !r.archived && (
+                <a href={r.share} target="_blank" rel="noreferrer" className="rlist-share">
+                  {t('share.clientLink')}
+                </a>
+              )}
+              {canWrite && <ReportRowMenu id={r.id} title={r.title} href={`${base}/${r.id}`} archived={!!r.archived} />}
+            </div>
             {!fine && hover === r.id && <Cover r={r} className="rlist-cover-inline" />}
           </li>
         ))}

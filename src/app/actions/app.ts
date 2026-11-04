@@ -19,7 +19,7 @@ import { db } from '@/lib/db';
 import { analyse, analyseBlock, aiConfigured } from '@/lib/ai/insights';
 import { TONE_LABEL, isTone, type Tone } from '@/lib/ai/tones';
 import { connectIntegration, refreshColumns } from '@/lib/services/integrations';
-import { convertReport, createReport, duplicateReport } from '@/lib/services/reports';
+import { archiveReport, convertReport, createReport, deleteArchivedReport, duplicateReport, restoreReport } from '@/lib/services/reports';
 import { snapshotReport, liveDashboardData } from '@/lib/engine/report';
 import { createGoalsShare, setGoalsPassword, stopGoalsShare } from '@/lib/services/goals-share';
 import { ROLLING_PRESETS } from '@/lib/services/dashboards';
@@ -176,11 +176,33 @@ export async function createReportAction(input: {
     return fail(e);
   }
 }
-export async function deleteReportAction(fd: FormData) {
+/** Archive / restore / delete (docs/superpowers/specs/2026-11-04-editor-report-management-design.md §1): a writer of the report's project. */
+async function ownedReport(fd: FormData) {
   const p = await writer();
   const r = await db.report.findFirst({ where: { id: Number(fd.get('id')), companyId: p.companyId } });
-  if (r) await db.report.delete({ where: { id: r.id } });
-  redirect(r?.kind === 'dashboard' ? '/dashboards' : '/reports');
+  if (!r) throw new Error('Not found');
+  await assertProject(p, r.projectId);
+  return { p, r };
+}
+const listOf = (kind: string) => (kind === 'dashboard' ? '/dashboards' : '/reports');
+export async function archiveReportAction(fd: FormData) {
+  const { p, r } = await ownedReport(fd);
+  await archiveReport(r.id, p.companyId);
+  revalidatePath(listOf(r.kind));
+  revalidatePath(`${listOf(r.kind)}/${r.id}`);
+}
+export async function restoreReportAction(fd: FormData) {
+  const { p, r } = await ownedReport(fd);
+  await restoreReport(r.id, p.companyId);
+  revalidatePath(listOf(r.kind));
+  revalidatePath(`${listOf(r.kind)}/${r.id}`);
+}
+/** Permanent, from Archived only and with the report's name typed exactly (the service refuses anything else). */
+export async function deleteReportAction(fd: FormData) {
+  const { p, r } = await ownedReport(fd);
+  await deleteArchivedReport(r.id, p.companyId, String(fd.get('name') ?? ''));
+  revalidatePath(listOf(r.kind));
+  redirect(`${listOf(r.kind)}?archived=1`);
 }
 /** Duplicate / convert (spec v3 §3.6): both land on the resulting page. */
 export async function duplicateReportAction(fd: FormData) {
@@ -198,7 +220,7 @@ export async function convertReportAction(fd: FormData) {
 export async function refreshReportAction(fd: FormData) {
   const p = await writer();
   const r = await db.report.findFirst({ where: { id: Number(fd.get('id')), companyId: p.companyId }, include: { project: true } });
-  if (!r) return;
+  if (!r || r.archivedAt) return; // an archived report never gets new data: Restore it first
   if (r.kind === 'report') {
     const data = await snapshotReport(r);
     await db.report.update({ where: { id: r.id }, data: { data: data as any, dataSyncedAt: new Date() } });

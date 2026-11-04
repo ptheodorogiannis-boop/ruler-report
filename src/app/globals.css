@@ -256,6 +256,7 @@ body {
     background: var(--glass-press);
   }
   .btn:disabled,
+  .btn-danger:disabled,
   .btn[aria-disabled='true'] {
     opacity: 0.5;
     cursor: not-allowed;
@@ -1550,6 +1551,27 @@ body {
 .rlist-project {
   color: var(--ink-2);
   font-weight: 600;
+}
+.rlist-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  align-self: center;
+}
+.rmenu > summary {
+  list-style: none;
+}
+.rmenu > summary::-webkit-details-marker {
+  display: none;
+}
+/* the open row sits above the rows after it, and its menu is solid so their links never show through */
+.rlist-row:has(.rmenu[open]),
+.rlist-row:has([data-delete-dialog]) {
+  z-index: 30;
+}
+.rmenu-pop {
+  background: var(--card-solid);
+  box-shadow: var(--shadow-pop);
 }
 .rlist-share {
   align-self: center;
