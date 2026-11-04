@@ -16,6 +16,7 @@ import { navModel } from './nav-groups';
 import { Wordmark } from './brand-marks';
 import { UserAvatar } from './avatar';
 import { Providers } from './providers';
+import { SearchDialog } from './search-dialog';
 
 // The frame (docs/DESIGN.md › Ruler glass pass, design-system.md §6.1): a top bar with the Ruler wordmark, the glass pill
 // menu of the daily places, notifications and the account; a rail of round icon buttons for the secondary places; on
@@ -50,6 +51,17 @@ export async function AppShell({ children, active }: { children: React.ReactNode
           </Link>
           <PillNav items={nav.daily} active={active} label={t(locale, 'nav.main')} />
           <div className="topbar-right">
+            <SearchDialog
+              labels={{
+                open: t(locale, 'search.open'),
+                placeholder: t(locale, 'search.placeholder'),
+                close: t(locale, 'common.close'),
+                nothing: t(locale, 'search.nothing'),
+                hint: t(locale, 'search.hint'),
+                connectItem: t(locale, 'search.connectItem'),
+                groups: { clients: t(locale, 'search.clients'), reports: t(locale, 'search.reports'), dashboards: t(locale, 'search.dashboards'), accounts: t(locale, 'search.accounts'), connect: t(locale, 'search.connect') },
+              }}
+            />
             <Link href="/notifications" className={`icon-btn ${active === '/notifications' ? 'is-active' : ''}`} aria-label={unread > 0 ? t(locale, 'common.notificationsUnread', { count: unread }) : t(locale, 'common.notifications')}>
               <Bell size={18} strokeWidth={1.5} aria-hidden="true" />
               {unread > 0 && <span className="bell-dot" aria-hidden="true" />}

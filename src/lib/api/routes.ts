@@ -25,6 +25,7 @@ import { isMediaOrHttps } from '@/lib/media/url';
 import { scopeSchema } from '@/lib/engine/campaigns';
 import { campaignScopeOf, listCampaignsFor } from '@/lib/services/campaigns';
 import type { ReportData, TemplateSection } from '@/lib/engine/types';
+import { searchAll } from '@/lib/services/search';
 
 export interface Ctx {
   p: Principal;
@@ -186,6 +187,8 @@ add('GET', '/integrations/:id/campaigns', async ({ p, params }) => {
 });
 
 // ───────────── metrics ─────────────
+/** App-wide search (extension): clients, reports, dashboards, connected accounts, and with ?project= the platforms to connect. */
+add('GET', '/search', async ({ p, query }) => ({ data: await searchAll(p, query.get('q') ?? '', Number(query.get('project')) || undefined) }));
 add('GET', '/metrics', async ({ p, query }) => {
   const slug = query.get('integration_slug');
   if (slug === 'custom') {

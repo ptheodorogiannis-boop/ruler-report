@@ -2823,3 +2823,110 @@ html[data-rr-drag] .newblock-drop {
   }
 }
 
+/* ───────────── app-wide search (src/components/search-dialog.tsx) ───────────── */
+.search-pill {
+  display: inline-flex;
+  height: 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-line);
+  background: var(--glass);
+  color: var(--ink-2);
+  font-size: 13px;
+  transition: background-color 0.2s var(--ease-brand), color 0.2s var(--ease-brand);
+}
+.search-pill:hover {
+  background: var(--glass-hover);
+  color: var(--ink);
+}
+.search-pill-key {
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink-3);
+  font-family: inherit;
+  font-size: 11px;
+}
+@media (max-width: 767px) {
+  .search-pill {
+    width: 40px;
+    justify-content: center;
+    padding: 0;
+  }
+  .search-pill-label,
+  .search-pill-key {
+    display: none;
+  }
+}
+.search-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12vh 16px 16px;
+  background: color-mix(in srgb, var(--ground) 40%, transparent);
+}
+.search-dialog {
+  width: min(640px, 100%);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.search-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 16px;
+  outline: none;
+}
+.search-results {
+  overflow: auto;
+  padding: 8px;
+}
+.search-note {
+  padding: 12px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.search-group + .search-group {
+  margin-top: 8px;
+}
+.search-group-title {
+  padding: 8px 12px 4px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.search-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 14px;
+  text-decoration: none;
+}
+.search-item[aria-selected='true'] {
+  background: var(--paper);
+}
+.search-item-sub {
+  flex-shrink: 1;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+

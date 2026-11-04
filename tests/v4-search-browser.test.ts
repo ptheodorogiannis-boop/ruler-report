@@ -63,3 +63,39 @@ test('list search: the Integrations tab and the reconnect list filter as you typ
     await browser.close();
   }
 });
+
+test('app-wide search: Ctrl+K finds a connected account and opens its project\'s Integrations tab', { skip: !base }, async () => {
+  const { chromium } = await import('playwright');
+  const { db } = await import('../src/lib/db');
+  const account = await db.integration.findFirstOrThrow({ where: { projectId: 1, slug: 'google_analytics_4' } });
+  const browser = await chromium.launch();
+  try {
+    const page = await (await browser.newContext({ viewport: { width: 1440, height: 1000 } })).newPage();
+    page.setDefaultTimeout(60000);
+    await signIn(page);
+    // the shortcut listens once the page is interactive
+    await page.waitForLoadState('networkidle');
+    await page.locator('.search-pill').waitFor();
+    await page.keyboard.press('Control+k');
+    const dialog = page.getByRole('dialog', { name: 'Search' });
+    await dialog.waitFor();
+    await dialog.getByRole('combobox').fill(account.name);
+    const group = dialog.getByRole('group', { name: 'Connected accounts' });
+    await group.getByRole('option').first().waitFor();
+    // arrow keys reach the account, Enter opens it
+    const options = dialog.getByRole('option');
+    const index = await options.evaluateAll((els, name) => els.findIndex((e) => e.textContent?.includes(name)), account.name);
+    assert.ok(index >= 0, 'the account is listed');
+    for (let i = 0; i < index; i++) await page.keyboard.press('ArrowDown');
+    await Promise.all([page.waitForURL(/\/projects\/1\?tab=integrations/), page.keyboard.press('Enter')]);
+    // Escape closes the dialog and gives focus back
+    await page.waitForLoadState('networkidle');
+    await page.locator('.search-pill').waitFor();
+    await page.keyboard.press('Control+k');
+    await dialog.waitFor();
+    await page.keyboard.press('Escape');
+    assert.equal(await dialog.count(), 0);
+  } finally {
+    await browser.close();
+  }
+});
