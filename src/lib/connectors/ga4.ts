@@ -29,6 +29,7 @@ const DIM: Record<string, string> = {
   source_medium: 'sessionSourceMedium',
   event_name: 'eventName',
   page: 'pagePath',
+  page_title: 'pageTitle',
   landing_page: 'landingPage',
   campaign: 'sessionCampaignName',
   product: 'itemName',

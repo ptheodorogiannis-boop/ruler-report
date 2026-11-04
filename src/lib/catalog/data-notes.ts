@@ -59,6 +59,10 @@ export const DATA_NOTES: Record<string, DataNote> = {
     attribution: 'Conversions use a 30-day click and 7-day view window by default.',
     timezone: 'Dates follow UTC as the LinkedIn API reports them.',
   },
+  matomo: {
+    timezone: "Dates follow the Matomo site's time zone.",
+    counting: "Unique visitors over a period need Matomo's range processing; without it this is the sum of the daily unique visitors. Each goal is counted separately, under its Matomo name or the name given in the tool.",
+  },
   google_analytics_4: {
     attribution: "Conversions and channels follow the property's attribution model (data-driven by default).",
     timezone: "Dates follow the GA4 property's time zone.",
@@ -144,6 +148,10 @@ export const DATA_NOTES_EL: Record<string, DataNote> = {
   linkedin_ads: {
     attribution: 'Οι μετατροπές χρησιμοποιούν από προεπιλογή παράθυρο 30 ημερών για κλικ και 7 ημερών για προβολή.',
     timezone: 'Οι ημερομηνίες ακολουθούν UTC, όπως τις αναφέρει το API του LinkedIn.',
+  },
+  matomo: {
+    timezone: 'Οι ημερομηνίες ακολουθούν τη ζώνη ώρας του ιστότοπου στο Matomo.',
+    counting: 'Οι μοναδικοί επισκέπτες μιας περιόδου χρειάζονται την επεξεργασία εύρους του Matomo· χωρίς αυτήν είναι το άθροισμα των ημερήσιων μοναδικών επισκεπτών. Κάθε στόχος μετριέται χωριστά, με το όνομά του στο Matomo ή το όνομα που ορίστηκε στο εργαλείο.',
   },
   google_analytics_4: {
     attribution: 'Οι μετατροπές και τα κανάλια ακολουθούν το μοντέλο απόδοσης της ιδιότητας (data-driven από προεπιλογή).',

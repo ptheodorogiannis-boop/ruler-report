@@ -200,7 +200,7 @@ export const WEB: Archetype = {
     source_medium: ['google / organic', '(direct) / (none)', 'google / cpc', 'facebook / paid', 'instagram / social', 'newsletter / email', 'bing / organic'],
     event_name: ['page_view', 'session_start', 'scroll', 'click', 'view_item', 'add_to_cart', 'begin_checkout', 'purchase', 'form_submit'],
   },
-  namedDims: { page: { prefix: '/page', count: 15 }, landing_page: { prefix: '/landing', count: 10 }, campaign: { prefix: 'campaign', count: 8 }, product: { prefix: 'Product', count: 10 } },
+  namedDims: { page: { prefix: '/page', count: 15 }, page_title: { prefix: 'Page', count: 12 }, landing_page: { prefix: '/landing', count: 10 }, campaign: { prefix: 'campaign', count: 8 }, product: { prefix: 'Product', count: 10 } },
   widgets: () => [
     sum('sessions', 'Sessions', 'sessions', { group: 'Traffic', desc: 'Group of user interactions within a time window.', tags: { cost: 'organic + paid' } }),
     sum('users', 'Active users', 'users', { group: 'Traffic', agg: false }),
@@ -232,6 +232,7 @@ export const WEB: Archetype = {
     byDim('revenue_by_country', 'Revenue by country', 'country', ['revenue'], { ...MONEY, group: 'Audience' }),
     byDim('revenue_by_channel', 'Revenue by channel', 'channel', ['revenue'], { ...MONEY, group: 'Acquisition' }),
     table('top_pages', 'Top pages', 'page', ['pageviews', 'users', 'engagement_rate', 'conversions'], { group: 'Tables', sortBy: 'pageviews' }),
+    table('top_page_titles', 'Top pages by title', 'page_title', ['pageviews', 'users', 'conversions'], { group: 'Tables', sortBy: 'pageviews' }),
     table('landing_pages', 'Landing pages', 'landing_page', ['sessions', 'engagement_rate', 'conversions', 'revenue'], { group: 'Tables', sortBy: 'sessions' }),
     table('source_medium', 'Source / medium', 'source_medium', webCols, { group: 'Tables', sortBy: 'sessions' }),
     table('campaigns', 'Campaigns', 'campaign', webCols, { group: 'Tables', sortBy: 'sessions' }),

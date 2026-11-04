@@ -9,7 +9,7 @@ import type { Variants } from './helpers';
 import { metaExtraWidgets } from './meta-extra';
 
 export type Category = 'social' | 'ads' | 'analytics' | 'seo' | 'crm' | 'email' | 'ecommerce' | 'local' | 'calls' | 'custom';
-export type ConnectorId = 'demo' | 'meta' | 'gads' | 'ga4' | 'gsc' | 'woo' | 'sheets' | 'csv' | 'rest' | 'ingest' | 'facebook' | 'instagram' | 'youtube' | 'gbp';
+export type ConnectorId = 'demo' | 'meta' | 'gads' | 'ga4' | 'gsc' | 'woo' | 'sheets' | 'csv' | 'rest' | 'ingest' | 'facebook' | 'instagram' | 'youtube' | 'gbp' | 'matomo';
 
 /** Meta's publisher platforms: the only ads platform whose numbers split by Facebook / Instagram / Messenger / Audience Network */
 const META_VARIANTS: Variants = {
@@ -110,7 +110,8 @@ export const INTEGRATIONS: IntegrationDef[] = [
   d('google_analytics_4', 'Google Analytics 4', 'analytics', 'web', 'ga4', 'ga4', 'oauth_google', '#e37400', true, { sourceIdLabel: 'GA4 property ID', currency: true }),
   d('search_console', 'Google Search Console', 'seo', 'seo', 'gsc', 'gsc', 'oauth_google', '#458cf5', true, { sourceIdLabel: 'Site URL (https://… or sc-domain:…)' }),
   d('google_my_business', 'Google Business Profile', 'local', 'local', 'gbp', 'gbp', 'oauth_google', '#34a853', true, { sourceIdLabel: 'Location (accounts/…/locations/…)' }),
-  d('matomo', 'Matomo', 'analytics', 'web', 'matomo', 'demo', 'token', '#3152a0', false, { fields: [{ name: 'baseUrl', label: 'Matomo URL' }, { name: 'tokenAuth', label: 'token_auth', secret: true }] }),
+  // a real connector since 2026-11-04 (src/lib/connectors/matomo.ts); accounts connected before stay sample data until reconnected
+  d('matomo', 'Matomo', 'analytics', 'web', 'matomo', 'matomo', 'token', '#3152a0', false, { sourceIdLabel: 'Site ID', fields: [{ name: 'baseUrl', label: 'Matomo address', placeholder: 'https://analytics.example.com' }, { name: 'tokenAuth', label: 'API token (token_auth)', secret: true }] }),
   d('plausible', 'Plausible', 'analytics', 'web', 'plausible', 'demo', 'api_key', '#5850ec', false, { fields: APIKEY, sourceIdLabel: 'Site domain' }),
   d('ruler_attribution', 'Ruler Attribution', 'analytics', 'web', 'ruler_attr', 'demo', 'api_key', '#4f46e5', false, { fields: [{ name: 'baseUrl', label: 'Attribution server URL' }, ...APIKEY] }),
   // ── CRM
