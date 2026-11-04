@@ -219,13 +219,13 @@ export async function convertReportAction(fd: FormData) {
   redirect(`/${r.kind === 'report' ? 'reports' : 'dashboards'}/${r.id}`);
 }
 /** The editor's period control (docs/superpowers/specs/2026-11-04-editor-report-management-design.md §2): new dates, re-pulled numbers, rewritten AI text. */
-export async function changeReportPeriodAction(input: { reportId: number; start: string; end: string; comparison: ComparisonChoice }): Promise<Result<{ rewritten: number; failed: number; stale: number }>> {
+export async function changeReportPeriodAction(input: { reportId: number; start: string; end: string; comparison: ComparisonChoice; language?: string }): Promise<Result<{ rewritten: number; failed: number; stale: number }>> {
   try {
     const p = await writer();
     const r = await db.report.findFirst({ where: { id: input.reportId, companyId: p.companyId } });
     if (!r) throw new Error('Not found');
     await assertProject(p, r.projectId);
-    const out = await changeReportPeriod(r.id, p.companyId, { start: input.start, end: input.end, comparison: input.comparison });
+    const out = await changeReportPeriod(r.id, p.companyId, { start: input.start, end: input.end, comparison: input.comparison, language: input.language });
     revalidatePath(`/reports/${r.id}`);
     return { ok: true, ...out };
   } catch (e) {

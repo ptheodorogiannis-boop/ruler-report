@@ -223,3 +223,12 @@ test('an edit saved while the numbers update is never overwritten: the change st
   assert.equal((r.layout as any).blocks[0].title, 'Renamed during the update', 'the edit is kept');
   assert.equal(r.startDate, report.startDate, 'the period is unchanged');
 });
+
+test('rewritten AI text keeps the language the agency writes in', async () => {
+  const { changeReportPeriod } = await import('../src/lib/services/report-period');
+  const { company, report } = await setup();
+  bodies.length = 0;
+  await withStub(() => changeReportPeriod(report.id, company.id, { start: '2026-10-01', end: '2026-10-31', comparison: 'previous_period', language: 'Greek' }));
+  assert.equal(bodies.length, 2, 'one call per AI card');
+  for (const b of bodies) assert.match(b.messages[0].content, /Language: Greek/);
+});

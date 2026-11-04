@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { analyse, analyseBlock } from '@/lib/ai/insights';
 import { snapshotReport } from '@/lib/engine/report';
 import type { AnalysisCard, DateRange, ReportData, WidgetValue } from '@/lib/engine/types';
+import { AI_LANGUAGES } from '@/lib/ai/language';
 import { reportView } from '@/lib/layout/service';
 import type { ReportLayout } from '@/lib/layout/types';
 import { comparisonFor, realDay, withoutStale, type ComparisonChoice } from './period-rules';
@@ -20,7 +21,7 @@ function valuesByIntegration(data: ReportData | null): Map<number, WidgetValue[]
   return out;
 }
 
-export async function changeReportPeriod(reportId: number, companyId: number, input: { start: string; end: string; comparison: ComparisonChoice }): Promise<{ rewritten: number; failed: number; stale: number }> {
+export async function changeReportPeriod(reportId: number, companyId: number, input: { start: string; end: string; comparison: ComparisonChoice; /** the language the agency writes AI text in (AI_LANGUAGES) */ language?: string }): Promise<{ rewritten: number; failed: number; stale: number }> {
   const r = await db.report.findFirst({ where: { id: reportId, companyId }, include: { project: true } });
   if (!r) throw new Error('Not found');
   if (r.archivedAt) throw new Error('Restore the report first');
@@ -46,7 +47,9 @@ export async function changeReportPeriod(reportId: number, companyId: number, in
 
   // 3. AI cards are rewritten for the new dates, one at a time; a failed rewrite keeps its text and the old period
   const view = (await reportView({ ...next, data: snapshot as any })).data;
-  const opts = { projectName: r.project.name, decimalSeparatorFormat: r.project.decimalSeparatorFormat };
+  // rewritten text keeps the agency's language (a Greek report stays Greek); anything unknown falls back to English
+  const language = AI_LANGUAGES.find((l) => l === input.language) ?? 'English';
+  const opts = { projectName: r.project.name, decimalSeparatorFormat: r.project.decimalSeparatorFormat, language };
   let rewritten = 0;
   let failed = 0;
   let stale = 0;
@@ -61,7 +64,7 @@ export async function changeReportPeriod(reportId: number, companyId: number, in
       ? view.sections.some((s) => s.id === c.blockId)
         ? await analyseBlock(view, c.blockId, { tone: c.tone ?? 'general', ...opts })
         : null
-      : await analyse(view, r.project.name, { decimalSeparatorFormat: opts.decimalSeparatorFormat });
+      : await analyse(view, r.project.name, { decimalSeparatorFormat: opts.decimalSeparatorFormat, language });
     if (a?.ai) {
       rewritten++;
       cards.push({ ...withoutStale(c), html: a.html, updatedAt: new Date().toISOString() });

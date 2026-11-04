@@ -20,6 +20,7 @@ import { scopeSummary, type CampaignScope } from '@/lib/engine/campaigns';
 import { changeReportPeriodAction, listCampaignsAction } from '@/app/actions/app';
 import { useRouter } from 'next/navigation';
 import { PeriodControl } from './period-control';
+import { useAiLanguage } from '@/components/ai-language';
 import { MetricPicker, type MetricPayload } from './metric-picker';
 import { BlockMenu } from './block-menu';
 import { withoutStale, type ComparisonChoice } from '@/lib/services/period-rules';
@@ -175,6 +176,8 @@ export function ReportEditor(props: EditorProps) {
     return latest.current === savedLayout.current;
   }, [doSave]);
   const router = useRouter();
+  // the language the agency writes AI text in (the analysis panel's select): rewritten cards keep it
+  const [aiLanguage] = useAiLanguage();
   const applyPeriod = async (input: { start: string; end: string; comparison: ComparisonChoice }): Promise<string | null> => {
     // lock first: no edit can land between the save below and the re-pull (the flush saves directly, past the lock)
     locked.current = true;
@@ -184,7 +187,7 @@ export function ReportEditor(props: EditorProps) {
       setPeriodBusy(false);
       return t('editor.saveFailed');
     }
-    const r = await changeReportPeriodAction({ reportId, ...input });
+    const r = await changeReportPeriodAction({ reportId, ...input, language: aiLanguage });
     if (!r.ok) {
       locked.current = false;
       setPeriodBusy(false);
