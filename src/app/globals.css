@@ -1589,6 +1589,13 @@ body {
   color: var(--ink-3);
 }
 /* starred table rows: tinted and heavier on every page; the star button only exists in the editor */
+/* re-declared on the report canvas, so --brand resolves to the report's accent there, not the app's red */
+.report-root {
+  --row-star: color-mix(in srgb, var(--brand) 12%, transparent);
+}
+:root[data-theme='dark'] .report-root {
+  --row-star: color-mix(in srgb, var(--brand) 22%, transparent);
+}
 .row-starred,
 .row-starred > td {
   background: var(--row-star);

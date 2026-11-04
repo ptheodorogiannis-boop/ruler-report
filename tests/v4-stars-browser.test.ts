@@ -47,6 +47,17 @@ test('row stars: star in the editor, tinted on the client link, unstar clears it
     assert.ok((await starred.innerText()).includes(name), `the starred row is ${name}`);
     assert.equal(await starred.locator('td').first().evaluate((el) => getComputedStyle(el).fontWeight), '600');
     assert.equal(await link.locator('.row-star').count(), 0, 'no star buttons on the client link');
+    // the tint is the report's accent (not the app's red): same colour as a probe painted with the report root's --brand
+    const [rowBg, probeBg] = await starred.locator('td').first().evaluate((td) => {
+      const root = td.closest('.report-root') as HTMLElement;
+      const probe = document.createElement('div');
+      probe.style.background = 'color-mix(in srgb, var(--brand) 12%, transparent)';
+      root.appendChild(probe);
+      const out = [getComputedStyle(td).backgroundColor, getComputedStyle(probe).backgroundColor];
+      probe.remove();
+      return out;
+    });
+    assert.equal(rowBg, probeBg);
 
     await row.hover();
     await row.locator('.row-star').click();
