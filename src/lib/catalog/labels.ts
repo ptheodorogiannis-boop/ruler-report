@@ -184,11 +184,20 @@ const LOCAL = {
   views_by_platform: 'Προβολές ανά πλατφόρμα και συσκευή',
   search_terms: 'Κορυφαίοι όροι αναζήτησης',
 };
+/** Meta Ads alone has Results and Cost per result (the event each ad set optimises for). */
+const META_RESULTS = {
+  results: 'Αποτελέσματα',
+  cost_per_result: 'Κόστος ανά αποτέλεσμα',
+};
+/** Widgets that exist only with an account's config (one per Matomo goal set). */
+const MATOMO_GOALS = {
+  conversions_by_goal: 'Μετατροπές ανά στόχο',
+};
 const withPrefix = (prefix: string, m: Record<string, string>) => Object.fromEntries(Object.entries(m).map(([k, v]) => [`${prefix}:${k}`, v]));
 
 export const METRIC_LABELS_EL: Record<string, string> = {
-  // Meta Ads alone has Results and Cost per result (the ad set's own event)
-  ...withPrefix('fb_ads', { ...ADS, results: 'Αποτελέσματα', cost_per_result: 'Κόστος ανά αποτέλεσμα' }),
+  ...withPrefix('fb_ads', ADS),
+  ...withPrefix('fb_ads', META_RESULTS),
   ...withPrefix('gads', ADS),
   ...withPrefix('fb', SOCIAL),
   ...withPrefix('ig', SOCIAL),
@@ -226,8 +235,10 @@ export const DIMENSION_LABELS_EL: Record<string, string> = {
   search_term: 'Όρος αναζήτησης',
 };
 
-/** Widgets that exist only with an account's config (Matomo goals): kept apart from the catalog-checked map above. */
-const CONFIG_LABELS_EL: Record<string, string> = { 'matomo:conversions_by_goal': 'Μετατροπές ανά στόχο' };
+/** Labels of widgets that exist only with an account's config: kept apart from the catalog-checked map above. */
+const CONFIG_LABELS_EL: Record<string, string> = {
+  ...withPrefix('matomo', MATOMO_GOALS),
+};
 const LABELS: Record<Locale, Record<string, string>> = { en: {}, el: { ...METRIC_LABELS_EL, ...CONFIG_LABELS_EL } };
 const DIMENSIONS: Record<Locale, Record<string, string>> = { en: {}, el: DIMENSION_LABELS_EL };
 
