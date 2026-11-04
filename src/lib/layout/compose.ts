@@ -20,6 +20,7 @@ import { MAX_MAP_PANEL, mapValue } from './map';
 import { applyTokens, type MetricToken, type TextVar } from './tokens';
 import { formatValue } from '@/lib/util/format';
 import { DEFAULT_SIZE, GRID_COLS, GRID_GAP, GRID_ROW_HEIGHT, HEX, PALETTE_NAMES, isSpecialSlug, type GroupBy, type LayoutBlock, type LayoutWidget, type MetricRef, type ReportLayout, type ReportTheme, type SourceInfo, type WidgetCustom } from './types';
+import { STARS_MAX, STAR_NAME_MAX } from './stars';
 
 // ───────────── ids & keys ─────────────
 let seq = 0;
@@ -558,7 +559,7 @@ export const customSchema = z
     alt: z.string().max(200).optional(),
     // analysis_v1 text kept through a period change: the range it was written for (cleared on the next edit)
     staleFor: z.object({ start: z.string().max(10), end: z.string().max(10) }).strict().optional(),
-    starredRows: z.array(z.string().max(300)).max(100).optional(),
+    starredRows: z.array(z.string().max(STAR_NAME_MAX)).max(STARS_MAX).optional(),
   })
   .strict();
 

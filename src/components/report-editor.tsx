@@ -23,6 +23,7 @@ import { PeriodControl } from './period-control';
 import { useAiLanguage } from '@/components/ai-language';
 import { MetricPicker, type MetricPayload } from './metric-picker';
 import { BlockMenu } from './block-menu';
+import { nextStarred } from '@/lib/layout/stars';
 import { withoutStale, type ComparisonChoice } from '@/lib/services/period-rules';
 import { AnalyseAllButton, BlockAnalyseMenu } from './block-analyse';
 import { ICONS, ICON_NAMES } from './infographic';
@@ -378,10 +379,9 @@ export function ReportEditor(props: EditorProps) {
       return { ...x, custom: Object.keys(custom).length ? custom : undefined };
     }), { coalesce: coalesce ? `${id}:${coalesce}` : undefined, immediate: periodChanged || formulaChanged });
   };
-  /** star or unstar a table row by its name (spec 2026-11-04 editor §5); at most 100 names are kept */
+  /** star or unstar a table row by its name (spec 2026-11-04 editor §5) */
   const toggleStar = (id: string, name: string) => {
-    const cur = widgetOf(id)?.custom?.starredRows ?? [];
-    const next = cur.includes(name) ? cur.filter((n) => n !== name) : [...cur, name].slice(-100);
+    const next = nextStarred(widgetOf(id)?.custom?.starredRows ?? [], name);
     updateCustom(id, { starredRows: next.length ? next : undefined });
   };
   const setBlockWidgets = (blockId: string, widgets: LayoutWidget[]) => mutate((l) => mapBlock(l, blockId, (b) => ({ ...b, widgets })));

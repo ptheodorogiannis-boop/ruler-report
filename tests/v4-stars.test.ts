@@ -61,3 +61,16 @@ test('the stored list is capped at 100 names', async () => {
   assert.equal(customSchema.safeParse({ starredRows: ['Ad 1'] }).success, true);
   assert.equal(customSchema.safeParse({ starredRows: Array.from({ length: 101 }, (_, i) => `Ad ${i}`) }).success, false);
 });
+
+test('starring: a toggle by name; long names (a GA4 page path) still save; a name too long to store is not starred', async () => {
+  const { nextStarred, STAR_NAME_MAX } = await import('../src/lib/layout/stars');
+  const { customSchema } = await import('../src/lib/layout/compose');
+  assert.deepEqual(nextStarred([], 'Ad 1'), ['Ad 1']);
+  assert.deepEqual(nextStarred(['Ad 1', 'Ad 2'], 'Ad 1'), ['Ad 2']);
+  const path = `/products/${'a'.repeat(600)}?utm_source=x`;
+  assert.deepEqual(nextStarred([], path), [path]);
+  assert.equal(customSchema.safeParse({ starredRows: [path] }).success, true, 'a 600-character name saves');
+  const huge = 'x'.repeat(STAR_NAME_MAX + 1);
+  assert.deepEqual(nextStarred(['Ad 1'], huge), ['Ad 1'], 'never stored, so the layout keeps saving');
+  assert.equal(nextStarred(Array.from({ length: 100 }, (_, i) => `Ad ${i}`), 'Ad new').length, 100);
+});
