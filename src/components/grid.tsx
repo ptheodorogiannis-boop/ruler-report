@@ -169,7 +169,10 @@ export function GridCanvas({ items, onChange, renderItem, onDropNew, dropSize, m
             key={w.id}
             className={clsx('ritem', isDragging && 'ritem-dragging', resizing === w.id && 'ritem-resizing')}
             style={{ ...gridStyle(w), ...(isDragging && drag ? { transform: `translate(${drag.dx}px, ${drag.dy}px)` } : {}) }}
+            data-x={w.x}
+            data-y={w.y}
             data-w={w.w}
+            data-h={w.h}
           >
             {renderItem(w, {
               dragging: isDragging,

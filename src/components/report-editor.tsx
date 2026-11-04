@@ -21,6 +21,7 @@ import { changeReportPeriodAction, listCampaignsAction } from '@/app/actions/app
 import { useRouter } from 'next/navigation';
 import { PeriodControl } from './period-control';
 import { MetricPicker, type MetricPayload } from './metric-picker';
+import { BlockMenu } from './block-menu';
 import { withoutStale, type ComparisonChoice } from '@/lib/services/period-rules';
 import { AnalyseAllButton, BlockAnalyseMenu } from './block-analyse';
 import { ICONS, ICON_NAMES } from './infographic';
@@ -33,7 +34,7 @@ import { saveLayoutAction, saveReportAsTemplateAction } from '@/app/actions/edit
 import { getIntegrationDef, isAdsSlug } from '@/lib/catalog/integrations';
 import type { Component, DateRange, Format, RenderedBlock, ReportData } from '@/lib/engine/types';
 import { composeReport, effectiveScope, indexValues, newId, valueKey, widgetValueKey, withBlockScope } from '@/lib/layout/compose';
-import { compact, firstFree, moveItem, resizeItem, resolve } from '@/lib/layout/grid';
+import { compact, firstFree, insertAfter, moveItem, resizeItem, resolve } from '@/lib/layout/grid';
 import { DEFAULT_SIZE, GRID_COLS, MIN_SIZE, type LayoutBlock, type LayoutWidget, type ReportLayout, type SourceInfo, type WidgetCustom } from '@/lib/layout/types';
 import { reportToCsv } from '@/lib/services/export';
 import { CopyButton } from './action-form';
@@ -105,6 +106,9 @@ export function ReportEditor(props: EditorProps) {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [panelBlock, setPanelBlock] = useState<string | null>(null);
+  // right-click in a block (spec 2026-11-04 editor §4): where, and on which widget (null = empty space)
+  const [menu, setMenu] = useState<{ blockId: string; widgetId: string | null; x: number; y: number } | null>(null);
+  const closeMenu = useCallback(() => setMenu(null), []);
   // campaign scope of a block (spec v3 §2.2): the gear opens an inline editor; Apply writes block.campaigns
   const [scopeBlock, setScopeBlock] = useState<string | null>(null);
   const [scopeDraft, setScopeDraft] = useState<CampaignScope>({ mode: 'all' });
@@ -458,7 +462,18 @@ export function ReportEditor(props: EditorProps) {
             return (
               <Fragment key={b.id}>
               {bi === 0 && <NewBlockDrop label={t('editor.dropNewBlock')} {...newBlockDrop(0)} />}
-              <section data-block={b.id} className={clsx('block-drop space-y-3', overBlock === b.id && 'is-over')} style={blockVars(layout.theme, b.id, platformColor, accent)} {...blockDrop(b.id)}>
+              <section
+                data-block={b.id}
+                className={clsx('block-drop space-y-3', overBlock === b.id && 'is-over')}
+                style={blockVars(layout.theme, b.id, platformColor, accent)}
+                {...blockDrop(b.id)}
+                onContextMenu={(e) => {
+                  const el = e.target as HTMLElement;
+                  if (preview || e.shiftKey || el.closest('input, textarea, select, [contenteditable]')) return;
+                  e.preventDefault();
+                  setMenu({ blockId: b.id, widgetId: el.closest('[data-widget]')?.getAttribute('data-widget') ?? null, x: e.clientX, y: e.clientY });
+                }}
+              >
                 <div className={clsx('flex flex-wrap items-center gap-2', b.hideHeader && 'opacity-60')}>
                   {BlockIconC && (
                     <span className="block-icon" data-icon={b.icon} aria-hidden="true">
@@ -579,7 +594,7 @@ export function ReportEditor(props: EditorProps) {
                     const rb = rendered.get(w.id);
                     const isNumber = rb?.widget.value.type === 'number' || w.component === 'number_v1' || w.component === 'empty_v1' || w.component === 'calculated_v1';
                     return (
-                      <div className={clsx('relative h-full', selected === w.id && 'ritem-selected', w.custom?.hidden && 'ritem-hidden')} data-kind={kindOf(w.component)} onClick={() => setSelected(w.id)}>
+                      <div className={clsx('relative h-full', selected === w.id && 'ritem-selected', w.custom?.hidden && 'ritem-hidden')} data-kind={kindOf(w.component)} data-widget={w.id} onClick={() => setSelected(w.id)}>
                         {rb ? <WidgetCard b={rb} fmt={fmt} brand={blockColor} palette={palette} grid /> : <div className="card h-full" />}
                         {w.custom?.staleFor && (
                           <div className="written-for no-print" data-written-for>
@@ -619,6 +634,27 @@ export function ReportEditor(props: EditorProps) {
             );
           })}
           </div>
+          {menu &&
+            (() => {
+              const mb = layout.blocks.find((x) => x.id === menu.blockId);
+              if (!mb) return null;
+              const src = mb.integrationId > 0 ? sources.find((x) => x.id === mb.integrationId) : undefined;
+              return (
+                <BlockMenu
+                  at={{ x: menu.x, y: menu.y }}
+                  source={src}
+                  widgetId={menu.widgetId}
+                  existing={inReport}
+                  onPick={(p) => {
+                    const size = DEFAULT_SIZE[componentOfPayload(p)];
+                    addWidget(mb.id, p, insertAfter(mb.widgets, menu.widgetId, size.w, size.h));
+                  }}
+                  onDuplicate={() => menu.widgetId && duplicateWidget(menu.widgetId)}
+                  onRemove={() => menu.widgetId && removeWidget(menu.widgetId)}
+                  onClose={closeMenu}
+                />
+              );
+            })()}
           {selectedWidget && (
             <SettingsPanel
           w={selectedWidget}

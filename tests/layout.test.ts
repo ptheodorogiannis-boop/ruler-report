@@ -332,3 +332,12 @@ test('dashboards: the live view follows the layout and caches by the set of valu
   const saved2 = await saveLayout(r, moved);
   assert.equal(saved2.data, live.data, 'moving widgets re-uses the cached live data');
 });
+
+test('insertAfter: right of the clicked widget when it fits, else the row under it; from empty space, the end of the block', async () => {
+  const { insertAfter } = await import('../src/lib/layout/grid');
+  assert.deepEqual(insertAfter([{ id: 'a', x: 0, y: 0, w: 3, h: 2 }], 'a', 3, 2), { x: 3, y: 0 });
+  assert.deepEqual(insertAfter([{ id: 'a', x: 6, y: 0, w: 6, h: 2 }], 'a', 3, 2), { x: 0, y: 2 });
+  assert.deepEqual(insertAfter([{ id: 'a', x: 0, y: 0, w: 12, h: 4 }], null, 3, 2), { x: 0, y: 4 });
+  assert.deepEqual(insertAfter([], null, 3, 2), { x: 0, y: 0 });
+  assert.deepEqual(insertAfter([{ id: 'a', x: 0, y: 0, w: 3, h: 2 }], 'missing', 3, 2), { x: 0, y: 2 }, 'an unknown id falls back to the end');
+});

@@ -315,6 +315,7 @@
   "editor.account": "Account",
   "editor.addBlock": "Add block",
   "editor.addItem": "Add item",
+  "editor.addMetricHere": "Add metric here",
   "editor.addMetrics": "Add metrics",
   "editor.addMetricsTo": "Add metrics to",
   "editor.addSeries": "Add series",

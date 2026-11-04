@@ -85,6 +85,17 @@ export function firstFree(items: GridRect[], w: number, h: number, cols = GRID_C
   return { x: 0, y: maxY };
 }
 
+/**
+ * Where "Add metric here" puts a w×h widget (docs/superpowers/specs/2026-11-04-editor-report-management-design.md §4): right
+ * of the clicked widget when it fits on that row, else the row under it; from empty space (or an unknown id), the end of
+ * the block. The caller drops it there and lets resolve/compact push the rest down.
+ */
+export function insertAfter(items: GridRect[], afterId: string | null, w: number, h: number, cols = GRID_COLS): { x: number; y: number } {
+  const a = afterId ? items.find((it) => it.id === afterId) : undefined;
+  if (!a) return { x: 0, y: gridHeight(items) };
+  return a.x + a.w + w <= cols ? { x: a.x + a.w, y: a.y } : { x: 0, y: a.y + a.h };
+}
+
 /** Place items that have no position (x,y < 0) one after another, then compact. */
 export function flow<T extends GridRect>(items: T[], cols = GRID_COLS): T[] {
   const placed: T[] = items.filter((it) => it.x >= 0 && it.y >= 0);
