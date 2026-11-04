@@ -7,7 +7,7 @@ import { setServerLocale } from '@/lib/i18n/server';
 
 // One family (docs/DESIGN.md › Ruler glass pass): Manrope for titles, text and figures, with Greek. The brand's licensed
 // faces (Avantt for titles, ABC Arizona Flare for running text) swap in later through --font-display / --font-sans.
-const manrope = Manrope({ subsets: ['latin', 'latin-ext', 'greek'], variable: '--font-sans', display: 'swap', weight: ['300', '400', '500', '600'] });
+const manrope = Manrope({ subsets: ['latin', 'latin-ext', 'greek'], variable: '--font-sans', display: 'swap' });
 
 const base = process.env.APP_URL || 'http://localhost:3100';
 export const metadata: Metadata = {
