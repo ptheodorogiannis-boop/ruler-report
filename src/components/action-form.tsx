@@ -29,7 +29,7 @@ export function ActionForm({
       {state?.token && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm">
           <div className="mb-1 font-semibold text-emerald-800">Copy your token now — it is shown only once</div>
-          <code className="block break-all rounded bg-white px-2 py-1 text-xs">{state.token}</code>
+          <code className="block break-all rounded-md bg-[var(--inset)] px-2 py-1 text-xs">{state.token}</code>
         </div>
       )}
       <div className="flex items-center gap-2">

@@ -1,4 +1,8 @@
 /** @type {import('tailwindcss').Config} */
+// Colour remaps (docs/DESIGN.md › Ruler glass pass): the slate, red, amber and emerald steps the components already use are
+// pointed at the Ruler greys and the design system's feedback colours, so every existing screen follows the new look
+// without touching its class names. Text steps keep at least 4.5:1 on glass; grey 50 (#7c7c7a) is never a text colour.
+const colors = require('tailwindcss/colors');
 module.exports = {
   content: [require('path').join(__dirname, 'src/**/*.{ts,tsx}').split('\\').join('/')],
   theme: {
@@ -9,13 +13,18 @@ module.exports = {
         paper: 'var(--paper)',
         up: 'var(--up)',
         down: 'var(--down)',
-        // accessibility remap (docs/DESIGN.md): the two slate steps the UI used for captions were 2.56:1 and 1.48:1 on white.
-        // Mapping them here fixes every existing `text-slate-400` / `text-slate-300` at once (5.2:1 and 2.1:1 → decorative only).
-        slate: { ...require('tailwindcss/colors').slate, 300: '#b8bfc9', 400: '#636d7c', 500: '#525b66', 600: '#3f4854' },
+        slate: { ...colors.slate, 50: '#f2f2f0', 100: '#e8e8e6', 200: '#d8d8d6', 300: '#a1a19f', 400: '#575756', 500: '#575756', 600: '#333332', 700: '#333332', 800: '#1f1f1e', 900: '#0e0e0e' },
+        red: { ...colors.red, 50: '#f7e6e5', 100: '#f0d2d0', 200: '#e4aca8', 400: '#c22a26', 500: '#a80100', 600: '#a80100', 700: '#a80100', 800: '#7d0100' },
+        amber: { ...colors.amber, 50: '#f6eedd', 100: '#efe1c2', 200: '#e2c890', 400: '#c08a1d', 500: '#9a6a00', 700: '#7d5200', 800: '#6a4600', 900: '#4f3400' },
+        emerald: { ...colors.emerald, 50: '#e3efe6', 200: '#b9d6c1', 400: '#3f9a5f', 500: '#2e7d4b', 600: '#166534', 700: '#166534', 800: '#114d28' },
       },
       fontFamily: {
-        sans: ['var(--font-sans)', 'Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
-        display: ['var(--font-display)', 'var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-sans)', 'Manrope', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
+        display: ['var(--font-sans)', 'Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      },
+      borderRadius: {
+        tile: '24px',
+        pop: '16px',
       },
     },
   },

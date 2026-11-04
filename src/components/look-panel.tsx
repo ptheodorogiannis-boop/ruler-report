@@ -56,6 +56,18 @@ export function LookPanel({ theme, clientColor, projectId, onChange, onClose }: 
               </label>
             ))}
           </div>
+          <div className="mt-4" data-colors-option>
+            <div className="label">{t('look.colors')}</div>
+            <div className="segments">
+              <button type="button" aria-pressed={(th.colors ?? 'report') === 'report'} onClick={() => set({ colors: undefined })}>
+                {t('look.colorsReport')}
+              </button>
+              <button type="button" aria-pressed={th.colors === 'platform'} onClick={() => set({ colors: 'platform' })}>
+                {t('look.colorsPlatform')}
+              </button>
+            </div>
+            <div className="mt-1 text-xs text-ink-3">{t('look.colorsHint')}</div>
+          </div>
         </div>
         <div>
           <div className="label">{t('look.coverImage')}</div>
@@ -92,10 +104,10 @@ export function LookPanel({ theme, clientColor, projectId, onChange, onClose }: 
 export function BlockColor({ value, fallback, onChange }: { value: string | undefined; fallback: string; onChange: (color: string | null) => void }) {
   const t = useT();
   return (
-    <span className="block-color" title={value ? `Block colour ${value} — click × for the platform colour` : 'Block colour (platform colour)'}>
+    <span className="block-color" title={t('look.blockColour')}>
       <input type="color" aria-label={t('look.blockColour')} value={value ?? fallback} onChange={(e) => onChange(e.target.value)} />
       {value && (
-        <button type="button" className="text-ink-3 hover:text-ink" aria-label={t('look.usePlatformColour')} onClick={() => onChange(null)}>
+        <button type="button" className="text-ink-3 hover:text-ink" aria-label={t('look.useDefaultColour')} onClick={() => onChange(null)}>
           <X size={12} />
         </button>
       )}

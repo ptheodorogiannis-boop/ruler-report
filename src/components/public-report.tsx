@@ -149,12 +149,12 @@ export async function PublicReport({ token, kind, embed, preset, compare, print,
   );
 
   return (
-    <div style={{ ...style, ...themeVars(data.theme, company.brandColor) }} className="report-root min-h-screen" lang={locale} data-cover-layout={coverLayout} {...printAttrs({ print, layout })}>
+    <div style={{ ...style, ...themeVars(data.theme, company.brandColor) }} className="report-root ground min-h-screen" lang={locale} data-cover-layout={coverLayout} {...printAttrs({ print, layout })}>
       <a href="#document" className="skip-link">
         {tr('public.skipToReport')}
       </a>
       {!embed && print !== '1' && (
-        <header className="dossier-head no-print border-b border-[var(--line)] bg-[var(--card)]">
+        <header className="dossier-head no-print">
           <div className="mx-auto flex max-w-[1280px] items-center justify-between px-4 py-3 md:px-8">
             {company.logo ? (
               // eslint-disable-next-line @next/next/no-img-element

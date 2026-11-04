@@ -34,7 +34,7 @@ export default async function TemplatesPage() {
       />
       {(['report', 'dashboard'] as const).map((kind) => (
         <section key={kind} className="mb-8">
-          <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">{kind === 'report' ? t('templates.reportTemplates') : t('templates.dashboardTemplates')}</h2>
+          <h2 className="mb-2 text-sm font-medium text-ink-3">{kind === 'report' ? t('templates.reportTemplates') : t('templates.dashboardTemplates')}</h2>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {templates
               .filter((tok) => tok.kind === kind)

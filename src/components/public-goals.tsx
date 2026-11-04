@@ -47,15 +47,15 @@ function GoalCard({ g, fmt, df }: { g: GoalsPageGoal; fmt: { currency: string; d
         </div>
         <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
           <div>
-            <dt className="text-[11px] uppercase tracking-wide text-ink-3">{tr('public.now')}</dt>
+            <dt className="text-xs text-ink-3">{tr('public.now')}</dt>
             <dd className="num font-semibold">{n(pr.current)}</dd>
           </div>
           <div>
-            <dt className="text-[11px] uppercase tracking-wide text-ink-3">{tr('public.target')}</dt>
+            <dt className="text-xs text-ink-3">{tr('public.target')}</dt>
             <dd className="num font-semibold">{n(pr.target)}</dd>
           </div>
           <div>
-            <dt className="text-[11px] uppercase tracking-wide text-ink-3">{tr('public.projected')}</dt>
+            <dt className="text-xs text-ink-3">{tr('public.projected')}</dt>
             <dd className="num font-semibold">{n(pr.estimatedEnd)}</dd>
           </div>
         </dl>

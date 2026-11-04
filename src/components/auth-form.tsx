@@ -13,11 +13,15 @@ export function AuthForm({ action, fields, submit, pending: pendingLabel }: { ac
           <label className="label" htmlFor={f.name}>
             {f.label}
           </label>
-          <input id={f.name} name={f.name} type={f.type ?? 'text'} placeholder={f.placeholder} autoComplete={f.autoComplete} className="input" required />
+          <input id={f.name} name={f.name} type={f.type ?? 'text'} placeholder={f.placeholder} autoComplete={f.autoComplete} className="input input-lg" required />
         </div>
       ))}
-      {state?.error && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</div>}
-      <button className="btn-primary w-full" disabled={pending}>
+      {state?.error && (
+        <div className="form-error" role="alert">
+          {state.error}
+        </div>
+      )}
+      <button className="btn-primary btn-lg w-full" disabled={pending}>
         {pending ? (pendingLabel ?? '…') : submit}
       </button>
     </form>

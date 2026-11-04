@@ -1,59 +1,126 @@
-/* Hallmark · checked: 2026-11-02 · genre: modern-minimal (inferred) · shape: app screen
- * floor: 0 FAIL on the connect screens · fixed: 9, 10, 11, 26a, 54 · structural: 0 printed
- * built: the project · redesign: polish · v2.0.0 */
-/* Hallmark · waive 26b · .btn-primary:active and the disabled styles of .btn and .btn-primary are defined in this file · the connect screens press and disable through the shared button classes, not TSX class strings */
+/* Hallmark · checked: 2026-11-04 · genre: modern-minimal (locked system: Ruler Hub glass, design-system.md + Figma RULEEEER) · shape: app screens
+ * critique: ink on glass over a grey ground with one glow; the accent marks one place at a time; numbers are set large and light
+ * built: the project · redesign: full (keeps content and wiring) · v2.0.0 */
+/* Hallmark · waive 26b · the pressed and disabled states of .btn, .btn-primary and .btn-accent are defined in this file · components press and disable through the shared button classes, not TSX class strings */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ───────────── tokens (docs/DESIGN.md) ───────────── */
+/* ───────────── tokens (docs/DESIGN.md › Ruler glass pass; values from the Ruler Hub design system) ─────────────
+ * Two accents on purpose: the app chrome uses --brand (Ruler red, or the workspace's colour); a report canvas
+ * re-points --brand at the report's accent (theme.ts › themeVars), so a client report never shows Ruler red next
+ * to the client's own colour. Old names (--paper, --card, --ink-2 …) stay as the names components read. */
 :root {
-  --paper: #f4f5f2;
-  --card: #ffffff;
-  --ink: #101418;
-  --ink-2: #525b66;
-  --ink-3: #636d7c;
-  --line: #e3e6e1;
-  --line-strong: #cfd4ce;
-  --brand: #1a36e6; /* overridden per workspace by the shell / public page */
-  --brand-soft: #e8ecff;
-  --up: #11784a;
-  --down: #b8321f;
-  --focus: #1a36e6;
-  --bg: var(--paper);
-  /* --font-sans / --font-display are set on <html> by next/font (src/app/layout.tsx); fallbacks live at the usage sites */
+  /* ground and tones */
+  --ground: #e4e4e2;
+  --glow-ink: rgba(14, 14, 14, 0.1);
+  --glass: rgba(255, 255, 255, 0.62);
+  --glass-line: rgba(255, 255, 255, 0.75);
+  --glass-solid: #f2f2f0;
+  --smoke: rgba(52, 52, 50, 0.78);
+  --smoke-solid: #3a3a38;
+  --smoke-fg: #ffffff;
+  --smoke-muted: #d6d6d4;
+  --solid: #0e0e0e;
+  --solid-fg: #ffffff;
+  --solid-muted: #a1a19f;
+  --inset: rgba(255, 255, 255, 0.8);
+  --hairline: rgba(14, 14, 14, 0.1);
+  /* text, lines, brand */
+  --ink: #0e0e0e;
+  --ink-2: #333332;
+  --ink-3: #575756;
+  --line: var(--hairline);
+  --line-strong: rgba(14, 14, 14, 0.24);
+  --brand: #db0100; /* Ruler red; the shell sets the workspace colour, a report sets its accent */
+  --brand-soft: color-mix(in srgb, var(--brand) 10%, transparent);
+  --up: #166534;
+  --down: #a80100;
+  --warning: #7d5200;
+  --info: #0b6471;
+  --focus: #0e0e0e;
+  /* legacy names, re-pointed */
+  --paper: rgba(14, 14, 14, 0.05); /* a quiet fill inside a tile: chips, tracks, hover rows */
+  --card: var(--glass);
+  --card-solid: var(--glass-solid); /* popovers and menus that sit over content */
+  --bg: var(--ground);
+  /* shape, depth, motion */
+  --r-tile: 24px;
+  --r-dialog: 28px;
+  --r-pop: 16px;
+  --r-input: 12px;
+  --r-chip: 6px;
+  --shadow-card: 0 1px 2px rgba(14, 14, 14, 0.04), 0 24px 48px -28px rgba(14, 14, 14, 0.35);
+  --shadow-pop: 0 16px 40px -16px rgba(14, 14, 14, 0.4);
+  --ease-brand: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-track: var(--ease-brand);
+  --font-display: var(--font-sans);
 }
-/* dark variants exist for when a theme switch is wired (not enabled yet) */
+/* dark values (Ruler Hub): defined for when a theme switch is wired; not switched on yet */
 :root[data-theme='dark'] {
-  --paper: #0f1317;
-  --card: #171c21;
-  --ink: #eceef1;
-  --ink-2: #a3abb6;
-  --ink-3: #8a93a0;
-  --line: #262d34;
-  --line-strong: #39424b;
-  --brand-soft: #1b2347;
-  --up: #4bc489;
-  --down: #f0796a;
-  --focus: #7c8cff;
+  --ground: #0b0b0b;
+  --glow-ink: rgba(255, 255, 255, 0.06);
+  --glass: rgba(255, 255, 255, 0.07);
+  --glass-line: rgba(255, 255, 255, 0.12);
+  --glass-solid: #1a1a1a;
+  --smoke: rgba(255, 255, 255, 0.14);
+  --smoke-solid: #333332;
+  --smoke-muted: #c5c5c3;
+  --solid: #f4f4f2;
+  --solid-fg: #0e0e0e;
+  --solid-muted: #575756;
+  --inset: rgba(20, 20, 20, 0.8);
+  --hairline: rgba(255, 255, 255, 0.1);
+  --ink: #ffffff;
+  --ink-2: #e2e2e0;
+  --ink-3: #a1a19f;
+  --line-strong: rgba(255, 255, 255, 0.24);
+  --up: #6fbf8b;
+  --down: #ff8a84;
+  --warning: #d9a441;
+  --info: #5fbec9;
+  --focus: #ffffff;
+  --paper: rgba(255, 255, 255, 0.06);
 }
 
 html,
 body {
-  background: var(--bg);
+  background: var(--ground);
   color: var(--ink);
-  font-family: var(--font-sans, Inter, ui-sans-serif, system-ui, 'Segoe UI', sans-serif);
+  font-family: var(--font-sans, Manrope, ui-sans-serif, system-ui, 'Segoe UI', sans-serif);
   font-size: 14px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
-  font-feature-settings: 'cv11', 'ss01';
+  overflow-x: clip;
+}
+/* the body is transparent so the ground's glow (a fixed layer behind it) shows; html keeps the plain ground as a fallback */
+body {
+  background: transparent;
 }
 
-/* keyboard focus: visible on every control, invisible for pointer clicks */
+/* the ground: grey with one glow at the top right and a faint ink glow at the bottom left. Drawn once, fixed, behind
+ * everything, with no backdrop-filter and no pointer events. It reads --brand from the element that carries it, so a
+ * report canvas glows in the report's accent. Page wrappers stay transparent so the glow shows. */
+.ground {
+  position: relative;
+}
+.ground::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  background:
+    radial-gradient(60vmax 45vmax at 88% -6%, color-mix(in srgb, var(--brand) 30%, transparent), transparent 70%),
+    radial-gradient(55vmax 45vmax at -8% 108%, var(--glow-ink), transparent 70%),
+    var(--ground);
+}
+
+/* keyboard focus: visible on every control, at once, invisible for pointer clicks */
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -65,48 +132,204 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+/* people who ask for less transparency get the opaque tones */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass: var(--glass-solid);
+    --smoke: var(--smoke-solid);
+    --card: var(--glass-solid);
+  }
+}
 
 @layer components {
+  /* a tile: glass without blur (tiles repeat by the dozen; blur is kept for the few overlays) */
   .card {
-    @apply rounded-xl border border-[var(--line)] bg-[var(--card)];
-    box-shadow: 0 1px 0 rgba(16, 20, 24, 0.03);
+    border-radius: var(--r-tile);
+    border: 1px solid var(--glass-line);
+    background: var(--card);
+    box-shadow: var(--shadow-card);
   }
+  /* the four tones (design-system.md §2) */
+  .tone-glass {
+    background: var(--glass);
+    border: 1px solid var(--glass-line);
+  }
+  .tone-smoke {
+    background: var(--smoke);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: var(--smoke-fg);
+    --ink: var(--smoke-fg);
+    --ink-2: var(--smoke-muted);
+    --ink-3: var(--smoke-muted);
+    --line: rgba(255, 255, 255, 0.16);
+    --paper: rgba(255, 255, 255, 0.1);
+  }
+  .tone-solid {
+    background: var(--solid);
+    border: 1px solid var(--solid);
+    color: var(--solid-fg);
+    --ink: var(--solid-fg);
+    --ink-2: var(--solid-muted);
+    --ink-3: var(--solid-muted);
+    --line: rgba(255, 255, 255, 0.14);
+    --paper: rgba(255, 255, 255, 0.08);
+  }
+  .tone-inset {
+    background: var(--inset);
+    border: 1px solid var(--hairline);
+    box-shadow: none;
+  }
+  /* an overlay over content (menus, popovers): the one place glass keeps its blur */
+  .overlay {
+    border-radius: var(--r-pop);
+    border: 1px solid var(--glass-line);
+    background: color-mix(in srgb, var(--glass-solid) 88%, transparent);
+    box-shadow: var(--shadow-pop);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    backdrop-filter: blur(24px) saturate(140%);
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .overlay {
+      background: var(--glass-solid);
+    }
+  }
+
+  /* buttons are pills. Ink is the primary; red is for one call to action, rarely. */
   .btn {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--line-strong)] bg-[var(--card)] px-3 py-1.5 text-sm font-medium text-[var(--ink)] transition hover:border-[var(--ink-3)] disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-4 text-[13px] font-medium;
+    min-height: 36px;
+    border-radius: 999px;
+    border: 1px solid var(--glass-line);
+    background: var(--glass);
+    color: var(--ink);
+    transition: background-color 0.2s var(--ease-brand), border-color 0.2s var(--ease-brand), color 0.2s var(--ease-brand);
+  }
+  .btn:hover {
+    background: rgba(255, 255, 255, 0.86);
+    border-color: var(--line-strong);
+  }
+  .btn:active {
+    background: rgba(255, 255, 255, 0.7);
+  }
+  .btn:disabled,
+  .btn[aria-disabled='true'] {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand px-3.5 py-1.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-4 text-[13px] font-medium;
+    min-height: 36px;
+    border-radius: 999px;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--ground);
+    transition: background-color 0.2s var(--ease-brand), border-color 0.2s var(--ease-brand);
+  }
+  .btn-primary:hover {
+    background: #2a2a29;
+    border-color: #2a2a29;
+  }
+  .btn-primary:active {
+    background: #000;
+  }
+  .btn-primary:disabled,
+  .btn-primary[aria-disabled='true'] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-4 text-[13px] font-medium;
+    min-height: 36px;
+    border-radius: 999px;
+    border: 1px solid var(--brand);
+    background: var(--brand);
+    color: #fff;
+    transition: filter 0.2s var(--ease-brand);
+  }
+  .btn-accent:hover {
+    filter: brightness(0.9);
+  }
+  .btn-accent:disabled {
+    opacity: 0.5;
   }
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--line-strong)] bg-[var(--card)] px-3 py-1.5 text-sm font-medium text-[var(--down)] transition hover:border-[var(--down)];
+    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-4 text-[13px] font-medium;
+    min-height: 36px;
+    border-radius: 999px;
+    border: 1px solid var(--glass-line);
+    background: var(--glass);
+    color: var(--down);
+    transition: border-color 0.2s var(--ease-brand);
+  }
+  .btn-danger:hover {
+    border-color: var(--down);
+  }
+  /* a round icon button: 40px circle, 18px line icon, an accessible name on the element */
+  .icon-btn {
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid var(--glass-line);
+    background: var(--glass);
+    color: var(--ink-2);
+    transition: background-color 0.2s var(--ease-brand), color 0.2s var(--ease-brand);
+  }
+  .icon-btn:hover {
+    background: rgba(255, 255, 255, 0.86);
+    color: var(--ink);
+  }
+  .icon-btn.is-active {
+    background: var(--brand);
+    border-color: var(--brand);
+    color: #fff;
   }
   .input {
-    @apply w-full rounded-lg border border-[var(--line-strong)] bg-[var(--card)] px-3 py-1.5 text-sm text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-3)] focus:border-brand focus:ring-2 focus:ring-[var(--brand-soft)];
+    @apply w-full px-3 text-sm outline-none;
+    min-height: 38px;
+    border-radius: var(--r-input);
+    border: 1px solid var(--line-strong);
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--ink);
+    transition: border-color 0.2s var(--ease-brand), box-shadow 0.2s var(--ease-brand);
   }
+  .input::placeholder {
+    color: var(--ink-3);
+  }
+  .input:focus {
+    border-color: var(--ink);
+    box-shadow: 0 0 0 3px rgba(14, 14, 14, 0.1);
+  }
+  .input[aria-invalid='true'] {
+    border-color: var(--down);
+  }
+  /* labels, captions and table heads: the body face a step smaller, sentence case, untracked (Figma DS-08: no
+   * letter-spaced or all-caps text; this overrides the Hub doc's tracked eyebrow, see docs/DESIGN.md) */
   .label {
-    @apply mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--ink-3)];
+    @apply mb-1 block text-xs font-medium;
+    color: var(--ink-3);
   }
   .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--ink-3)];
+    @apply text-xs font-medium;
+    color: var(--ink-3);
   }
   .display {
     font-family: var(--font-display, var(--font-sans, ui-sans-serif, system-ui, sans-serif));
-    letter-spacing: -0.01em;
-    font-feature-settings: 'tnum', 'cv11';
-  }
-  /* Bricolage has no Greek glyphs: in Greek a title would mix two faces in one line, so display text is Inter there */
-  :lang(el) .display {
-    font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
-    letter-spacing: -0.015em;
+    letter-spacing: -0.02em;
+    font-feature-settings: 'tnum';
   }
   .num {
     font-variant-numeric: tabular-nums;
   }
   .badge {
-    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
   .th {
-    @apply whitespace-nowrap px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--ink-3)];
+    @apply whitespace-nowrap px-3 py-2 text-left text-xs font-medium;
+    color: var(--ink-3);
   }
   .td {
     @apply px-3 py-2 text-sm;
@@ -313,8 +536,6 @@ body {
   fill: var(--ink-3);
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
 }
 .rband-comparison {
@@ -356,8 +577,6 @@ body {
   margin-left: 8px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--up);
 }
 .rband-date-end {
@@ -459,108 +678,6 @@ body {
 /* ───────────── award pass: motion verb "slide along a track and click into place" (docs/DESIGN.md) ───────────── */
 :root {
   --ease-track: cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-/* nav link: a marker slides in on the left; the icon's part moves (nav-icons.tsx) */
-.navlink {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 0.5rem;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--ink-2);
-  transition: background-color 0.25s var(--ease-track), color 0.25s var(--ease-track);
-}
-.navlink::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 25%;
-  height: 50%;
-  width: 2px;
-  border-radius: 2px;
-  background: var(--brand);
-  opacity: 0;
-  translate: -6px 0;
-  transition: translate 0.3s var(--ease-track), opacity 0.3s var(--ease-track);
-}
-.navlink > svg {
-  flex-shrink: 0;
-}
-@media (hover: hover) {
-  .navlink:hover {
-    color: var(--ink);
-    background: var(--paper);
-  }
-  .navlink:hover::before {
-    opacity: 1;
-    translate: 0 0;
-  }
-}
-.navlink:focus-visible::before,
-.navlink.is-active::before {
-  opacity: 1;
-  translate: 0 0;
-}
-.navlink.is-active {
-  color: var(--brand);
-  background: var(--brand-soft);
-  font-weight: 600;
-}
-
-/* primary button: a light fill slides in from the left */
-.btn-primary {
-  position: relative;
-  isolation: isolate;
-  overflow: clip;
-}
-.btn-primary::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: rgba(255, 255, 255, 0.16);
-  translate: -101% 0;
-  transition: translate 0.35s var(--ease-track);
-}
-.btn-primary::after {
-  /* the ruler tick: a white line draws along the bottom edge */
-  content: '';
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 3px;
-  height: 2px;
-  border-radius: 2px;
-  background: #fff;
-  transform-origin: left center;
-  scale: 0 1;
-  transition: scale 0.4s var(--ease-track);
-}
-@media (hover: hover) {
-  .btn-primary:hover::after {
-    scale: 1 1;
-  }
-}
-.btn-primary:focus-visible::after {
-  scale: 1 1;
-}
-@media (hover: hover) {
-  .btn-primary:hover::before {
-    translate: 0 0;
-  }
-  .btn-primary:hover {
-    opacity: 1;
-  }
-}
-.btn-primary:focus-visible::before {
-  translate: 0 0;
-}
-.btn-primary:active {
-  scale: 0.985;
 }
 
 /* inline links: an underline at rest that rises into a band */
@@ -695,21 +812,83 @@ body {
   }
 }
 
-/* ───────────── login ───────────── */
-.login-stage {
+/* ───────────── public pages: sign in, sign up (design-system.md §6.3) ───────────── */
+.public-stage {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+}
+.public-wrap {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.public-mark {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink);
+}
+.public-product {
+  padding-left: 12px;
+  border-left: 1px solid var(--line-strong);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.public-panel {
+  width: 100%;
+  padding: 36px 32px 28px;
+  border-radius: var(--r-dialog);
+  border: 1px solid var(--glass-line);
+  background: var(--glass);
+  box-shadow: var(--shadow-pop);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
+}
+@media (max-width: 479px) {
+  .public-panel {
+    padding: 28px 20px 22px;
+  }
+}
+.public-title {
+  font-size: 34px;
+  line-height: 1.1;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  overflow-wrap: break-word;
+}
+.public-sub {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.public-hint {
+  margin-top: 20px;
+  padding: 10px 12px;
+  border-radius: 12px;
   background: var(--paper);
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-3);
 }
-.login-avatar {
-  position: relative;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, var(--card) 72%, transparent 73%);
+.public-foot {
+  display: flex;
+  gap: 20px;
+  font-size: 12px;
+  color: var(--ink-2);
 }
-.login-avatar .bs-avatar {
-  transition: opacity 0.4s var(--ease-track);
-}
-.login-caption {
-  min-height: 1.5em;
-  transition: opacity 0.3s var(--ease-track);
+.form-error {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(168, 1, 0, 0.1);
+  color: var(--down);
+  font-size: 13px;
 }
 .bs-avatar {
   display: block;
@@ -744,137 +923,187 @@ body {
 .frame {
   min-height: 100vh;
 }
-.rail {
-  position: sticky;
-  top: 0;
+/* the top bar: wordmark, the pill menu, then notifications and the account (design-system.md §6.1) */
+.topbar {
+  position: relative;
   z-index: 40;
-  background: var(--card);
-  border-bottom: 1px solid var(--line);
-}
-.rail-inner {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 20px;
-  min-height: 60px;
-  padding: 0 20px;
-}
-@media (min-width: 1024px) {
-  .rail-inner {
-    padding: 0 28px;
-  }
-}
-.rail-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 0;
-  max-width: 220px;
-  color: var(--ink);
+  gap: 16px;
+  min-height: 72px;
+  padding: 12px 20px;
 }
-.rail-right {
+@media (min-width: 1024px) {
+  .topbar {
+    padding: 14px 28px;
+  }
+}
+.topbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  max-width: 260px;
+  color: var(--ink);
+  border-radius: 999px;
+}
+.topbar-ws {
+  padding-left: 12px;
+  border-left: 1px solid var(--line-strong);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.topbar-right {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
 }
-.rail-icon {
-  position: relative;
-  display: inline-flex;
-  width: 36px;
-  height: 36px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  color: var(--ink-2);
-  transition: background-color 0.25s var(--ease-track), color 0.25s var(--ease-track);
-}
-@media (hover: hover) {
-  .rail-icon:hover {
-    background: var(--paper);
-    color: var(--ink);
-  }
-}
-.rail-icon.is-active {
-  color: var(--brand);
-  background: var(--brand-soft);
-}
-.rail-badge {
+.bell-dot {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 999px;
+  top: 9px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   background: var(--brand);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 16px;
-  text-align: center;
 }
-
-/* slide-rule nav */
-.topnav {
+.topbar .icon-btn {
+  position: relative;
+}
+/* the pill menu: glass, the active place a red pill with white text */
+.pillnav {
   min-width: 0;
 }
-.topnav-list {
+.pillnav-list {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 2px 0;
+  gap: 2px;
   margin: 0;
-  padding: 0;
+  padding: 4px;
   list-style: none;
+  border-radius: 999px;
+  border: 1px solid var(--glass-line);
+  background: var(--glass);
+  box-shadow: var(--shadow-card);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
 }
-.topnav-group {
-  display: contents;
-}
-.topnav-sep {
-  width: 1px;
-  height: 18px;
-  margin: 0 6px;
-  background: var(--line-strong);
-}
-.topnav-item {
-  position: relative;
-  display: inline-block;
-  padding: 18px 8px 14px;
+.pillnav-item {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
   color: var(--ink-2);
   white-space: nowrap;
-  border-radius: 6px 6px 0 0;
+  transition: background-color 0.2s var(--ease-brand), color 0.2s var(--ease-brand);
 }
-.topnav-item::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: 4px;
-  width: 1px;
-  height: 5px;
-  background: var(--line-strong);
-}
-.topnav-item.is-active {
+.pillnav-item:hover {
+  background: var(--hairline);
   color: var(--ink);
-  font-weight: 600;
 }
-.topnav-item.is-active::after {
-  content: '';
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 0;
-  height: 3px;
-  background: var(--ink);
+.pillnav-item.is-active {
+  background: var(--brand);
+  color: #fff;
 }
-@media (hover: hover) {
-  .topnav-item:hover {
-    color: var(--ink);
+/* body: the icon rail beside the page */
+.frame-body {
+  display: flex;
+  align-items: flex-start;
+}
+.siderail {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  flex: none;
+  width: 72px;
+  min-height: calc(100vh - 120px);
+  padding: 8px 0 24px 20px;
+}
+@media (min-width: 1024px) {
+  .siderail {
+    padding-left: 28px;
+    width: 80px;
   }
 }
-
-
+.siderail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* the rail's tooltip: its label on the right, at once on hover and on keyboard focus */
+.rail-btn {
+  position: relative;
+}
+.rail-btn::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  translate: 0 -50%;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--ground);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s var(--ease-brand);
+  z-index: 60;
+}
+.rail-btn:hover::after,
+.rail-btn:focus-visible::after {
+  opacity: 1;
+}
+.frame-main {
+  flex: 1;
+  min-width: 0;
+  padding: 16px 20px 72px;
+}
+@media (min-width: 1024px) {
+  .frame-main {
+    padding: 16px 40px 88px 28px;
+  }
+}
+.frame-content {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+/* page title: large and light (Hub: about 40px, -0.03em) */
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-bottom: 28px;
+}
+.page-title {
+  font-family: var(--font-display, var(--font-sans));
+  font-size: clamp(30px, 3.4vw, 42px);
+  line-height: 1.08;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+.page-sub {
+  margin-top: 8px;
+  max-width: 72ch;
+  font-size: 14px;
+  color: var(--ink-2);
+}
 /* account menu */
 .umenu {
   position: relative;
@@ -893,44 +1122,189 @@ body {
   position: absolute;
   right: 0;
   top: calc(100% + 8px);
-  width: 260px;
+  width: 280px;
   z-index: 50;
-  box-shadow: 0 16px 40px -16px rgba(16, 20, 24, 0.35);
 }
-
-.frame-main {
-  padding: 28px 20px 64px;
+.lang-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: var(--ink-2);
 }
-@media (min-width: 1024px) {
+.lang-chip:hover {
+  background: var(--hairline);
+  color: var(--ink);
+}
+.lang-chip.is-active {
+  background: var(--ink);
+  color: var(--ground);
+}
+/* menu rows (account menu, the More sheet) */
+.navlink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-2);
+  transition: background-color 0.2s var(--ease-brand), color 0.2s var(--ease-brand);
+}
+.navlink > svg {
+  flex-shrink: 0;
+}
+.navlink:hover {
+  color: var(--ink);
+  background: var(--hairline);
+}
+.navlink.is-active {
+  color: #fff;
+  background: var(--brand);
+}
+/* phones: no pill menu and no rail; a floating glass tab bar carries the places */
+.tabbar {
+  display: none;
+}
+@media (max-width: 767px) {
+  .topbar {
+    min-height: 64px;
+    padding: 10px 16px;
+  }
+  .topbar .pillnav,
+  .siderail {
+    display: none;
+  }
+  .topbar-ws {
+    display: none;
+  }
   .frame-main {
-    padding: 36px 40px 80px;
+    padding: 8px 16px 112px;
+  }
+  .tabbar {
+    display: block;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 45;
+  }
+  .tabbar-list {
+    display: flex;
+    justify-content: space-between;
+    gap: 2px;
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    border-radius: 999px;
+    border: 1px solid var(--glass-line);
+    background: color-mix(in srgb, var(--glass-solid) 82%, transparent);
+    box-shadow: var(--shadow-pop);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    backdrop-filter: blur(24px) saturate(140%);
+  }
+  .tabbar-list > li {
+    flex: 1;
+    min-width: 0;
+  }
+  .tabbar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 48px;
+    padding: 4px 2px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink-2);
+    list-style: none;
+    cursor: pointer;
+  }
+  .tabbar-item > span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tabbar-item::-webkit-details-marker {
+    display: none;
+  }
+  .tabbar-item.is-active {
+    background: var(--brand);
+    color: #fff;
+  }
+  .tabbar-more {
+    position: relative;
+  }
+  .tabbar-sheet {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    padding: 8px;
+    border-radius: var(--r-dialog);
+  }
+  .tabbar-sheet ul {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 }
-.frame-content {
-  max-width: 1200px;
-  margin: 0 auto;
+@media print {
+  .topbar,
+  .siderail,
+  .tabbar {
+    display: none !important;
+  }
 }
 
-/* period segments (overview) */
+/* segmented control (period segments, page tabs): a glass pill, the chosen segment filled with ink */
 .segments {
   display: inline-flex;
-  border: 1px solid var(--line-strong);
-  border-radius: 10px;
-  padding: 2px;
-  background: var(--card);
+  flex-wrap: nowrap;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-line);
+  background: var(--glass);
 }
-.segments a {
-  padding: 5px 12px;
-  border-radius: 8px;
+.segments a,
+.segments button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
   color: var(--ink-2);
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  transition: background-color 0.25s var(--ease-track), color 0.25s var(--ease-track);
+  transition: background-color 0.2s var(--ease-brand), color 0.2s var(--ease-brand);
 }
-.segments a.is-active {
+.segments a:hover,
+.segments button:hover {
+  color: var(--ink);
+}
+.segments a.is-active,
+.segments button.is-active,
+.segments [aria-pressed='true'] {
   background: var(--ink);
-  color: #fff;
+  color: var(--ground);
+}
+.seg-count {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--hairline);
+  font-size: 11px;
+}
+.segments .is-active .seg-count {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* notes (attention list) */
@@ -964,8 +1338,6 @@ body {
   padding: 0 12px 10px 0;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--ink-3);
   border-bottom: 1px solid var(--ink);
 }
@@ -1219,31 +1591,6 @@ body {
   }
 }
 
-/* secondary buttons: a hairline slides in along the bottom edge (same verb as the primary fill) */
-.btn {
-  position: relative;
-  overflow: clip;
-}
-.btn::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  background: var(--ink);
-  translate: -101% 0;
-  transition: translate 0.35s var(--ease-track);
-}
-@media (hover: hover) {
-  .btn:hover::after {
-    translate: 0 0;
-  }
-}
-.btn:focus-visible::after {
-  translate: 0 0;
-}
-
 /* ───────────── critic pass 2 ───────────── */
 /* read-only grids: a table or funnel card hugs its rows instead of filling the cell with white */
 .rgrid:not(.rgrid-edit) > .ritem[data-kind='table'] > .card,
@@ -1257,28 +1604,11 @@ body {
   outline-offset: -3px;
   border-radius: 8px;
 }
-/* login: a taller form, the stage never pads the form away on phones */
-.input-lg {
-  padding-top: 11px;
-  padding-bottom: 11px;
-  font-size: 15px;
-}
+/* taller controls on the public pages */
+.input-lg,
 .btn-lg {
-  padding-top: 11px;
-  padding-bottom: 11px;
+  min-height: 46px;
   font-size: 15px;
-}
-@media (max-width: 1023px) {
-  .login {
-    grid-template-rows: auto 1fr;
-  }
-  .login-stage {
-    padding-top: 36px;
-    padding-bottom: 24px;
-  }
-}
-.login-ruler .rband-caption {
-  font-size: 11px;
 }
 /* the intro: every caliper measures itself once when the page opens, staggered by position */
 @media (prefers-reduced-motion: no-preference) {
@@ -1347,11 +1677,6 @@ body {
   }
 }
 
-/* the login ruler arrives after hydration: its slot is reserved so nothing shifts */
-.login-ruler-slot {
-  min-height: 52px;
-}
-
 /* read-only grids: a row grows to fit a long table, so nothing scrolls inside a card (no scroll regions to focus) */
 .rgrid:not(.rgrid-edit) {
   grid-auto-rows: minmax(64px, auto);
@@ -1394,26 +1719,11 @@ body {
   }
 }
 /* ───────────── pass 5: performance and polish (docs/DESIGN.md) ───────────── */
-/* the login face is sized here at both breakpoints, so the server renders its final box and nothing shifts (CLS 0) */
-.login-avatar-lg {
-  width: 168px;
-  height: 168px;
-}
-@media (min-width: 1024px) {
-  .login-avatar-lg {
-    width: 240px;
-    height: 240px;
-  }
-}
 /* a chart's module arrives after the page: its box holds the cell meanwhile */
 .chart-loading {
   width: 100%;
   height: 100%;
   min-height: 120px;
-}
-/* the public header's Print / PDF button: border hover only, no sliding hairline */
-.dossier-head .btn::after {
-  content: none;
 }
 /* phones: a justified KPI (five or six columns on the desktop grid) still sits two to a row */
 @media (max-width: 767px) {
@@ -1423,35 +1733,6 @@ body {
   }
 }
 /* ───────────── pass 5c: overlaps found by a text-collision scan at 1440 / 1280 / 1024 / 768 / 390 ───────────── */
-/* phones: the slide-rule nav takes its own row under the brand and the icons, so the brand never sits on a label */
-@media (max-width: 767px) {
-  .rail-inner {
-    grid-template-columns: auto 1fr;
-    gap: 0 12px;
-    min-height: 0;
-    padding: 8px 16px 0;
-  }
-  .rail-brand {
-    grid-row: 1;
-    grid-column: 1;
-  }
-  .rail-right {
-    grid-row: 1;
-    grid-column: 2;
-    justify-self: end;
-  }
-  /* the rail scrolls away on phones: four pinned nav rows would take a quarter of the screen */
-  .rail {
-    position: static;
-  }
-  .topnav {
-    grid-row: 2;
-    grid-column: 1 / -1;
-  }
-  .topnav-item {
-    padding: 6px 10px 12px;
-  }
-}
 /* tablets: the overview board is wider than the page, so it scrolls sideways inside it (same verb as phone tables) */
 /* the wrapper is the containing block of the board's screen-reader-only spans, so they stay inside the scroll box instead of widening the page */
 .board-scroll {
@@ -1966,5 +2247,84 @@ body {
   .cover-hero {
     aspect-ratio: 32 / 9;
     border-radius: 0;
+  }
+}
+
+/* the connect screens' platform tile: a quiet inset tile, the glyph in ink */
+.tile-mark {
+  background: var(--inset);
+  border: 1px solid var(--hairline);
+}
+
+/* ───────────── Ruler glass pass: report canvas (docs/DESIGN.md) ───────────── */
+/* the editor's toolbar and side drawer are single overlays over the canvas, so they keep the blur */
+.editor-toolbar {
+  border-radius: 20px;
+}
+.editor-drawer {
+  border-radius: 0;
+}
+@media (min-width: 1024px) {
+  .editor-drawer {
+    border-radius: var(--r-tile);
+  }
+}
+/* the public header sits on the ground: no band, no border */
+.dossier-head {
+  background: transparent;
+}
+/* KPI figures: large and light (Hub: 34px, weight 300, tabular) */
+.kpi-value {
+  font-weight: 300;
+  font-size: 34px;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+@media (max-width: 767px) {
+  .kpi-value {
+    font-size: 28px;
+  }
+}
+/* print and the PDF service: white paper, no ground, no glow, no blur, hairline tiles */
+@media print {
+  html {
+    background: #fff !important;
+  }
+  .ground::before {
+    display: none !important;
+  }
+  .card,
+  .overlay,
+  .public-panel {
+    background: #fff !important;
+    border-color: #d8d8d6 !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+[data-print='1'].ground::before,
+[data-print='1'] .ground::before {
+  display: none;
+}
+/* block (section) titles: large and light, like the page title one step down */
+.block-title {
+  font-family: var(--font-display, var(--font-sans));
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+/* a tile that is a link lifts 4px on hover (motion-safe) and its border darkens */
+.card-link {
+  transition: transform 0.35s var(--ease-brand), box-shadow 0.35s var(--ease-brand), border-color 0.2s var(--ease-brand);
+}
+.card-link:hover {
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 1px 2px rgba(14, 14, 14, 0.05), 0 32px 56px -28px rgba(14, 14, 14, 0.45);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .card-link:hover {
+    transform: translateY(-4px);
   }
 }

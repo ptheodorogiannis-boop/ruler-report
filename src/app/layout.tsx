@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
-import { Bricolage_Grotesque, Inter } from 'next/font/google';
+import { Manrope } from 'next/font/google';
 import '@bible-strong/avatar-react/styles.css';
 import './globals.css';
 import { getLocale } from '@/lib/i18n/server';
 import { setServerLocale } from '@/lib/i18n/server';
 
-// Two families (docs/DESIGN.md › Type): Inter for UI and data (with Greek), Bricolage Grotesque for titles and KPI values.
-const inter = Inter({ subsets: ['latin', 'latin-ext', 'greek'], variable: '--font-sans', display: 'swap' });
-const bricolage = Bricolage_Grotesque({ subsets: ['latin', 'latin-ext'], variable: '--font-display', display: 'swap', axes: ['opsz'] });
+// One family (docs/DESIGN.md › Ruler glass pass): Manrope for titles, text and figures, with Greek. The brand's licensed
+// faces (Avantt for titles, ABC Arizona Flare for running text) swap in later through --font-display / --font-sans.
+const manrope = Manrope({ subsets: ['latin', 'latin-ext', 'greek'], variable: '--font-sans', display: 'swap', weight: ['300', '400', '500', '600'] });
 
 const base = process.env.APP_URL || 'http://localhost:3100';
 export const metadata: Metadata = {
@@ -24,10 +24,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const locale = await getLocale();
   setServerLocale(locale);
   return (
-    <html lang={locale} className={`${inter.variable} ${bricolage.variable}`}>
-      <body>
-        {children}
-      </body>
+    <html lang={locale} className={manrope.variable}>
+      <body>{children}</body>
     </html>
   );
 }

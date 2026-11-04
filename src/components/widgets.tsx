@@ -265,8 +265,8 @@ export function WidgetCard(props: CardProps) {
 export function PlatformBadge({ slug, name }: { slug: string; name: string }) {
   const def = getIntegrationDef(slug);
   return (
-    <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">
-      <span className="inline-flex" style={{ color: `var(--block, ${def?.color ?? '#636d7c'})` }}>
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-2">
+      <span className="inline-flex" style={{ color: `var(--block, ${def?.color ?? '#575756'})` }}>
         <PlatformIcon slug={slug} size={14} tone="ink" />
       </span>
       {name}
@@ -289,7 +289,7 @@ export function BlockHeader({ s, dataNotes, editor }: { s: RenderedSection; data
       ) : src ? (
         <div className="eyebrow">{tr('public.customBlock')}</div>
       ) : null}
-      <h2 className="display flex items-center text-xl font-semibold">
+      <h2 className="block-title flex items-center">
         {Icon && (
           <span className="block-icon" data-icon={s.icon} aria-hidden="true">
             <Icon size={16} />
@@ -305,12 +305,14 @@ export function BlockHeader({ s, dataNotes, editor }: { s: RenderedSection; data
 
 /** A layout block: header + widgets positioned on the 12-column grid. */
 function LayoutSection({ s, fmt, brand, theme, dataNotes }: { s: RenderedSection; fmt: Fmt; brand?: string; theme?: ReportTheme; dataNotes?: boolean }) {
-  // the block's colour (its own, else the platform's) drives the badge, KPI highlights and the first chart series
+  // the block's colour (its own, else the report's accent, or the platform's when the look asks) drives the icon, the
+  // KPI highlights and the first chart series
   const platformColor = (s.source && getIntegrationDef(s.source.slug)?.color) || '#636d7c';
-  const blockColor = blockColorOf(theme, s.id, platformColor);
-  const palette = paletteFor(theme?.palette, brand ?? '#1a36e6');
+  const accent = theme?.accent ?? brand ?? '#db0100';
+  const blockColor = blockColorOf(theme, s.id, platformColor, accent);
+  const palette = paletteFor(theme?.palette, accent);
   return (
-    <section id={s.id} className="print-section space-y-3" style={blockVars(theme, s.id, platformColor)}>
+    <section id={s.id} className="print-section space-y-3" style={blockVars(theme, s.id, platformColor, accent)}>
       {!s.hideHeader && <BlockHeader s={s} dataNotes={dataNotes} />}
       {s.blocks.length === 0 ? (
         <div className="card p-6 text-center text-sm text-ink-3">{tr('public.noWidgets')}</div>
@@ -338,7 +340,7 @@ function AutoSection({ s, fmt, brand }: { s: RenderedSection; fmt: Fmt; brand?: 
   }
   return (
     <section className="print-section space-y-4">
-      <h2 className="display text-xl font-semibold">{s.title}</h2>
+      <h2 className="block-title">{s.title}</h2>
       {groups.map((g) => {
         const nums = g.blocks.filter((b) => b.widget.value.type === 'number' || (b.widget.value.type === 'error' && b.widget.value.code === 'invalid_metrics_combination'));
         const others = g.blocks.filter((b) => !nums.includes(b));

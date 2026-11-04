@@ -194,7 +194,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                             <summary className="btn cursor-pointer list-none px-2 [&::-webkit-details-marker]:hidden" aria-label={t('projects.moreActions', { name: i.name })} title={t('projects.moreActions', { name: i.name })}>
                               <MoreHorizontal size={16} strokeWidth={1.75} aria-hidden="true" />
                             </summary>
-                            <div className="absolute right-0 z-20 mt-1 w-56 rounded-lg border border-[var(--line)] bg-[var(--card)] p-1 shadow-sm">
+                            <div className="overlay absolute right-0 z-20 mt-1 w-56 p-1">
                               {canReconnect && !attention && (
                                 <Link href={reconnectUrl(i)} className={item}>
                                   {reconnectLabel}

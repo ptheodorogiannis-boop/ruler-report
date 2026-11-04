@@ -57,19 +57,21 @@ test('agency UI in Greek: the login form, the top nav and the shell chrome carry
   // the login form imports the avatar library (ESM-only exports node cannot resolve here), so its source is checked instead of its render
   const { readFileSync } = await import('node:fs');
   const { dictFor, t } = await import('../src/lib/i18n');
-  const { navGroups } = await import('../src/components/nav-groups');
-  const { TopNav } = await import('../src/components/top-nav');
+  const { navModel } = await import('../src/components/nav-groups');
+  const { PillNav, SideRail } = await import('../src/components/top-nav');
   const loginSrc = readFileSync('src/components/login-form.tsx', 'utf8');
   for (const re of [/>s*Sign ins*</, />s*Emails*</, />s*Passwords*</, /Create a workspace/, /New agency?/, /Skip to the sign-in form/, /'Checking…'/]) assert.doesNotMatch(loginSrc, re, `English literal ${re} still in the login form`);
   assert.match(loginSrc, /useT()/, 'the login form reads its strings through useT');
   // 'Email' stays 'Email' in Greek UIs; the rest must be Greek
   for (const k of ['auth.signIn', 'auth.password', 'auth.createWorkspace', 'auth.captionWatch']) assert.match(t('el', k), GREEK, `${k} is Greek`);
   assert.ok(Object.keys(dictFor('el', ['auth'])).length >= 15);
-  const nav = renderToStaticMarkup(createElement(TopNav, { groups: navGroups('el', 'admin'), active: '/overview' }));
+  const el = navModel('el', 'admin');
+  const nav = renderToStaticMarkup(createElement('div', null, createElement(PillNav, { items: el.daily, active: '/overview', label: 'Κύριο' }), createElement(SideRail, { items: el.secondary, settings: el.settings, label: 'Εργαλεία' })));
   for (const w of ['Overview', 'Projects', 'Reports', 'Dashboards', 'Templates', 'Integrations']) assert.ok(!nav.includes(w), `English "${w}" in the Greek nav`);
   assert.match(nav, /Επισκόπηση/);
-  assert.equal(navGroups('el', 'client').length, 1, 'clients see one group');
-  const enNav = renderToStaticMarkup(createElement(TopNav, { groups: navGroups('en', 'admin') }));
+  assert.deepEqual(navModel('el', 'client').daily.map((n) => n.href), ['/reports', '/dashboards'], 'clients see reports and dashboards only');
+  assert.equal(navModel('el', 'client').secondary.length, 0);
+  const enNav = renderToStaticMarkup(createElement(PillNav, { items: navModel('en', 'admin').daily, label: 'Main' }));
   assert.match(enNav, /Overview/);
 });
 

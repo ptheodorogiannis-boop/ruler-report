@@ -167,7 +167,7 @@ export function TemplateEditor({ initial, slugs, readOnly }: { initial: { id?: n
           {grouped.map(([g, list]) => (
             <div key={g}>
               <div className="mb-1 flex items-center justify-between">
-                <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{g}</div>
+                <div className="text-xs font-medium text-ink-3">{g}</div>
                 {!readOnly && (
                   <button className="text-[11px] text-brand" onClick={() => addAllInGroup(list)}>
                     {t('templates.addAll')}

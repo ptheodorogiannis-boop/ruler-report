@@ -32,7 +32,7 @@ export function BlockAnalyseMenu({ reportId, blockId, language: forced, onDone }
         <Sparkles size={12} /> {pending ? t('analysis.working') : t('analysis.analyse')} <ChevronDown size={12} />
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-30 mt-1 min-w-[190px] rounded-lg border border-[var(--line)] bg-white p-1 shadow-lg" role="menu">
+        <div className="overlay absolute left-0 top-full z-30 mt-1 min-w-[190px] p-1" role="menu">
           {TONES.map((tone) => (
             <button key={tone} type="button" role="menuitem" className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-[var(--paper)]" onClick={() => run(tone)}>
               {t(`tones.${tone}`)}

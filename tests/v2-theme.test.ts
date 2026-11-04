@@ -27,6 +27,13 @@ test('theme rendering: CSS variables for the accent, block colours clamped to 3:
   assert.equal(blockColorOf(undefined, 'b', '#fde68a'), '#928857', 'a pale yellow (1.3:1 on white) is clamped too');
   assert.ok(contrastOnWhite('#928857') >= 3 && contrastOnWhite('#939597') >= 3, 'clamped colours reach 3:1');
   assert.deepEqual(blockVars(undefined, 'b', '#1877f2'), { '--block': '#1877f2' });
+  // icons and block colours match the report: without an own colour a block takes the accent, unless the look asks for platform colours
+  assert.equal(blockColorOf(undefined, 'b', '#1877f2', '#db0100'), '#db0100');
+  assert.equal(blockColorOf({ colors: 'platform' }, 'b', '#1877f2', '#db0100'), '#1877f2');
+  assert.equal(blockColorOf({ blocks: { b: { color: '#0e9f8e' } } }, 'b', '#1877f2', '#db0100'), '#0e9f8e', 'an own colour still wins');
+  assert.deepEqual(blockVars(undefined, 'b', '#1877f2', '#db0100'), { '--block': '#db0100' });
+  // the brand palette is the accent and then greys from the Ruler ramp: one highlighted series
+  assert.deepEqual(paletteFor('brand', '#db0100').slice(0, 3), ['#db0100', '#575756', '#a1a19f']);
   assert.equal(paletteFor('brand', '#b8321f')[0], '#b8321f');
   assert.equal(paletteFor(undefined, '#b8321f')[0], '#b8321f');
   assert.equal(paletteFor('mono', '#b8321f').length, 8);

@@ -1,4 +1,5 @@
-// A platform's mark (spec §4): the brand icon in the platform colour, a lettermark for brands the icon set does not
+// A platform's mark (spec §4): the brand icon in ink by default (it takes the colour of the text or the report around
+// it, docs/DESIGN.md › Ruler glass pass) or in the platform colour on request, a lettermark for brands the icon set does not
 // carry, a small glyph for generic sources. Inline SVG, server-safe, no client JavaScript; the name is carried by the
 // text next to it, so the mark itself is decorative.
 import { getIntegrationDef } from '@/lib/catalog/integrations';
@@ -37,9 +38,9 @@ const GLYPHS: Record<Glyph, React.ReactNode> = {
   ),
 };
 
-export function PlatformIcon({ slug, size = 16, tone = 'brand', className }: { slug: string; size?: IconSize; tone?: IconTone; className?: string }) {
+export function PlatformIcon({ slug, size = 16, tone = 'ink', className }: { slug: string; size?: IconSize; tone?: IconTone; className?: string }) {
   const def = getIntegrationDef(slug);
-  const brand = def?.color ?? '#636d7c';
+  const brand = def?.color ?? '#575756';
   const color = tone === 'brand' ? brand : tone === 'white' ? '#fff' : 'currentColor';
   const icon = platformIcon(slug);
   if (icon)
@@ -57,7 +58,7 @@ export function PlatformIcon({ slug, size = 16, tone = 'brand', className }: { s
     );
   }
   const letters = lettermark(def.name);
-  const style = { ['--pm' as string]: `${size}px`, background: tone === 'white' ? 'transparent' : brand, color: '#fff' } as React.CSSProperties;
+  const style = { ['--pm' as string]: `${size}px`, background: tone === 'white' ? 'transparent' : tone === 'brand' ? brand : 'currentColor', color: tone === 'brand' || tone === 'white' ? '#fff' : 'var(--ground)' } as React.CSSProperties;
   return (
     <span className={['pmark', className].filter(Boolean).join(' ')} data-lettermark={letters} aria-hidden="true" style={style}>
       {letters}

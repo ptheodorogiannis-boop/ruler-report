@@ -3,10 +3,12 @@
 import type { CSSProperties } from 'react';
 import type { PaletteName, ReportLayout, ReportTheme } from './types';
 
-/** Series colours. "brand" is the accent followed by hues that stay apart for colour-blind readers (docs/DESIGN.md › Tokens). */
-const HUES = ['#0e9f8e', '#d97a1d', '#7c5ce6', '#b8321f', '#557086', '#11784a', '#8a6d3b'];
+/** Series colours. "brand" is the accent followed by greys from the Ruler ramp: one highlighted series, the rest quiet
+ * (docs/DESIGN.md › Ruler glass pass). Every grey is at least 3:1 against white except the last two, used only for a
+ * sixth and seventh series. */
+const GREYS = ['#575756', '#a1a19f', '#333332', '#7c7c7a', '#c5c5c3', '#2a2a29', '#8a8a88'];
 /** The chart palette when a report has no theme (the same list charts.tsx starts from). */
-export const DEFAULT_PALETTE = ['#1a36e6', ...HUES];
+export const DEFAULT_PALETTE = ['#db0100', ...GREYS];
 export const PALETTES: Record<Exclude<PaletteName, 'brand'>, string[]> = {
   vivid: ['#2563eb', '#f43f5e', '#f59e0b', '#10b981', '#8b5cf6', '#06b6d4', '#84cc16', '#ec4899'],
   calm: ['#3b5b8c', '#6d8fb3', '#2f6f6a', '#6aa39d', '#b08968', '#9fb8d1', '#d4b483', '#8a5a44'],
@@ -14,7 +16,7 @@ export const PALETTES: Record<Exclude<PaletteName, 'brand'>, string[]> = {
 };
 
 export function paletteFor(name: PaletteName | undefined, accent: string): string[] {
-  if (!name || name === 'brand') return [accent, ...HUES];
+  if (!name || name === 'brand') return [accent, ...GREYS];
   return PALETTES[name];
 }
 
@@ -28,6 +30,7 @@ export function cleanTheme(t: ReportTheme | undefined): ReportTheme | undefined 
   if (t.coverLayout && t.coverLayout !== 'banner') out.coverLayout = t.coverLayout;
   if (t.coverText) out.coverText = t.coverText;
   if (t.showPeriod === false) out.showPeriod = false;
+  if (t.colors === 'platform') out.colors = 'platform';
   if (t.blocks) {
     const blocks: Record<string, { color?: string }> = {};
     for (const [id, b] of Object.entries(t.blocks)) if (b?.color) blocks[id] = { color: b.color };
@@ -73,15 +76,20 @@ export function mix(a: string, b: string, t: number): string {
   return hex(ar + (br - ar) * t, ag + (bg - ag) * t, ab + (bb - ab) * t);
 }
 
-/** A block's colour: its own, else the platform's; colours under 3:1 on white are mixed with 45 % ink so hairlines and badges stay visible. */
-export function blockColorOf(theme: ReportTheme | undefined, blockId: string, platformColor: string): string {
+/**
+ * A block's colour: its own; else the report's accent (the default, so icons and highlights match the report) or, when
+ * the look asks for platform colours or no accent is known, the platform's. Colours under 3:1 on white are mixed with
+ * 45 % ink so hairlines and badges stay visible.
+ */
+export function blockColorOf(theme: ReportTheme | undefined, blockId: string, platformColor: string, accent?: string): string {
   const own = theme?.blocks?.[blockId]?.color;
-  const c = (own ?? platformColor).toLowerCase();
+  const fallback = accent && theme?.colors !== 'platform' ? accent : platformColor;
+  const c = (own ?? fallback).toLowerCase();
   return contrastOnWhite(c) < 3 ? mix(c, INK, 0.45) : c;
 }
 
-export function blockVars(theme: ReportTheme | undefined, blockId: string, platformColor: string): CSSProperties {
-  return { '--block': blockColorOf(theme, blockId, platformColor) } as CSSProperties;
+export function blockVars(theme: ReportTheme | undefined, blockId: string, platformColor: string, accent?: string): CSSProperties {
+  return { '--block': blockColorOf(theme, blockId, platformColor, accent) } as CSSProperties;
 }
 
 /** The report root's variables: the theme accent, else the client's colour. */

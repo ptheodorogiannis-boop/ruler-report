@@ -78,7 +78,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
             const active = pr.integrations.filter((i) => i.status === 'active');
             const uniq = [...new Set(active.map((i) => i.slug))];
             return (
-              <Link key={pr.id} href={`/projects/${pr.id}`} className="card block p-4 transition hover:border-brand hover:shadow-md">
+              <Link key={pr.id} href={`/projects/${pr.id}`} className="card card-link block p-5">
                 <div className="flex items-center gap-3">
                   <ClientMark name={pr.name} logo={pr.logo} size={40} />
                   <div className="min-w-0">

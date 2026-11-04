@@ -292,7 +292,7 @@ export function ReportEditor(props: EditorProps) {
   return (
     <div className="report-root space-y-6" style={themeVars(layout.theme, brand ?? '#1a36e6')}>
       {/* ───── toolbar ───── */}
-      <div className="no-print card sticky top-2 z-20 flex flex-wrap items-center gap-2 px-3 py-2">
+      <div className="no-print overlay editor-toolbar sticky top-3 z-20 flex flex-wrap items-center gap-2 px-3 py-2">
         <SaveIndicator state={saveState} onRetry={() => void doSave()} />
         <span className="mx-1 h-5 w-px bg-[var(--line)]" />
         <button className="btn px-2" title={t('editor.undo')} disabled={history.current.length === 0} onClick={undo}>
@@ -343,19 +343,20 @@ export function ReportEditor(props: EditorProps) {
             const sec = composed.sections.find((s) => s.id === b.id);
             const src = sec?.source;
             const platformColor = (src && getIntegrationDef(src.slug)?.color) || '#636d7c';
-            const blockColor = blockColorOf(layout.theme, b.id, platformColor);
-            const palette = paletteFor(layout.theme?.palette, layout.theme?.accent ?? brand ?? '#1a36e6');
+            const accent = layout.theme?.accent ?? brand ?? '#db0100';
+            const blockColor = blockColorOf(layout.theme, b.id, platformColor, accent);
+            const palette = paletteFor(layout.theme?.palette, accent);
             const BlockIconC = b.icon ? ICONS[b.icon] : null;
             return (
               <Fragment key={b.id}>
-              <section data-block={b.id} className="space-y-3" style={blockVars(layout.theme, b.id, platformColor)}>
+              <section data-block={b.id} className="space-y-3" style={blockVars(layout.theme, b.id, platformColor, accent)}>
                 <div className={clsx('flex flex-wrap items-center gap-2', b.hideHeader && 'opacity-60')}>
                   {BlockIconC && (
                     <span className="block-icon" data-icon={b.icon} aria-hidden="true">
                       <BlockIconC size={16} />
                     </span>
                   )}
-                  <input className="display min-w-[8rem] flex-1 rounded-md border border-transparent bg-transparent px-1 text-xl font-semibold outline-none hover:border-[var(--line)] focus:border-brand focus:bg-white md:max-w-md" value={b.title} onChange={(e) => renameBlock(b.id, e.target.value)} aria-label={t('editor.blockTitle')} />
+                  <input className="block-title min-w-[8rem] flex-1 rounded-xl border border-transparent bg-transparent px-2 outline-none hover:border-[var(--line)] focus:border-[var(--ink)] focus:bg-[var(--inset)] md:max-w-md" value={b.title} onChange={(e) => renameBlock(b.id, e.target.value)} aria-label={t('editor.blockTitle')} />
                   {src && src.integrationId > 0 ? (
                     <>
                       <PlatformBadge slug={src.slug} name={src.platform} />
@@ -372,7 +373,7 @@ export function ReportEditor(props: EditorProps) {
                           {scopeSummary(effectiveScope(b, data))}
                         </button>
                       )}
-                      {!preview && <BlockColor value={layout.theme?.blocks?.[b.id]?.color} fallback={getIntegrationDef(src.slug)?.color ?? '#636d7c'} onChange={(c) => mutate((l) => withBlockColor(l, b.id, c), { coalesce: `color:${b.id}` })} />}
+                      {!preview && <BlockColor value={layout.theme?.blocks?.[b.id]?.color} fallback={blockColor} onChange={(c) => mutate((l) => withBlockColor(l, b.id, c), { coalesce: `color:${b.id}` })} />}
                     </>
                   ) : (
                     <span className="eyebrow">{t('editor.customBlock')}</span>
@@ -528,7 +529,7 @@ export function ReportEditor(props: EditorProps) {
 }
 
 /** Drawer shell: a sticky side column on large screens, a fixed overlay on small ones. */
-const DRAWER = 'no-print z-40 flex flex-col bg-white shadow-xl fixed inset-y-0 w-[22rem] max-w-full lg:sticky lg:top-16 lg:inset-auto lg:z-10 lg:w-80 lg:shrink-0 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:rounded-xl lg:border lg:border-[var(--line)] lg:shadow-sm';
+const DRAWER = 'no-print overlay editor-drawer z-40 flex flex-col fixed inset-y-0 w-[22rem] max-w-full lg:sticky lg:top-20 lg:inset-auto lg:z-10 lg:w-80 lg:shrink-0 lg:self-start lg:max-h-[calc(100vh-6rem)]';
 
 // ───────────── toolbar bits ─────────────
 function SaveIndicator({ state, onRetry }: { state: 'saved' | 'dirty' | 'saving' | 'error'; onRetry: () => void }) {
@@ -568,7 +569,7 @@ function AddBlockMenu({ sources, onAdd }: { sources: SourceInfo[]; onAdd: (s: So
             <button className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-slate-50" onClick={() => (onAdd(null), setOpen(false))}>
               <span className="badge bg-slate-100 text-slate-600">{t('editor.custom')}</span> {t('editor.customBlock')}
             </button>
-            <div className="px-2 pb-1 pt-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('editor.connectedAccounts')}</div>
+            <div className="px-2 pb-1 pt-2 text-xs font-medium text-ink-3">{t('editor.connectedAccounts')}</div>
             {sources.map((s) => {
               const def = getIntegrationDef(s.slug);
               return (
@@ -703,7 +704,7 @@ function AddMetricsPanel({ block, sources, customMetrics, onAdd, onClose }: { bl
     <aside data-add-metrics className={clsx(DRAWER, 'left-0 border-r border-[var(--line)]')}>
       <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
         <div className="min-w-0">
-          <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('editor.addMetricsTo')}</div>
+          <div className="text-xs font-medium text-ink-3">{t('editor.addMetricsTo')}</div>
           <div className="truncate text-sm font-semibold">{block.title}</div>
         </div>
         <button className="text-slate-400 hover:text-slate-700" onClick={onClose} aria-label={t('common.close')}>
@@ -735,7 +736,7 @@ function AddMetricsPanel({ block, sources, customMetrics, onAdd, onClose }: { bl
             {!loading && !source && <div className="text-xs text-slate-400">{t('editor.connectFirst')}</div>}
             {grouped.map(([g, list]) => (
               <div key={g}>
-                <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">{g}</div>
+                <div className="mb-1 text-xs font-medium text-ink-3">{g}</div>
                 <div className="space-y-0.5">
                   {list.map((d) => {
                     const p = payloadFor(d);
@@ -770,7 +771,7 @@ function AddMetricsPanel({ block, sources, customMetrics, onAdd, onClose }: { bl
             })}
             {customMetrics.length > 0 && (
               <div>
-                <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('editor.blendedWorkspace')}</div>
+                <div className="mb-1 text-xs font-medium text-ink-3">{t('editor.blendedWorkspace')}</div>
                 <div className="space-y-0.5">
                   {customMetrics.map((m) => {
                     const p: Payload = { kind: 'blended', key: `cm_${m.id}`, title: m.name };
@@ -849,7 +850,7 @@ function SettingsPanel({ w, rendered, raw, rawIdx, sources, range, comparison, k
     <aside className={clsx(DRAWER, 'right-0 border-l border-[var(--line)]')}>
       <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
         <div className="min-w-0">
-          <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('editor.compSettings', { comp: COMP_LABEL[comp] ? t(COMP_LABEL[comp]) : comp })}</div>
+          <div className="text-xs font-medium text-ink-3">{t('editor.compSettings', { comp: COMP_LABEL[comp] ? t(COMP_LABEL[comp]) : comp })}</div>
           <div className="truncate text-sm font-semibold">{c.title || baseLabel}</div>
         </div>
         <button className="text-slate-400 hover:text-slate-700" onClick={onClose} aria-label={t('common.close')}>

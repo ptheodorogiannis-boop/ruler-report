@@ -497,6 +497,7 @@ export const themeSchema = z
     coverLayout: z.enum(['banner', 'header', 'none']).optional(),
     coverText: hex.optional(),
     showPeriod: z.boolean().optional(),
+    colors: z.enum(['report', 'platform']).optional(),
     blocks: z.record(z.string().max(64), z.object({ color: hex.optional() }).strict()).refine((b) => Object.keys(b).length <= 100, 'Too many block colours').optional(),
   })
   .strict();

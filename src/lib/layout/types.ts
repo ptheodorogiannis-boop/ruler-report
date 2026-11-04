@@ -117,6 +117,8 @@ export interface ReportTheme {
   coverText?: string;
   /** false hides the period band on the cover */
   showPeriod?: boolean;
+  /** where icons, block colours and first chart series take their colour: the report's accent (default) or each platform's own */
+  colors?: 'report' | 'platform';
 }
 export const PALETTE_NAMES = ['brand', 'vivid', 'calm', 'mono'] as const;
 export type PaletteName = (typeof PALETTE_NAMES)[number];

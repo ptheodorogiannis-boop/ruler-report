@@ -26,20 +26,32 @@ test('MediaImage and ClientMark survive a URL with a bare percent sign (review: 
   assert.match(renderToStaticMarkup(createElement(ClientMark, { name: 'Acme', logo: url })), /<img/);
 });
 
-test('TopNav: a single group (client role) renders no separator; the active item carries aria-current', async () => {
-  const { TopNav } = await import('../src/components/top-nav');
-  const one = renderToStaticMarkup(createElement(TopNav, { groups: [{ label: 'Work', items: [{ href: '/dashboards', label: 'Dashboards' }, { href: '/reports', label: 'Reports' }] }], active: '/reports' }));
-  assert.doesNotMatch(one, /topnav-sep/);
-  assert.match(one, /aria-current="page"[^>]*>Reports</);
-  const three = renderToStaticMarkup(createElement(TopNav, { groups: [{ label: 'A', items: [{ href: '/a', label: 'A' }] }, { label: 'B', items: [{ href: '/b', label: 'B' }] }, { label: 'C', items: [{ href: '/c', label: 'C' }] }] }));
-  assert.equal((three.match(/topnav-sep/g) || []).length, 2);
+test('PillNav, SideRail and TabBar: the active place carries aria-current; rail buttons are named; More holds the rest', async () => {
+  const { PillNav, SideRail, TabBar } = await import('../src/components/top-nav');
+  const items = [
+    { href: '/dashboards', label: 'Dashboards', icon: 'dashboards' as const },
+    { href: '/reports', label: 'Reports', icon: 'reports' as const },
+  ];
+  const pill = renderToStaticMarkup(createElement(PillNav, { items, active: '/reports', label: 'Main' }));
+  assert.match(pill, /aria-current="page"[^>]*>Reports</);
+  assert.match(pill, /pillnav-item is-active/);
+  const rail = renderToStaticMarkup(createElement(SideRail, { items: [{ href: '/templates', label: 'Templates', icon: 'templates' as const }], settings: { href: '/settings', label: 'Settings', icon: 'settings' as const }, active: '/settings', label: 'Tools' }));
+  assert.match(rail, /aria-label="Templates"/);
+  assert.match(rail, /data-tip="Settings"/);
+  assert.match(rail, /aria-current="page"/);
+  assert.equal(renderToStaticMarkup(createElement(SideRail, { items: [], label: 'Tools' })), '', 'no rail without places');
+  const six = Array.from({ length: 6 }, (_, i) => ({ href: '/p' + i, label: 'P' + i, icon: 'overview' as const }));
+  const bar = renderToStaticMarkup(createElement(TabBar, { daily: six, more: [{ href: '/x', label: 'X', icon: 'api' as const }], active: '/x', labels: { nav: 'Main', more: 'More' } }));
+  assert.equal((bar.match(/class="tabbar-item/g) || []).length, 5, 'four places and More');
+  assert.match(bar, /tabbar-item is-active[^>]*>.*More/s, 'More lights up while it holds the active place');
 });
 
-test('PlatformIcon: brand mark in the platform colour, lettermark for brands the set lacks, category glyph for generic sources', async () => {
+test('PlatformIcon: ink by default (it takes the colour around it), the platform colour on request, lettermark and glyph fallbacks', async () => {
   const { PlatformIcon } = await import('../src/components/platform-icon');
   const yt = renderToStaticMarkup(createElement(PlatformIcon, { slug: 'youtube' }));
   assert.match(yt, /<svg[^>]*data-icon="YouTube"/);
-  assert.match(yt, /fill="#ff0000"/i);
+  assert.match(yt, /fill="currentColor"/);
+  assert.match(renderToStaticMarkup(createElement(PlatformIcon, { slug: 'youtube', tone: 'brand' })), /fill="#ff0000"/i);
   const li = renderToStaticMarkup(createElement(PlatformIcon, { slug: 'linkedin' }));
   assert.match(li, /data-lettermark="Li"/);
   assert.match(li, />Li</);

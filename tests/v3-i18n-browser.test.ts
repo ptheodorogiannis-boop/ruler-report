@@ -63,7 +63,7 @@ test('Greek app: the account menu switches the workspace to EL, the nav and over
     await page.locator('details.umenu > summary').click();
     await Promise.all([page.waitForLoadState('networkidle'), page.locator('[data-locale-switch] button[value=el]').click()]);
     await page.goto(`${base}/overview`, { waitUntil: 'networkidle' });
-    const nav = await page.locator('nav.topnav').innerText();
+    const nav = await page.locator('nav.pillnav').innerText();
     assert.match(nav, /Επισκόπηση/, `Greek nav: ${nav.slice(0, 80)}`);
     assert.doesNotMatch(nav, /Overview|Projects|Reports/);
     assert.equal(await page.evaluate(() => document.documentElement.lang), 'el');
@@ -71,7 +71,7 @@ test('Greek app: the account menu switches the workspace to EL, the nav and over
     await page.locator('details.umenu > summary').click();
     await Promise.all([page.waitForLoadState('networkidle'), page.locator('[data-locale-switch] button[value=en]').click()]);
     await page.goto(`${base}/overview`, { waitUntil: 'networkidle' });
-    assert.match(await page.locator('nav.topnav').innerText(), /Overview/);
+    assert.match(await page.locator('nav.pillnav').innerText(), /Overview/);
   } finally {
     await browser.close();
     await db.user.delete({ where: { id: user.id } }).catch(() => null);

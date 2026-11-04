@@ -187,7 +187,7 @@ export function ReportBuilder({ project, templates, integrations, kind }: { proj
           <div className="space-y-3">
             {Object.entries(byCat).map(([cat, list]) => (
               <div key={cat}>
-                <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">{cat}</div>
+                <div className="mb-1 text-xs font-medium text-ink-3">{cat}</div>
                 {list.map((i) => (
                   <label key={i.id} className="flex items-center gap-2 py-0.5 text-sm">
                     <input type="checkbox" checked={selected.includes(i.id)} onChange={() => toggle(i.id)} />

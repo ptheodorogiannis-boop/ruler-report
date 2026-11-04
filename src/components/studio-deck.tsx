@@ -22,7 +22,7 @@ export function StudioDeck({ slides, title }: { slides: Slide[]; title: string }
       <div className={`${full ? 'mx-auto w-full max-w-5xl flex-1' : ''}`}>
         <div className={`card flex flex-col justify-between overflow-hidden p-8 ${full ? 'h-full' : 'min-h-[460px]'}`}>
           <div>
-            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand">{title}</div>
+            <div className="mb-1 text-xs font-medium text-brand">{title}</div>
             <h2 className="text-3xl font-bold tracking-tight">{s.title}</h2>
             {s.bullets.length > 0 && (
               <ul className="mt-4 list-disc space-y-1.5 pl-5 text-lg text-slate-700">
