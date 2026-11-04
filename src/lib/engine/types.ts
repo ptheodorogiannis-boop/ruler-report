@@ -196,6 +196,12 @@ export interface BreakdownRow {
   key: string;
   label?: string;
   values: Record<string, number>;
+  /** an ad creative or a post image (docs/superpowers/specs/2026-11-04-ads-previews-sources-matomo-design.md §1) */
+  thumb?: string | null;
+  /** the post itself, for tables that link their rows */
+  link?: string | null;
+  /** ads / ad sets: the action type that counts as this row's result (offsite_conversion.fb_pixel_purchase …) */
+  resultType?: string | null;
 }
 /** A campaign of an ads account (spec v3 §2.1). */
 export interface Campaign {

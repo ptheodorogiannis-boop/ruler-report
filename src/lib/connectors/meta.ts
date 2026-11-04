@@ -3,6 +3,7 @@
 import type { BreakdownRow, Campaign, Connector, DailyData, DailyFilter, DateRange } from '@/lib/engine/types';
 import { endpoints } from '@/lib/oauth/endpoints';
 import { fetchJson } from './http';
+import { promotedObjectAction } from './meta-results';
 
 
 const ACTION: Record<string, string[]> = {
@@ -16,8 +17,10 @@ const ACTION: Record<string, string[]> = {
 };
 const DIM: Record<string, { level?: string; breakdowns?: string; field: string; idField?: string }> = {
   campaign: { level: 'campaign', field: 'campaign_name', idField: 'campaign_id' }, // rows keyed by id, labelled by name (spec v3 §2.1)
-  adset: { level: 'adset', field: 'adset_name' },
-  ad: { level: 'ad', field: 'ad_name' },
+  // ad sets and ads keyed by id too (docs/superpowers/specs/2026-11-04-ads-previews-sources-matomo-design.md §1); an ad row also
+  // carries its ad set, whose optimisation says what counts as the ad's result
+  adset: { level: 'adset', field: 'adset_name', idField: 'adset_id' },
+  ad: { level: 'ad', field: 'ad_name', idField: 'adset_id,ad_id' },
   age: { breakdowns: 'age', field: 'age' },
   gender: { breakdowns: 'gender', field: 'gender' },
   device: { breakdowns: 'impression_device', field: 'impression_device' },
@@ -103,23 +106,44 @@ export function metaBreakdownParams(dimension: string, range: DateRange, campaig
   if (!dim) return null;
   const params: Record<string, string> = { time_range: timeRange(range), level: dim.level ?? 'account' };
   if (dim.breakdowns) params.breakdowns = dim.breakdowns;
-  if (dim.level) params.extraFields = [dim.field, dim.idField].filter(Boolean).join(',');
+  if (dim.level) params.extraFields = [dim.field, dim.idField, ...(dimension === 'ad' || dimension === 'adset' ? ['video_thruplay_watched_actions'] : [])].filter(Boolean).join(',');
   if (campaignIds) params.filtering = campaignFiltering(campaignIds);
   return params;
 }
 
 /** Group insight rows by a field (optionally keyed by an id field), summing the primitives. */
-function groupMetaRows(rows: any[], field: string, idField: string | undefined, prims: string[]): BreakdownRow[] {
-  const groups = new Map<string, { label: string; values: Record<string, number> }>();
+type MetaGroup = BreakdownRow & { acts: Record<string, number>; adsetId?: string };
+function groupRows(rows: any[], field: string, idField: string | undefined, prims: string[]): MetaGroup[] {
+  const keyField = idField?.split(',').pop();
+  const groups = new Map<string, MetaGroup>();
   for (const r of rows) {
-    const key = String(r[idField ?? field] ?? '(unknown)');
-    const label = String(r[field] ?? key);
+    const key = String(r[keyField ?? field] ?? '(unknown)');
     const v = rowToPrims(r, prims);
-    const g = groups.get(key) ?? { label, values: {} };
+    const g = groups.get(key) ?? { key, label: String(r[field] ?? key), values: {}, acts: {}, ...(r.adset_id ? { adsetId: String(r.adset_id) } : {}) };
     for (const p of prims) g.values[p] = (g.values[p] ?? 0) + v[p];
+    for (const a of [...(r.actions ?? []), ...(r.video_thruplay_watched_actions ?? []).map((x: any) => ({ action_type: 'video_thruplay_watched', value: x.value }))]) g.acts[a.action_type] = (g.acts[a.action_type] ?? 0) + Number(a.value ?? 0);
     groups.set(key, g);
   }
-  return [...groups].map(([key, g]) => ({ key, label: g.label, values: g.values }));
+  return [...groups.values()];
+}
+/** Group insight rows by a field (optionally keyed by an id field), summing the primitives. */
+function groupMetaRows(rows: any[], field: string, idField: string | undefined, prims: string[]): BreakdownRow[] {
+  return groupRows(rows, field, idField, prims).map(({ key, label, values }) => ({ key, label, values }));
+}
+
+/** Objects by id, ≤ 50 ids a call; a batch that fails (deleted, no access) is simply missing from the answer. */
+async function byIds(ctx: any, ids: string[], fields: string): Promise<Record<string, any>> {
+  const token = ctx.integration.credentials?.accessToken;
+  const out: Record<string, any> = {};
+  for (let i = 0; i < ids.length; i += 50) {
+    const qs = new URLSearchParams({ ids: ids.slice(i, i + 50).join(','), fields, access_token: token });
+    try {
+      Object.assign(out, await fetchJson<Record<string, any>>(`${endpoints.meta.graph}/?${qs}`));
+    } catch {
+      /* the rows of this batch keep no type / no thumbnail */
+    }
+  }
+  return out;
 }
 
 /** Campaign-level rows keyed by campaign id, labelled by name. */
@@ -149,8 +173,30 @@ export const metaConnector: Connector = {
     if (!dim || !params) return [];
     const rows = await insights(ctx, params);
     const sortBy = opts?.sortBy && prims.includes(opts.sortBy) ? opts.sortBy : prims[0];
-    const out = groupMetaRows(rows, dim.field, dim.idField, prims).sort((a, b) => (b.values[sortBy] ?? 0) - (a.values[sortBy] ?? 0));
-    return opts?.limit ? out.slice(0, opts.limit) : out;
+    if (dimension !== 'ad' && dimension !== 'adset') {
+      const out = groupMetaRows(rows, dim.field, dim.idField, prims).sort((a, b) => (b.values[sortBy] ?? 0) - (a.values[sortBy] ?? 0));
+      return opts?.limit ? out.slice(0, opts.limit) : out;
+    }
+    // ads and ad sets: the lookups below are only for the rows kept (all of them when sorting by results)
+    const all = groupRows(rows, dim.field, dim.idField, prims.filter((p) => p !== 'results'));
+    const order = (list: MetaGroup[]) => list.sort((a, b) => (b.values[sortBy] ?? 0) - (a.values[sortBy] ?? 0));
+    let kept = sortBy === 'results' ? all : order(all).slice(0, opts?.limit ?? all.length);
+    if (prims.includes('results')) {
+      const setOf = (g: MetaGroup) => (dimension === 'adset' ? g.key : g.adsetId);
+      const sets = await byIds(ctx, [...new Set(kept.map(setOf).filter((x): x is string => !!x))], 'optimization_goal,promoted_object');
+      for (const g of kept) {
+        const set = sets[setOf(g) ?? ''];
+        const type = set ? promotedObjectAction(set.optimization_goal, set.promoted_object) : null;
+        g.resultType = type;
+        g.values.results = type ? g.acts[type] ?? 0 : 0;
+      }
+      if (sortBy === 'results') kept = order(kept).slice(0, opts?.limit ?? kept.length);
+    }
+    if (dimension === 'ad') {
+      const ads = await byIds(ctx, kept.map((g) => g.key), 'creative{thumbnail_url,image_url}');
+      for (const g of kept) g.thumb = ads[g.key]?.creative?.image_url ?? ads[g.key]?.creative?.thumbnail_url ?? null;
+    }
+    return kept.map(({ acts: _a, adsetId: _s, ...r }) => r);
   },
 
   /** reach is not additive across days — ask the API for the period total */

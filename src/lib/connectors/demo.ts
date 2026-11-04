@@ -89,6 +89,8 @@ function dimCategories(slug: string, dimension: string): string[] {
   return [];
 }
 
+const DEMO_RESULT_TYPES = ['offsite_conversion.fb_pixel_purchase', 'offsite_conversion.fb_pixel_add_to_cart', 'lead'];
+
 function primValue(ctx: ConnectorContext, specs: Record<string, PrimSpec>, prim: string, date: string, memo: Map<string, number>, scale: number): number {
   const mk = `${prim}|${date}`;
   const m = memo.get(mk);
@@ -223,6 +225,17 @@ export const demoConnector: Connector = {
       }
       return { key: label, label, values };
     });
+    // ads and ad sets: a result type and count like Meta's (from the conversions share), creatives for ads; every fifth ad
+    // has none, so the placeholder shows too (docs/superpowers/specs/2026-11-04-ads-previews-sources-matomo-design.md §1)
+    if (isAdsSlug(ctx.integration.slug) && (dimension === 'ad' || dimension === 'adset')) {
+      let conv = 0;
+      for (const date of eachDay(range)) conv += primValue(ctx, arch.prims, 'conversions', date, memo, scale);
+      rows.forEach((r, i) => {
+        r.resultType = DEMO_RESULT_TYPES[i % DEMO_RESULT_TYPES.length];
+        if (prims.includes('results')) r.values.results = Math.max(0, Math.round(conv * weights[i] * (1 + (i % 3) * 0.6)));
+        if (dimension === 'ad') r.thumb = i % 5 === 4 ? null : `/demo/creative-${(i % 4) + 1}.svg`;
+      });
+    }
     const sortBy = opts?.sortBy && prims.includes(opts.sortBy) ? opts.sortBy : prims[0];
     if (dimension !== 'hour' && !(arch.dims[dimension] && ['age', 'device'].includes(dimension))) rows.sort((a, b) => (b.values[sortBy] ?? 0) - (a.values[sortBy] ?? 0));
     return opts?.limit ? rows.slice(0, opts.limit) : rows;
