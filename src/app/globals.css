@@ -2556,3 +2556,57 @@ html[data-rr-drag] .newblock-drop {
   flex: 1;
   justify-content: center;
 }
+
+/* ───────────── PDF widget (src/components/pdf-card.tsx) ───────────── */
+.pdf-scroll {
+  min-height: 160px;
+}
+.pdf-pages {
+  display: grid;
+  gap: 12px;
+}
+.pdf-page {
+  margin: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--hairline);
+}
+.pdf-page canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.pdf-note {
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.pdf-note-error {
+  color: var(--down);
+}
+/* on screen a PDF is a previewer: it scrolls inside its tile, the height of its grid cell */
+.rgrid > .ritem[data-kind='pdf'] .pdf-scroll {
+  max-height: calc(var(--gh, 9) * 76px - 72px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+@media print {
+  .rgrid > .ritem[data-kind='pdf'] .pdf-scroll {
+    max-height: none;
+    overflow: visible;
+  }
+  .pdf-page {
+    break-inside: avoid;
+  }
+}
+[data-print='1'] .rgrid > .ritem[data-kind='pdf'] .pdf-scroll {
+  max-height: none;
+  overflow: visible;
+}
+@media (max-width: 767px) {
+  .rgrid > .ritem[data-kind='pdf'] {
+    grid-column: 1 / -1;
+  }
+}

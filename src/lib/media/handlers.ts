@@ -3,12 +3,13 @@
 import { createReadStream } from 'node:fs';
 import { Readable } from 'node:stream';
 import { canAdmin, canWrite, type Principal } from '@/lib/auth';
-import { deleteMedia, isMediaMime, listMedia, mediaMaxBytes, putMedia, readMedia } from './store';
+import { deleteMedia, isMediaMime, isPdfMime, listMedia, mediaMaxBytes, putMedia, readMedia } from './store';
 
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
 
-/** The first bytes must match the declared type: a renamed SVG or script never gets stored as an image. */
-export function sniffImage(bytes: Buffer): 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp' | null {
+/** The first bytes must match the declared type: a renamed SVG or script never gets stored as an image or a PDF. */
+export function sniffImage(bytes: Buffer): 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp' | 'application/pdf' | null {
+  if (bytes.length >= 5 && bytes.toString('latin1', 0, 5) === '%PDF-') return 'application/pdf';
   if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'image/png';
   if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
   if (bytes.length >= 6 && bytes.toString('latin1', 0, 4) === 'GIF8') return 'image/gif';
@@ -25,11 +26,11 @@ export async function uploadHandler(p: Principal | null, form: FormData): Promis
   if (!p) return json({ message: 'Unauthenticated.' }, 401);
   if (!canWrite(p)) return json({ message: 'Forbidden.' }, 403);
   const file = form.get('file');
-  if (!(file instanceof File)) return json({ message: 'Choose an image file.' }, 422);
-  if (file.size > mediaMaxBytes()) return json({ message: `Images must be ${mediaMaxBytes() / (1024 * 1024)} MB or smaller` }, 422);
+  if (!(file instanceof File)) return json({ message: 'Choose an image or a PDF.' }, 422);
+  if (file.size > mediaMaxBytes()) return json({ message: `Files must be ${mediaMaxBytes() / (1024 * 1024)} MB or smaller` }, 422);
   const bytes = Buffer.from(await file.arrayBuffer());
   const sniffed = sniffImage(bytes);
-  if (!sniffed || !isMediaMime(file.type) || sniffed !== file.type) return json({ message: 'Unsupported image type (PNG, JPEG, WebP or GIF only)' }, 422);
+  if (!sniffed || !isMediaMime(file.type) || sniffed !== file.type) return json({ message: 'Unsupported file type (PNG, JPEG, WebP, GIF or PDF only)' }, 422);
   const projectId = int(form.get('projectId'));
   if (projectId && p.projectIds && !p.projectIds.includes(projectId)) return json({ message: 'Forbidden.' }, 403);
   try {
@@ -40,10 +41,10 @@ export async function uploadHandler(p: Principal | null, form: FormData): Promis
   }
 }
 
-export async function listHandler(p: Principal | null): Promise<Response> {
+export async function listHandler(p: Principal | null, kind: 'image' | 'pdf' = 'image'): Promise<Response> {
   if (!p) return json({ message: 'Unauthenticated.' }, 401);
   if (!canWrite(p)) return json({ message: 'Forbidden.' }, 403);
-  return json({ items: await listMedia(p.companyId) });
+  return json({ items: await listMedia(p.companyId, 24, kind) });
 }
 
 export async function getHandler(id: string): Promise<Response> {
@@ -57,7 +58,9 @@ export async function getHandler(id: string): Promise<Response> {
       'content-type': m.mime,
       'content-length': String(m.size),
       'cache-control': 'public, max-age=31536000, immutable',
-      'content-disposition': `inline; filename="${encodeURIComponent(m.name)}"`,
+      // a PDF is drawn by pdf.js inside the report; opened on its own it downloads, and never runs as a page of this origin
+      'content-disposition': `${isPdfMime(m.mime) ? 'attachment' : 'inline'}; filename="${encodeURIComponent(m.name)}"`,
+      ...(isPdfMime(m.mime) ? { 'content-security-policy': 'sandbox' } : {}),
       'x-content-type-options': 'nosniff',
     },
   });

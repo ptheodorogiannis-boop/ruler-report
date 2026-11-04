@@ -4,11 +4,17 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line, Line
 import { compact, formatValue, type FormatOpts } from '@/lib/util/format';
 import type { Format } from '@/lib/engine/types';
 
-// Series palette (docs/DESIGN.md › Tokens): accent first, then hues that stay apart for colour-blind readers; every one ≥ 3:1 on white.
-const PALETTE = ['#1a36e6', '#0e9f8e', '#d97a1d', '#7c5ce6', '#b8321f', '#557086', '#11784a', '#8a6d3b'];
-const COMPARE = '#c3c9d2';
-const GRID = '#eceeea';
-const TICK = { fontSize: 11, fill: '#636d7c' };
+// Series palette (docs/DESIGN.md › Ruler glass pass): the accent first, then greys from the Ruler ramp (one highlighted series).
+const PALETTE = ['#db0100', '#575756', '#a1a19f', '#333332', '#7c7c7a', '#c5c5c3', '#2a2a29', '#8a8a88'];
+const COMPARE = '#c5c5c3';
+const GRID = 'rgba(14, 14, 14, 0.08)';
+const TICK = { fontSize: 11, fill: '#575756' };
+
+/**
+ * Charts draw in once on screen, but never in print, in the PDF service's render (?print=1, which would capture a
+ * half-drawn line) or for people who ask for less motion.
+ */
+const still = () => typeof document !== 'undefined' && (!!document.querySelector('[data-print="1"]') || window.matchMedia?.('print').matches || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 
 interface Props {
   labels: string[];
@@ -30,6 +36,7 @@ const shortDate = (l: string) => (/^\d{4}-\d{2}-\d{2}$/.test(l) ? `${l.slice(8, 
 const box = (fill?: boolean) => (fill ? { width: '100%', height: '100%', minHeight: 120 } : { width: '100%', height: 220 });
 
 export function TimeChart({ labels, series, seriesLabels, format, opts, comparison, color, fill, kind, palette }: Props) {
+  const anim = !still();
   const pal = palette ?? PALETTE;
   const data = labels.map((l, i) => {
     const row: Record<string, number | string> = { label: l };
@@ -53,9 +60,9 @@ export function TimeChart({ labels, series, seriesLabels, format, opts, comparis
           <BarChart data={data} margin={{ top: 8, right: 18, bottom: 0, left: -8 }}>
             {axes}
             {multi && <Legend wrapperStyle={{ fontSize: 12 }} />}
-            {comparison && !multi && <Bar dataKey="c0" name="Previous period" fill={COMPARE} radius={[3, 3, 0, 0]} />}
+            {comparison && !multi && <Bar isAnimationActive={anim} dataKey="c0" name="Previous period" fill={COMPARE} radius={[3, 3, 0, 0]} />}
             {series.map((_, i) => (
-              <Bar key={i} dataKey={`s${i}`} name={seriesLabels[i]} stackId={kind === 'stacked' ? 's' : undefined} fill={multi ? pal[i % pal.length] : brand} radius={kind === 'stacked' && i < series.length - 1 ? 0 : [3, 3, 0, 0]} />
+              <Bar isAnimationActive={anim} key={i} dataKey={`s${i}`} name={seriesLabels[i]} stackId={kind === 'stacked' ? 's' : undefined} fill={multi ? pal[i % pal.length] : brand} radius={kind === 'stacked' && i < series.length - 1 ? 0 : [3, 3, 0, 0]} />
             ))}
           </BarChart>
         ) : kind === 'area' && multi ? (
@@ -63,7 +70,7 @@ export function TimeChart({ labels, series, seriesLabels, format, opts, comparis
             {axes}
             <Legend wrapperStyle={{ fontSize: 12 }} />
             {series.map((_, i) => (
-              <Area key={i} type="monotone" dataKey={`s${i}`} name={seriesLabels[i]} stroke={pal[i % pal.length]} fill={pal[i % pal.length]} fillOpacity={0.12} strokeWidth={2} />
+              <Area isAnimationActive={anim} key={i} type="monotone" dataKey={`s${i}`} name={seriesLabels[i]} stroke={pal[i % pal.length]} fill={pal[i % pal.length]} fillOpacity={0.12} strokeWidth={2} />
             ))}
           </AreaChart>
         ) : multi ? (
@@ -71,7 +78,7 @@ export function TimeChart({ labels, series, seriesLabels, format, opts, comparis
             {axes}
             <Legend wrapperStyle={{ fontSize: 12 }} />
             {series.map((_, i) => (
-              <Line key={i} type="monotone" dataKey={`s${i}`} name={seriesLabels[i]} stroke={pal[i % pal.length]} strokeWidth={2} dot={false} />
+              <Line isAnimationActive={anim} key={i} type="monotone" dataKey={`s${i}`} name={seriesLabels[i]} stroke={pal[i % pal.length]} strokeWidth={2} dot={false} />
             ))}
           </LineChart>
         ) : (
@@ -83,8 +90,8 @@ export function TimeChart({ labels, series, seriesLabels, format, opts, comparis
               </linearGradient>
             </defs>
             {axes}
-            {comparison && <Line type="monotone" dataKey="c0" name="Previous period" stroke={COMPARE} strokeDasharray="3 4" dot={false} strokeWidth={1.5} />}
-            <Area type="monotone" dataKey="s0" name={seriesLabels[0]} stroke={brand} strokeWidth={2} fill="url(#g0)" />
+            {comparison && <Line isAnimationActive={anim} type="monotone" dataKey="c0" name="Previous period" stroke={COMPARE} strokeDasharray="3 4" dot={false} strokeWidth={1.5} />}
+            <Area isAnimationActive={anim} type="monotone" dataKey="s0" name={seriesLabels[0]} stroke={brand} strokeWidth={2} fill="url(#g0)" />
           </AreaChart>
         )}
       </ResponsiveContainer>
@@ -93,6 +100,7 @@ export function TimeChart({ labels, series, seriesLabels, format, opts, comparis
 }
 
 export function CategoryChart({ labels, series, seriesLabels, format, opts, pie, donut, stacked, fill, palette }: Props & { pie?: boolean; donut?: boolean; stacked?: boolean }) {
+  const anim = !still();
   const pal = palette ?? PALETTE;
   const data = labels.map((l, i) => {
     const row: Record<string, number | string> = { label: l };
@@ -104,7 +112,7 @@ export function CategoryChart({ labels, series, seriesLabels, format, opts, pie,
       <div style={box(fill)}>
         <ResponsiveContainer>
           <PieChart>
-            <Pie data={data} dataKey="s0" nameKey="label" innerRadius={donut ? '58%' : '45%'} outerRadius="75%" paddingAngle={2}>
+            <Pie isAnimationActive={anim} data={data} dataKey="s0" nameKey="label" innerRadius={donut ? '58%' : '45%'} outerRadius="75%" paddingAngle={2}>
               {data.map((_, i) => (
                 <Cell key={i} fill={pal[i % pal.length]} />
               ))}
@@ -129,7 +137,7 @@ export function CategoryChart({ labels, series, seriesLabels, format, opts, pie,
           <Tooltip formatter={(v: number) => formatValue(v, format, opts)} cursor={{ fill: 'rgba(16,20,24,0.04)' }} />
           {series.length > 1 && <Legend wrapperStyle={{ fontSize: 12 }} />}
           {series.map((_, i) => (
-            <Bar key={i} dataKey={`s${i}`} name={seriesLabels[i]} stackId={stacked ? 's' : undefined} fill={pal[i % pal.length]} radius={stacked && i < series.length - 1 ? 0 : [3, 3, 0, 0]} />
+            <Bar isAnimationActive={anim} key={i} dataKey={`s${i}`} name={seriesLabels[i]} stackId={stacked ? 's' : undefined} fill={pal[i % pal.length]} radius={stacked && i < series.length - 1 ? 0 : [3, 3, 0, 0]} />
           ))}
         </BarChart>
       </ResponsiveContainer>
@@ -137,7 +145,7 @@ export function CategoryChart({ labels, series, seriesLabels, format, opts, pie,
   );
 }
 
-export function Sparkline({ values, color = '#636d7c' }: { values: number[]; color?: string }) {
+export function Sparkline({ values, color = '#575756' }: { values: number[]; color?: string }) {
   const data = values.map((v, i) => ({ i, v }));
   return (
     <div style={{ width: 90, height: 28 }}>

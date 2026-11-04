@@ -14,6 +14,7 @@ import { seriesColors } from '@/lib/layout/custom-chart';
 import { ICONS, TileCard } from './infographic';
 import { ContainerCard } from './container-card';
 import { CompareCard } from './compare-card';
+import { PdfCard } from './pdf-card';
 import { reconnectUrl } from '@/lib/health-url';
 import { DataNote } from './data-note';
 import { getRequestLocale, tr } from '@/lib/i18n/request';
@@ -261,6 +262,7 @@ export function WidgetCard(props: CardProps) {
   if (t === 'image') return <ImageCard {...props} />;
   if (t === 'container') return <ContainerCard {...props} />;
   if (t === 'compare') return <CompareCard {...props} />;
+  if (t === 'pdf') return <PdfCard {...props} />;
   return <ErrorCard {...props} />;
 }
 

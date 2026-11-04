@@ -11,7 +11,12 @@ const nextConfig = {
   // NEXT_DIST_DIR lets a production build/start live next to a running dev server (default .next)
   distDir: process.env.NEXT_DIST_DIR || '.next',
   // playwright drives the PDF service (src/lib/services/pdf.ts) and must not be bundled
-  serverExternalPackages: ['@prisma/client', 'bcryptjs', 'nodemailer', 'playwright', 'playwright-core'],
+  serverExternalPackages: ['@prisma/client', 'bcryptjs', 'nodemailer', 'playwright', 'playwright-core', '@sparticuz/chromium'],
+  // the serverless Chromium (src/lib/services/pdf.ts) is loaded at run time, so its packed binary is traced in by hand
+  outputFileTracingIncludes: {
+    '/api/pdf/[token]': ['./node_modules/@sparticuz/chromium/**'],
+    '/api/cron/tick': ['./node_modules/@sparticuz/chromium/**'],
+  },
   poweredByHeader: false,
 };
 export default nextConfig;

@@ -18,7 +18,7 @@ export interface MetricRef {
 export type SortDir = 'asc' | 'desc';
 
 /** Editor-only widget sources that are not backed by an integration. */
-export const SPECIAL_SLUGS = ['custom', 'manual', 'analysis', 'calculated', 'custom_chart', 'infographic', 'image', 'container', 'compare'] as const;
+export const SPECIAL_SLUGS = ['custom', 'manual', 'analysis', 'calculated', 'custom_chart', 'infographic', 'image', 'container', 'compare', 'pdf'] as const;
 export type SpecialSlug = (typeof SPECIAL_SLUGS)[number];
 export const isSpecialSlug = (s: string): s is SpecialSlug => (SPECIAL_SLUGS as readonly string[]).includes(s);
 /** Campaign table defaults (spec v3 §2.3); here (pure) so the editor panel never imports the engine. */
@@ -81,6 +81,8 @@ export interface WidgetCustom {
   compareRefs?: MetricRef[];
   /** show the change as a percentage (default) or as an absolute difference */
   changeAs?: 'percent' | 'absolute';
+  // pdf_v1: the pages to show, typed like a print dialog ("1-3, 5"); all pages when empty (the file is `url`)
+  pdfPages?: string;
   // image_v1
   url?: string;
   fit?: 'cover' | 'contain';
@@ -155,6 +157,7 @@ export const DEFAULT_SIZE: Record<Component, { w: number; h: number }> = {
   infographic_v1: { w: 3, h: 2 },
   image_v1: { w: 6, h: 4 },
   compare_v1: { w: 12, h: 3 },
+  pdf_v1: { w: 12, h: 9 },
 };
 export const MIN_SIZE: Record<Component, { w: number; h: number }> = {
   number_v1: { w: 2, h: 2 },
@@ -169,6 +172,7 @@ export const MIN_SIZE: Record<Component, { w: number; h: number }> = {
   infographic_v1: { w: 2, h: 2 },
   image_v1: { w: 2, h: 2 },
   compare_v1: { w: 4, h: 3 },
+  pdf_v1: { w: 4, h: 4 },
 };
 
 export interface SourceInfo {

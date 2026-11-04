@@ -3,9 +3,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { unlockCookie } from '@/lib/share';
-import { PdfBusyError, PdfTimeoutError, pdfAvailable, pdfContentDisposition, pdfPageUrl, renderPdf } from '@/lib/services/pdf';
+import { PdfBusyError, PdfTimeoutError, pdfAvailable, pdfBaseFor, pdfContentDisposition, pdfPageUrl, renderPdf } from '@/lib/services/pdf';
 
 export const dynamic = 'force-dynamic';
+// Chromium starts cold on a serverless host: allow the render a minute (vercel.json caps the plan's own maximum)
+export const maxDuration = 60;
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -22,9 +24,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
     const v = req.nextUrl.searchParams.get(k);
     if (v && /^[\w-]{1,32}$/.test(v)) extra[k] = v;
   }
-  const url = pdfPageUrl(r.kind === 'report' ? 'report' : 'dashboard', token, { layout, ...extra });
+  // the page renders from the address the visitor used (serverless) or the configured one; a protected Vercel preview lets
+  // the render in with the visitor's own Vercel session cookie, which never leaves this host
+  const origin = `${req.headers.get('x-forwarded-proto')?.split(',')[0] || req.nextUrl.protocol.replace(':', '')}://${req.headers.get('x-forwarded-host')?.split(',')[0] || req.headers.get('host')}`;
+  const url = pdfPageUrl(r.kind === 'report' ? 'report' : 'dashboard', token, { layout, ...extra }, pdfBaseFor(origin));
+  const vercelJwt = req.cookies.get('_vercel_jwt')?.value;
+  const cookies = [...(cookie ? [{ name: cookieName, value: cookie }] : []), ...(vercelJwt && new URL(url).host === new URL(origin).host ? [{ name: '_vercel_jwt', value: vercelJwt }] : [])];
   try {
-    const pdf = await renderPdf({ url, cookies: cookie ? [{ name: cookieName, value: cookie }] : [] });
+    const pdf = await renderPdf({ url, cookies });
     return new NextResponse(new Uint8Array(pdf), {
       headers: { 'content-type': 'application/pdf', 'content-disposition': pdfContentDisposition(r.title), 'cache-control': 'no-store' },
     });

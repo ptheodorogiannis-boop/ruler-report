@@ -17,11 +17,9 @@ export function schedulerEnabled(env: Env = process.env): boolean {
   return !onVercel(env);
 }
 
-/** Whether the PDF export may look for Chromium at all: PDF_ENABLED=off|auto, default auto except on Vercel. */
+/** Whether the PDF export may look for Chromium at all: PDF_ENABLED=off|auto, default auto (on Vercel the serverless Chromium). */
 export function pdfAllowed(env: Env = process.env): boolean {
-  if (env.PDF_ENABLED === 'off') return false;
-  if (env.PDF_ENABLED) return true;
-  return !onVercel(env);
+  return env.PDF_ENABLED !== 'off';
 }
 
 /**

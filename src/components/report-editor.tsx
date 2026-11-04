@@ -11,6 +11,7 @@ import { BlockColor, LookPanel } from './look-panel';
 import { CustomChartSettings } from './widget-settings/custom-chart';
 import { TileSettings } from './widget-settings/tile';
 import { CompareSettings } from './widget-settings/compare';
+import { PdfSettings } from './widget-settings/pdf';
 import { ImageSettings } from './widget-settings/image';
 import { ContainerSettings } from './widget-settings/container';
 import { CampaignScopeEditor } from './campaign-scope-editor';
@@ -57,12 +58,12 @@ interface MetricDef {
   component: Component;
   references: { title: string; description?: string; group?: string };
 }
-type Payload = { kind: 'metric'; slug: string; integrationId: number; key: string; component: Component; title: string } | { kind: 'special'; slug: 'manual' | 'analysis' | 'calculated' | 'custom_chart' | 'infographic' | 'image' | 'container' | 'compare' } | { kind: 'blended'; key: string; title: string };
+type Payload = { kind: 'metric'; slug: string; integrationId: number; key: string; component: Component; title: string } | { kind: 'special'; slug: 'manual' | 'analysis' | 'calculated' | 'custom_chart' | 'infographic' | 'image' | 'container' | 'compare' | 'pdf' } | { kind: 'blended'; key: string; title: string };
 
 // dictionary keys per component, resolved with t at render (spec v3 §5)
-const COMP_LABEL: Record<string, string> = { number_v1: 'editor.comp_number_v1', chart_v1: 'editor.comp_chart_v1', datatable_v1: 'editor.comp_datatable_v1', funnel_v1: 'editor.comp_funnel_v1', container_v1: 'editor.comp_container_v1', analysis_v1: 'editor.comp_analysis_v1', empty_v1: 'editor.comp_empty_v1', calculated_v1: 'editor.comp_calculated_v1', custom_chart_v1: 'editor.comp_custom_chart_v1', infographic_v1: 'editor.comp_infographic_v1', image_v1: 'editor.comp_image_v1', compare_v1: 'editor.comp_compare_v1' };
-const SPECIAL_COMPONENT = { manual: 'empty_v1', analysis: 'analysis_v1', calculated: 'calculated_v1', custom_chart: 'custom_chart_v1', infographic: 'infographic_v1', image: 'image_v1', container: 'container_v1', compare: 'compare_v1' } as const;
-const SPECIAL_KEY = { manual: 'number', analysis: 'text', calculated: 'formula', custom_chart: 'chart', infographic: 'tile', image: 'image', container: 'campaigns', compare: 'compare' } as const;
+const COMP_LABEL: Record<string, string> = { number_v1: 'editor.comp_number_v1', chart_v1: 'editor.comp_chart_v1', datatable_v1: 'editor.comp_datatable_v1', funnel_v1: 'editor.comp_funnel_v1', container_v1: 'editor.comp_container_v1', analysis_v1: 'editor.comp_analysis_v1', empty_v1: 'editor.comp_empty_v1', calculated_v1: 'editor.comp_calculated_v1', custom_chart_v1: 'editor.comp_custom_chart_v1', infographic_v1: 'editor.comp_infographic_v1', image_v1: 'editor.comp_image_v1', compare_v1: 'editor.comp_compare_v1', pdf_v1: 'editor.comp_pdf_v1' };
+const SPECIAL_COMPONENT = { manual: 'empty_v1', analysis: 'analysis_v1', calculated: 'calculated_v1', custom_chart: 'custom_chart_v1', infographic: 'infographic_v1', image: 'image_v1', container: 'container_v1', compare: 'compare_v1', pdf: 'pdf_v1' } as const;
+const SPECIAL_KEY = { manual: 'number', analysis: 'text', calculated: 'formula', custom_chart: 'chart', infographic: 'tile', image: 'image', container: 'campaigns', compare: 'compare', pdf: 'pdf' } as const;
 const SPECIAL_DEFAULT: Record<keyof typeof SPECIAL_KEY, () => WidgetCustom> = {
   manual: () => ({ title: 'Manual metric', value: 0 }),
   analysis: () => ({ title: 'Analysis', html: '' }),
@@ -72,6 +73,7 @@ const SPECIAL_DEFAULT: Record<keyof typeof SPECIAL_KEY, () => WidgetCustom> = {
   image: () => ({ title: 'Image', fit: 'contain' }),
   container: () => ({ title: 'Campaigns', metrics: ['spend', 'impressions', 'clicks', 'cpc', 'conversions'], rows: 10, showStatus: true }),
   compare: () => ({ compareMode: 'periods' }),
+  pdf: () => ({}),
 };
 const componentOfPayload = (p: Payload): Component => (p.kind === 'metric' ? p.component : p.kind === 'blended' ? 'number_v1' : SPECIAL_COMPONENT[p.slug]);
 const parsePayload = (s: string): Payload | null => {
@@ -82,7 +84,7 @@ const parsePayload = (s: string): Payload | null => {
   }
 };
 const compOf = (w: LayoutWidget) => w.component;
-const kindOf = (c: Component) => (c === 'chart_v1' || c === 'custom_chart_v1' ? 'chart' : c === 'datatable_v1' ? 'table' : c === 'funnel_v1' ? 'funnel' : c === 'analysis_v1' ? 'text' : c === 'infographic_v1' ? 'tile' : c === 'image_v1' ? 'image' : c === 'container_v1' ? 'container' : c === 'compare_v1' ? 'compare' : 'number');
+const kindOf = (c: Component) => (c === 'chart_v1' || c === 'custom_chart_v1' ? 'chart' : c === 'datatable_v1' ? 'table' : c === 'funnel_v1' ? 'funnel' : c === 'analysis_v1' ? 'text' : c === 'infographic_v1' ? 'tile' : c === 'image_v1' ? 'image' : c === 'container_v1' ? 'container' : c === 'compare_v1' ? 'compare' : c === 'pdf_v1' ? 'pdf' : 'number');
 
 export function ReportEditor(props: EditorProps) {
   const t = useT();
@@ -786,6 +788,7 @@ function AddMetricsPanel({ block, sources, customMetrics, onAdd, onClose }: { bl
     { slug: 'infographic', title: t('editor.spInfographic'), hint: t('editor.spInfographicHint') },
     { slug: 'compare', title: t('editor.specialCompare'), hint: t('editor.specialCompareHint') },
     { slug: 'image', title: t('editor.spImage'), hint: t('editor.spImageHint') },
+    { slug: 'pdf', title: t('editor.specialPdf'), hint: t('editor.specialPdfHint') },
     ...(isAdsSlug(block.slug) ? [{ slug: 'container' as const, title: t('editor.spContainer'), hint: t('editor.spContainerHint') }] : []),
   ];
   return (
@@ -921,7 +924,7 @@ function SettingsPanel({ w, rendered, raw, rawIdx, sources, range, comparison, k
   const isNumber = comp === 'number_v1' || comp === 'empty_v1' || comp === 'calculated_v1';
   const isTime = rendered?.widget.value.type === 'chart' && /^\d{4}-\d{2}-\d{2}$/.test((raw?.widget.value as any)?.labels?.[0] ?? (rendered.widget.value as any).labels?.[0] ?? '');
   const tableRaw = raw?.widget.value.type === 'table' ? raw.widget.value : undefined;
-  const predefined = !['manual', 'analysis', 'calculated', 'custom_chart', 'infographic', 'image', 'container', 'compare'].includes(w.slug);
+  const predefined = !['manual', 'analysis', 'calculated', 'custom_chart', 'infographic', 'image', 'container', 'compare', 'pdf'].includes(w.slug);
   const [periodDraft, setPeriodDraft] = useState<DateRange>(c.period ?? range);
   useEffect(() => setPeriodDraft(c.period ?? range), [w.id, c.period, range]);
   const refOptions = useMemo(() => {
@@ -1029,6 +1032,7 @@ function SettingsPanel({ w, rendered, raw, rawIdx, sources, range, comparison, k
         {w.slug === 'custom_chart' && <CustomChartSettings c={c} sources={sources} decimal={decimal} onChange={onChange} />}
         {w.slug === 'infographic' && <TileSettings c={c} sources={sources} decimal={decimal} rawIdx={rawIdx} onChange={onChange} />}
         {w.slug === 'compare' && <CompareSettings c={c} sources={sources} decimal={decimal} onChange={onChange} />}
+        {w.slug === 'pdf' && <PdfSettings c={c} onChange={onChange} />}
         {w.slug === 'image' && <ImageSettings c={c} onChange={onChange} />}
         {w.slug === 'container' && <ContainerSettings c={c} sources={sources} integrationId={w.integrationId} rendered={rendered} onChange={onChange} />}
 

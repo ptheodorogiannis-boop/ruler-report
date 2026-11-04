@@ -7,7 +7,7 @@ import path from 'node:path';
 import { db } from '@/lib/db';
 import { mediaStore } from '@/lib/platform';
 
-export const MEDIA_MIME = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' } as const;
+export const MEDIA_MIME = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'application/pdf': 'pdf' } as const;
 export type MediaMime = keyof typeof MEDIA_MIME;
 export const MEDIA_MAX_BYTES = 5 * 1024 * 1024;
 /** Vercel caps a function's request body at 4.5 MB, so uploads kept in the database stay at 4 MB. */
@@ -16,6 +16,7 @@ export const mediaMaxBytes = () => (mediaStore() === 'db' ? MEDIA_DB_MAX_BYTES :
 const tooLarge = () => `Images must be ${mediaMaxBytes() / (1024 * 1024)} MB or smaller`;
 export const isMediaMime = (m: string): m is MediaMime => Object.prototype.hasOwnProperty.call(MEDIA_MIME, m);
 export const mediaUrl = (id: string) => `/api/media/${id}`;
+export const isPdfMime = (m: string) => m === 'application/pdf';
 
 /** Absolute folder of a company's files: MEDIA_DIR (tests) or <cwd>/data/uploads. */
 export function mediaDir(companyId: number): string {
@@ -37,7 +38,7 @@ export interface PutMediaInput {
 /** Validates, stores the row, writes the file; a failed write removes the row again so nothing partial stays. */
 export async function putMedia(input: PutMediaInput): Promise<{ id: string; url: string; width: number | null; height: number | null }> {
   const { companyId, mime, bytes } = input;
-  if (!isMediaMime(mime)) throw new Error('Unsupported image type (PNG, JPEG, WebP or GIF only)');
+  if (!isMediaMime(mime)) throw new Error('Unsupported file type (PNG, JPEG, WebP, GIF or PDF only)');
   if (!bytes.length) throw new Error('The file is empty');
   if (bytes.length > mediaMaxBytes()) throw new Error(tooLarge());
   const dim = (n: number | null | undefined) => (Number.isFinite(n) && (n as number) > 0 ? Math.round(n as number) : null);
@@ -82,7 +83,8 @@ export async function deleteMedia(id: string, companyId: number): Promise<boolea
   return true;
 }
 
-export async function listMedia(companyId: number, take = 24) {
-  const rows = await db.media.findMany({ where: { companyId }, orderBy: { createdAt: 'desc' }, take, omit: { data: true } });
-  return rows.map((r) => ({ id: r.id, url: mediaUrl(r.id), name: r.name, width: r.width, height: r.height, createdAt: r.createdAt.toISOString() }));
+/** The company's recent uploads; `kind` keeps the image pickers to images and the PDF picker to PDFs. */
+export async function listMedia(companyId: number, take = 24, kind: 'image' | 'pdf' = 'image') {
+  const rows = await db.media.findMany({ where: { companyId, mime: kind === 'pdf' ? 'application/pdf' : { not: 'application/pdf' } }, orderBy: { createdAt: 'desc' }, take, omit: { data: true } });
+  return rows.map((r) => ({ id: r.id, url: mediaUrl(r.id), name: r.name, mime: r.mime, size: r.size, width: r.width, height: r.height, createdAt: r.createdAt.toISOString() }));
 }

@@ -56,7 +56,8 @@ test('platform defaults: on Vercel uploads go to the database and the scheduler 
   assert.equal(schedulerEnabled({ VERCEL: '1', ENABLE_SCHEDULER: '1' }), true);
   assert.equal(pdfAllowed({}), true);
   assert.equal(pdfAllowed({ PDF_ENABLED: 'off' }), false);
-  assert.equal(pdfAllowed({ VERCEL: '1' }), false);
+  assert.equal(pdfAllowed({ VERCEL: '1' }), true, 'on Vercel the serverless Chromium is used');
+  assert.equal(pdfAllowed({ VERCEL: '1', PDF_ENABLED: 'off' }), false);
   assert.equal(pdfAllowed({ VERCEL: '1', PDF_ENABLED: 'auto' }), true);
 });
 

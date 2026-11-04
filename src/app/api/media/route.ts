@@ -8,9 +8,9 @@ export const dynamic = 'force-dynamic';
 // An Authorization header means "API client": never fall back to a browser session if the token is wrong.
 const principal = (req: NextRequest) => (req.headers.get('authorization') ? tokenPrincipal(req.headers.get('authorization')) : getPrincipal());
 
-/** GET /api/media — the company's recent uploads (for the picker). */
+/** GET /api/media[?kind=pdf] — the company's recent uploads (for the pickers): images by default, PDFs on request. */
 export async function GET(req: NextRequest) {
-  return listHandler(await principal(req));
+  return listHandler(await principal(req), req.nextUrl.searchParams.get('kind') === 'pdf' ? 'pdf' : 'image');
 }
 
 const json = (data: unknown, status: number) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   if (!p) return json({ message: 'Unauthenticated.' }, 401);
   if (!canWrite(p)) return json({ message: 'Forbidden.' }, 403);
   const declared = Number(req.headers.get('content-length') ?? 0);
-  if (declared > mediaMaxBytes() + 64 * 1024) return json({ message: `Images must be ${mediaMaxBytes() / (1024 * 1024)} MB or smaller` }, 413);
+  if (declared > mediaMaxBytes() + 64 * 1024) return json({ message: `Files must be ${mediaMaxBytes() / (1024 * 1024)} MB or smaller` }, 413);
   let form: FormData;
   try {
     form = await req.formData();

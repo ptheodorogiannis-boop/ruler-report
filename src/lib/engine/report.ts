@@ -343,7 +343,7 @@ export async function ensureWidgetValues(inp: EnsureInput): Promise<{ data: Repo
     // ads blocks: the block's scope, else the account default frozen at generation
     const blockScope = isAdsSlug(b.slug) ? (b.campaigns ?? frozenDefault(b.integrationId)) : undefined;
     for (const w of b.widgets) {
-      if (w.slug === 'manual' || w.slug === 'analysis' || w.slug === 'image') continue;
+      if (w.slug === 'manual' || w.slug === 'analysis' || w.slug === 'image' || w.slug === 'pdf') continue;
       if (w.slug === 'container') {
         // campaign table (spec v3 §2.3): one value per (account, metrics, scope)
         const id = w.integrationId || b.integrationId;

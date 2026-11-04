@@ -2,7 +2,7 @@
 import type { CampaignScope } from './campaigns';
 import type { Tone } from '@/lib/ai/tones';
 
-export type Component = 'number_v1' | 'chart_v1' | 'datatable_v1' | 'funnel_v1' | 'container_v1' | 'analysis_v1' | 'empty_v1' | 'calculated_v1' | 'custom_chart_v1' | 'infographic_v1' | 'image_v1' | 'compare_v1';
+export type Component = 'number_v1' | 'chart_v1' | 'datatable_v1' | 'funnel_v1' | 'container_v1' | 'analysis_v1' | 'empty_v1' | 'calculated_v1' | 'custom_chart_v1' | 'infographic_v1' | 'image_v1' | 'compare_v1' | 'pdf_v1';
 export type Format = 'number' | 'currency' | 'percent' | 'decimal' | 'duration' | 'text';
 export type DiffType = 'positive_good' | 'positive_bad' | 'neutral';
 
@@ -158,7 +158,15 @@ export interface CompareValue {
   /** accounts mode: the sum, when the metric can be added up */
   total?: number | null;
 }
-export type WidgetValue = NumberValue | ChartValue | TableValue | FunnelValue | ErrorValue | TextValue | TileValue | ImageValue | ContainerValue | CompareValue;
+/** An uploaded PDF shown inside the report (pdf_v1): its pages drawn in place by pdf.js, not attached as a file. */
+export interface PdfValue {
+  type: 'pdf';
+  url: string;
+  /** 1-based pages to show, in order; all pages when absent */
+  pages?: number[];
+  caption?: string;
+}
+export type WidgetValue = NumberValue | ChartValue | TableValue | FunnelValue | ErrorValue | TextValue | TileValue | ImageValue | ContainerValue | CompareValue | PdfValue;
 
 // ---------- connectors ----------
 export type DailyData = Record<string, Record<string, number>>; // date → prim → value
