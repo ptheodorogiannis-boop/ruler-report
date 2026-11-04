@@ -12,7 +12,9 @@ import { tFor } from '../src/lib/i18n';
 
 const savedGraph = endpoints.meta.graph;
 let server: http.Server;
-const idsCalls: { ids: string[]; fields: string }[] = [];
+const idsCalls: { ids: string[]; fields: string; width?: string | null }[] = [];
+const oneCalls: string[] = [];
+let withGone = false; // an ad whose ad set was deleted: Graph refuses a whole ?ids= call that names it
 let manyAds = 0; // > 0: the insights answer that many ads instead of the fixture
 const range = { start: '2026-10-01', end: '2026-10-31' };
 const ctx = { integration: { id: 1, slug: 'facebook_ads', name: 'Acme', sourceId: 'act_100200300400', config: {}, credentials: { accessToken: 'EAA-test' } } };
@@ -35,28 +37,50 @@ const CREATIVES: Record<string, unknown> = {
   a3: { id: 'a3', creative: { id: 'c3' } },
   // a4: no creative readable
 };
+/** the creatives themselves, read with thumbnail_width / thumbnail_height (Meta sizes the thumbnail to them) */
+const CREATIVE_NODES: Record<string, { image_url?: string; thumbnail_url?: string }> = {
+  c1: { image_url: 'https://cdn.example/a1-full.jpg', thumbnail_url: 'https://cdn.example/a1-thumb.jpg' },
+  c2: { thumbnail_url: 'https://cdn.example/a2-thumb.jpg' },
+  c3: { image_url: 'https://cdn.example/a3-full.jpg' },
+};
+const sized = (u: string | undefined, w: string | null) => (u && u.includes('-thumb') && w ? `${u}?w=${w}` : u);
 
 before(async () => {
   server = http.createServer((req, res) => {
     const u = new URL(req.url!, 'http://x');
     const send = (body: unknown) => res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(body));
+    const fail = () => res.writeHead(400, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { message: '(#100) Some of the aliases you requested do not exist: gone', code: 100 } }));
+    const width = u.searchParams.get('thumbnail_width');
+    const node = (id: string, fields: string): unknown => {
+      if (fields.startsWith('creative')) return manyAds ? { id, creative: { id: `c-${id}` } } : CREATIVES[id];
+      if (fields.includes('thumbnail_url')) {
+        const c = manyAds ? { thumbnail_url: `https://cdn.example/${id}-thumb.jpg` } : CREATIVE_NODES[id];
+        return c && { id, image_url: c.image_url, thumbnail_url: sized(c.thumbnail_url, width) };
+      }
+      return manyAds ? ADSETS.s1 : ADSETS[id];
+    };
     if (u.pathname === '/' && u.searchParams.get('ids')) {
       const ids = u.searchParams.get('ids')!.split(',');
       const fields = u.searchParams.get('fields') ?? '';
-      idsCalls.push({ ids, fields });
-      const src = fields.startsWith('creative') ? CREATIVES : ADSETS;
+      idsCalls.push({ ids, fields, width });
+      if (ids.includes('gone')) return fail();
       const out: Record<string, unknown> = {};
       for (const id of ids) {
-        if (manyAds && fields.startsWith('creative')) out[id] = { id, creative: { id: `c-${id}`, thumbnail_url: `https://cdn.example/${id}.jpg` } };
-        else if (manyAds) out[id] = ADSETS.s1;
-        else if (src[id]) out[id] = src[id];
+        const n = node(id, fields);
+        if (n) out[id] = n;
       }
       return send(out);
+    }
+    const one = /^\/([A-Za-z0-9_-]+)$/.exec(u.pathname);
+    if (one && u.searchParams.get('fields') && !u.searchParams.get('level')) {
+      oneCalls.push(one[1]);
+      const n = one[1] === 'gone' ? null : node(one[1], u.searchParams.get('fields')!);
+      return n ? send(n) : fail();
     }
     const level = u.searchParams.get('level');
     if (level === 'ad') {
       if (manyAds) return send({ data: Array.from({ length: manyAds }, (_, i) => row({ ad_id: `m${i}`, ad_name: `Ad ${i}`, adset_id: 's1', spend: String(1000 - i) })) });
-      return send({ data: ADS });
+      return send({ data: withGone ? [...ADS, row({ ad_id: 'a5', ad_name: 'Old ad', adset_id: 'gone', actions: [{ action_type: 'link_click', value: '9' }] })] : ADS });
     }
     if (level === 'adset') return send({ data: [row({ adset_id: 's1', adset_name: 'Cart builders', actions: [{ action_type: 'offsite_conversion.fb_pixel_add_to_cart', value: '15' }] })] });
     if (level === 'campaign') return send({ data: [row({ campaign_id: '11', campaign_name: 'Brand' })] });
@@ -94,7 +118,7 @@ test('resultLabel: plain words for the common types, humanised otherwise, a dash
   assert.equal(resultLabel(null, en), '–');
 });
 
-test('ads level: rows keyed by ad id, results of the ad set event, thumbnails from image_url then thumbnail_url', async () => {
+test('ads level: rows keyed by ad id, results of the ad set event, a 240 px thumbnail else the image', async () => {
   idsCalls.length = 0;
   const rows = await metaConnector.breakdown(ctx, 'ad', ['spend', 'results'], range);
   const by = Object.fromEntries(rows.map((r) => [r.key, r]));
@@ -104,9 +128,12 @@ test('ads level: rows keyed by ad id, results of the ad set event, thumbnails fr
   assert.equal(by.a1.values.results, 12);
   assert.equal(by.a3.resultType, 'offsite_conversion.fb_pixel_purchase');
   assert.equal(by.a3.values.results, 2);
-  assert.equal(by.a1.thumb, 'https://cdn.example/a1-full.jpg');
-  assert.equal(by.a2.thumb, 'https://cdn.example/a2-thumb.jpg');
-  assert.equal(by.a3.thumb, null);
+  // a small image for a 48 px cell (the full creative is often over the 300 KB a snapshot keeps)
+  assert.equal(by.a1.thumb, 'https://cdn.example/a1-thumb.jpg?w=240');
+  assert.equal(by.a2.thumb, 'https://cdn.example/a2-thumb.jpg?w=240');
+  assert.equal(by.a3.thumb, 'https://cdn.example/a3-full.jpg', 'no thumbnail: the image');
+  const nodes = idsCalls.filter((c) => c.fields.includes('thumbnail_url'));
+  assert.ok(nodes.length > 0 && nodes.every((c) => c.width === '240'), 'creatives asked with thumbnail_width=240');
 });
 
 test('missing ad set and creative: that row has no type, no results and no thumbnail; the others are filled', async () => {
@@ -148,4 +175,20 @@ test('campaign level is unchanged: no id lookups', async () => {
   const rows = await metaConnector.breakdown(ctx, 'campaign', ['spend'], range);
   assert.equal(rows[0].key, '11');
   assert.equal(idsCalls.length, 0);
+});
+
+test('one deleted ad set: Graph refuses the whole batch, the other ids are asked one by one and keep their result type', async () => {
+  withGone = true;
+  oneCalls.length = 0;
+  try {
+    const rows = await metaConnector.breakdown(ctx, 'ad', ['spend', 'results'], range);
+    const by = Object.fromEntries(rows.map((r) => [r.key, r]));
+    assert.equal(by.a1.resultType, 'offsite_conversion.fb_pixel_add_to_cart');
+    assert.equal(by.a1.values.results, 12);
+    assert.equal(by.a3.resultType, 'offsite_conversion.fb_pixel_purchase');
+    assert.equal(by.a5.resultType, null, 'the deleted one has none');
+    assert.ok(oneCalls.includes('s1') && oneCalls.includes('gone'));
+  } finally {
+    withGone = false;
+  }
 });

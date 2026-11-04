@@ -40,12 +40,12 @@ export function num(v: unknown): number {
   return s && s !== '-' && Number.isFinite(n) ? n : 0;
 }
 
-/** A Matomo error answer becomes an Error with its message; a token problem asks for a reconnect. */
+/** A Matomo error answer becomes an Error with its message; a token problem or a site the token lost asks for a reconnect. */
 function check<T>(j: T): T {
   const e = j as { result?: string; message?: string } | null;
   if (e && typeof e === 'object' && !Array.isArray(e) && e.result === 'error') {
     const msg = String(e.message ?? 'unknown error');
-    throw new Error(/token|authenticat|not logged in|login/i.test(msg) ? `invalid_token: Matomo: ${msg}` : `Matomo: ${msg}`);
+    throw new Error(/token|authenticat|not logged in|login|can't access this resource|requires view access/i.test(msg) ? `invalid_token: Matomo: ${msg}` : `Matomo: ${msg}`);
   }
   return j;
 }

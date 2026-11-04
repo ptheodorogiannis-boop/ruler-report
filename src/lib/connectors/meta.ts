@@ -131,16 +131,29 @@ function groupMetaRows(rows: any[], field: string, idField: string | undefined, 
   return groupRows(rows, field, idField, prims).map(({ key, label, values }) => ({ key, label, values }));
 }
 
-/** Objects by id, ≤ 50 ids a call; a batch that fails (deleted, no access) is simply missing from the answer. */
-async function byIds(ctx: any, ids: string[], fields: string): Promise<Record<string, any>> {
+/** Objects by id, ≤ 50 ids a call; an id that cannot be read (deleted, no access) is simply missing from the answer. */
+async function byIds(ctx: any, ids: string[], fields: string, extra: Record<string, string> = {}): Promise<Record<string, any>> {
   const token = ctx.integration.credentials?.accessToken;
   const out: Record<string, any> = {};
   for (let i = 0; i < ids.length; i += 50) {
-    const qs = new URLSearchParams({ ids: ids.slice(i, i + 50).join(','), fields, access_token: token });
+    const batch = ids.slice(i, i + 50);
+    const qs = new URLSearchParams({ ids: batch.join(','), fields, ...extra, access_token: token });
     try {
       Object.assign(out, await fetchJson<Record<string, any>>(`${endpoints.meta.graph}/?${qs}`));
-    } catch {
-      /* the rows of this batch keep no type / no thumbnail */
+    } catch (e) {
+      // Graph refuses the whole call when one id cannot be read (a deleted ad set, no access): ask the others one by one
+      if (batch.length < 2 || !/\(#(100|803)\)/.test(String((e as Error)?.message ?? ''))) continue;
+      for (let j = 0; j < batch.length; j += 5) {
+        await Promise.all(
+          batch.slice(j, j + 5).map(async (id) => {
+            try {
+              out[id] = await fetchJson(`${endpoints.meta.graph}/${encodeURIComponent(id)}?${new URLSearchParams({ fields, ...extra, access_token: token })}`);
+            } catch {
+              /* this row keeps no type / no thumbnail */
+            }
+          }),
+        );
+      }
     }
   }
   return out;
@@ -193,8 +206,15 @@ export const metaConnector: Connector = {
       if (sortBy === 'results') kept = order(kept).slice(0, opts?.limit ?? kept.length);
     }
     if (dimension === 'ad') {
-      const ads = await byIds(ctx, kept.map((g) => g.key), 'creative{thumbnail_url,image_url}');
-      for (const g of kept) g.thumb = ads[g.key]?.creative?.image_url ?? ads[g.key]?.creative?.thumbnail_url ?? null;
+      // each ad's creative, then the creatives themselves with a 240 px thumbnail: a 48 px cell needs no full-size image,
+      // and a snapshot keeps images up to 300 KB
+      const ads = await byIds(ctx, kept.map((g) => g.key), 'creative');
+      const creativeOf = (g: MetaGroup): string | undefined => ads[g.key]?.creative?.id;
+      const creatives = await byIds(ctx, [...new Set(kept.map(creativeOf).filter((x): x is string => !!x))], 'thumbnail_url,image_url', { thumbnail_width: '240', thumbnail_height: '240' });
+      for (const g of kept) {
+        const c = creatives[creativeOf(g) ?? ''];
+        g.thumb = c?.thumbnail_url ?? c?.image_url ?? null;
+      }
     }
     return kept.map(({ acts: _a, adsetId: _s, ...r }) => r);
   },

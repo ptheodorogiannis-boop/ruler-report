@@ -151,7 +151,8 @@ test('validate: the site name, its currency and time zone, and the goals', async
 
 test('errors: Matomo says why; a bad token means reconnect; only https (or a local test server)', async () => {
   const { matomoApi, matomoConnector } = await import('../src/lib/connectors/matomo');
-  await assert.rejects(matomoApi({ baseUrl: base, tokenAuth: 'tok' }, 'X.forbidden', {}), /Matomo: You can't access this resource/);
+  // a site the token lost access to asks for a reconnect too (spec §4), with Matomo's own words
+  await assert.rejects(matomoApi({ baseUrl: base, tokenAuth: 'tok' }, 'X.forbidden', {}), /^Error: invalid_token: Matomo: You can't access this resource/);
   await assert.rejects(matomoConnector.daily(ctxFor('bad'), ['sessions'], range), /invalid_token/);
   await assert.rejects(matomoApi({ baseUrl: 'http://example.com/matomo', tokenAuth: 'tok' }, 'API.getMatomoVersion', {}), /https/);
 });
