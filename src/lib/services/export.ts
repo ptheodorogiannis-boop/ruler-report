@@ -24,6 +24,7 @@ export function reportToCsv(data: ReportData, locale: Locale = 'en'): string {
         if (v.items?.length) v.items.forEach((it) => rows.push([...head, 'tile', it.label, it.value, '', '']));
         else rows.push([...head, 'tile', v.kind, v.value ?? '', v.target ?? v.comparison?.value ?? '', v.comparison?.change_pct ?? '']);
       } else if (v.type === 'image') rows.push([...head, 'image', v.alt, v.url, '', '']);
+      else if (v.type === 'compare') v.columns.forEach((c) => rows.push([...head, 'compare', c.label || (c.range ? `${c.range.start}..${c.range.end}` : ''), c.value ?? '', '', c.change_pct ?? '']));
       else if (v.type === 'container') v.rows.forEach((r) => v.metrics.forEach((m, mi) => rows.push([...head, 'campaign', `${r.name} · ${m.label}`, r.values[mi] ?? '', r.comparison?.[mi] ?? '', ''])));
     }
   return rows.map((r) => r.map(esc).join(',')).join('\n');

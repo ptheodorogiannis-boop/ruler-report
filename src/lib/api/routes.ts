@@ -235,6 +235,7 @@ add('POST', '/metrics/get-data', async ({ p, body }) => {
     else if (v.type === 'text') out[id] = { values: { html: v.html } };
     else if (v.type === 'tile') out[id] = { values: { kind: v.kind, value: v.value ?? null, target: v.target ?? null, items: v.items ?? [] } };
     else if (v.type === 'container') out[id] = { values: { metrics: v.metrics.map((m) => m.key), rows: v.rows.map((r) => ({ id: r.id, name: r.name, status: r.status, ...Object.fromEntries(v.metrics.map((m, i) => [m.key, r.values[i]])) })), truncated: v.truncated } };
+    else if (v.type === 'compare') out[id] = { values: { mode: v.mode, columns: v.columns.map((c) => ({ label: c.label, period: c.range ?? null, value: c.value, difference: c.change_pct ?? null, absoluteDifference: c.absolute ?? null, base: !!c.base })), total: v.total ?? null } };
     else out[id] = { values: { url: v.url, alt: v.alt, caption: v.caption ?? '' } };
   }
   return out;

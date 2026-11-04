@@ -18,7 +18,7 @@ const KINDS: { value: TileKind; label: string }[] = [
 ];
 
 /** An account + metric picker that writes a MetricRef. */
-function RefPicker({ sources, value, component, onChange, label }: { sources: SourceInfo[]; value: MetricRef | undefined; component: 'number_v1' | 'datatable_v1'; onChange: (r: MetricRef | undefined) => void; label: string }) {
+export function RefPicker({ sources, value, component, onChange, label }: { sources: SourceInfo[]; value: MetricRef | undefined; component: 'number_v1' | 'datatable_v1'; onChange: (r: MetricRef | undefined) => void; label: string }) {
   const t = useT();
   const [srcId, setSrcId] = useState<number | null>(value?.integrationId ?? sources[0]?.id ?? null);
   const source = sources.find((s) => s.id === srcId) ?? null;

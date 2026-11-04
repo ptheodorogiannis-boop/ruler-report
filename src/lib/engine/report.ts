@@ -13,6 +13,7 @@ import { createHash } from 'node:crypto';
 import { comparisonFor, indexValues, layoutToSections, storeKey, valueKey } from '@/lib/layout/compose';
 import type { ReportLayout } from '@/lib/layout/types';
 import { widgetRefs } from '@/lib/layout/refs';
+import { compareNeeds } from '@/lib/layout/compare';
 import { resolveContainer } from '@/lib/layout/container';
 import { connectorFor } from '@/lib/connectors';
 
@@ -368,6 +369,11 @@ export async function ensureWidgetValues(inp: EnsureInput): Promise<{ data: Repo
         store(k, mk(value, sc.info ? { campaignScope: sc.info } : {}));
         continue;
       }
+      if (w.slug === 'compare') {
+        // one metric across periods or accounts (src/lib/layout/compare.ts); the block's own account follows its scope
+        for (const n of compareNeeds(w, inp.range, inp.comparison ?? null)) await need(n.ref.integrationId, n.ref.key, n.period, n.ref.integrationId === b.integrationId ? blockScope : undefined);
+        continue;
+      }
       if (w.slug === 'custom_chart' || w.slug === 'infographic') {
         // refs to the block's own account follow the block scope (review I8); other accounts stay account-wide
         for (const ref of widgetRefs(w)) await need(ref.integrationId, ref.key, w.custom?.period, ref.integrationId === b.integrationId ? blockScope : undefined);
@@ -438,7 +444,9 @@ export function layoutFingerprint(layout: ReportLayout): string {
     b.widgets.map((w) => {
       const refs = widgetRefs(w).map((r) => `${r.integrationId}:${r.key}`).join(',');
       const period = w.custom?.period ? `@${w.custom.period.start}..${w.custom.period.end}` : '';
-      return `${valueKey(w.slug === 'container' && !w.integrationId ? { ...w, integrationId: b.integrationId } : w, b.campaigns) ?? ''}|${w.slug === 'calculated' ? w.custom?.formula ?? '' : ''}|${refs}${period}`;
+      // a comparison's periods are part of what it shows (relative ones follow the dashboard's range, which is in the cache key already)
+      const cmp = w.slug === 'compare' ? JSON.stringify([w.custom?.compareMode, w.custom?.comparePrevious, w.custom?.compareYearAgo, w.custom?.comparePeriods]) : '';
+      return `${valueKey(w.slug === 'container' && !w.integrationId ? { ...w, integrationId: b.integrationId } : w, b.campaigns) ?? ''}|${w.slug === 'calculated' ? w.custom?.formula ?? '' : ''}|${refs}${period}${cmp}`;
     }),
   );
   return createHash('sha1').update(lines.sort().join('\n')).digest('hex').slice(0, 12);

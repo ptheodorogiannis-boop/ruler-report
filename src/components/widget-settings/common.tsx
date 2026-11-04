@@ -98,9 +98,9 @@ export function Segmented<T extends string>({ options, value, onChange, label }:
   return (
     <div>
       {label && <div className="label">{label}</div>}
-      <div className="flex flex-wrap gap-1">
+      <div className="segments segments-fill flex-wrap">
         {options.map((o) => (
-          <button key={o.value} type="button" className={`btn flex-1 py-1 ${value === o.value ? 'border-brand text-brand' : ''}`} onClick={() => onChange(o.value)}>
+          <button key={o.value} type="button" aria-pressed={value === o.value} onClick={() => onChange(o.value)}>
             {o.label}
           </button>
         ))}

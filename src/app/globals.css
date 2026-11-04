@@ -2498,3 +2498,61 @@ html[data-rr-drag] .newblock-drop {
     color: var(--ink-3);
   }
 }
+
+/* ───────────── comparison container (src/components/compare-card.tsx) ───────────── */
+.compare-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.compare-col {
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+}
+.compare-col.is-base {
+  border-color: color-mix(in srgb, var(--block, var(--brand)) 45%, transparent);
+}
+.compare-value {
+  margin-top: 8px;
+  font-size: 28px;
+  line-height: 1.05;
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+.compare-bar {
+  margin-top: 10px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--paper);
+  overflow: hidden;
+}
+.compare-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ink-3);
+  opacity: 0.45;
+}
+.compare-col.is-base .compare-bar i {
+  background: var(--block, var(--brand));
+  opacity: 1;
+}
+@media (max-width: 767px) {
+  .rgrid > .ritem[data-kind='compare'] {
+    grid-column: 1 / -1;
+  }
+}
+/* a segmented control that fills its row (settings panels) */
+.segments-fill {
+  display: flex;
+  width: 100%;
+}
+.segments-fill > * {
+  flex: 1;
+  justify-content: center;
+}

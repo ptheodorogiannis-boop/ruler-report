@@ -18,7 +18,7 @@ export interface MetricRef {
 export type SortDir = 'asc' | 'desc';
 
 /** Editor-only widget sources that are not backed by an integration. */
-export const SPECIAL_SLUGS = ['custom', 'manual', 'analysis', 'calculated', 'custom_chart', 'infographic', 'image', 'container'] as const;
+export const SPECIAL_SLUGS = ['custom', 'manual', 'analysis', 'calculated', 'custom_chart', 'infographic', 'image', 'container', 'compare'] as const;
 export type SpecialSlug = (typeof SPECIAL_SLUGS)[number];
 export const isSpecialSlug = (s: string): s is SpecialSlug => (SPECIAL_SLUGS as readonly string[]).includes(s);
 /** Campaign table defaults (spec v3 §2.3); here (pure) so the editor panel never imports the engine. */
@@ -70,6 +70,17 @@ export interface WidgetCustom {
   items?: { label: string; value: number }[]; // typed data for ranking / compare
   tableRef?: MetricRef & { column?: string; rows?: number }; // ranking from a table metric
   icon?: string; // a name from the tile icon set
+  // compare_v1: one metric (`ref`) across periods or accounts
+  compareMode?: 'periods' | 'accounts';
+  /** periods mode: the previous period is on unless set to false; the same period a year ago is opt-in */
+  comparePrevious?: boolean;
+  compareYearAgo?: boolean;
+  /** periods mode: up to four more periods, each with an optional label */
+  comparePeriods?: { label?: string; start: string; end: string }[];
+  /** accounts mode: the same or another metric on other accounts, shown beside `ref` */
+  compareRefs?: MetricRef[];
+  /** show the change as a percentage (default) or as an absolute difference */
+  changeAs?: 'percent' | 'absolute';
   // image_v1
   url?: string;
   fit?: 'cover' | 'contain';
@@ -143,6 +154,7 @@ export const DEFAULT_SIZE: Record<Component, { w: number; h: number }> = {
   custom_chart_v1: { w: 6, h: 4 },
   infographic_v1: { w: 3, h: 2 },
   image_v1: { w: 6, h: 4 },
+  compare_v1: { w: 12, h: 3 },
 };
 export const MIN_SIZE: Record<Component, { w: number; h: number }> = {
   number_v1: { w: 2, h: 2 },
@@ -156,6 +168,7 @@ export const MIN_SIZE: Record<Component, { w: number; h: number }> = {
   custom_chart_v1: { w: 3, h: 3 },
   infographic_v1: { w: 2, h: 2 },
   image_v1: { w: 2, h: 2 },
+  compare_v1: { w: 4, h: 3 },
 };
 
 export interface SourceInfo {

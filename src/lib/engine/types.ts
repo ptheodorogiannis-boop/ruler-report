@@ -2,7 +2,7 @@
 import type { CampaignScope } from './campaigns';
 import type { Tone } from '@/lib/ai/tones';
 
-export type Component = 'number_v1' | 'chart_v1' | 'datatable_v1' | 'funnel_v1' | 'container_v1' | 'analysis_v1' | 'empty_v1' | 'calculated_v1' | 'custom_chart_v1' | 'infographic_v1' | 'image_v1';
+export type Component = 'number_v1' | 'chart_v1' | 'datatable_v1' | 'funnel_v1' | 'container_v1' | 'analysis_v1' | 'empty_v1' | 'calculated_v1' | 'custom_chart_v1' | 'infographic_v1' | 'image_v1' | 'compare_v1';
 export type Format = 'number' | 'currency' | 'percent' | 'decimal' | 'duration' | 'text';
 export type DiffType = 'positive_good' | 'positive_bad' | 'neutral';
 
@@ -129,7 +129,36 @@ export interface ContainerValue {
   rows: { id: string; name: string; status: 'active' | 'paused' | 'other'; values: (number | null)[]; comparison?: (number | null)[] }[];
   truncated: number;
 }
-export type WidgetValue = NumberValue | ChartValue | TableValue | FunnelValue | ErrorValue | TextValue | TileValue | ImageValue | ContainerValue;
+/**
+ * Comparison container (compare_v1): one metric across chosen periods (this period against the previous one, the same
+ * period a year ago and up to four custom periods) or across accounts. `columns[0]` is the base. In periods mode a
+ * column's change_pct is how this period moved against that column; in accounts mode it is the account's own change
+ * against the previous period.
+ */
+export interface CompareValue {
+  type: 'compare';
+  mode: 'periods' | 'accounts';
+  format: Format;
+  columns: {
+    label: string;
+    /** periods mode: which period the column is, so the card can name it in the reader's language */
+    token?: 'current' | 'previous' | 'yearAgo' | 'custom';
+    range?: DateRange;
+    platform?: string;
+    slug?: string;
+    /** accounts mode: the column's own format and currency when it differs from the base metric */
+    format?: Format;
+    currency?: string;
+    value: number | null;
+    change_pct?: number | null;
+    absolute?: number | null;
+    base?: boolean;
+    error?: string;
+  }[];
+  /** accounts mode: the sum, when the metric can be added up */
+  total?: number | null;
+}
+export type WidgetValue = NumberValue | ChartValue | TableValue | FunnelValue | ErrorValue | TextValue | TileValue | ImageValue | ContainerValue | CompareValue;
 
 // ---------- connectors ----------
 export type DailyData = Record<string, Record<string, number>>; // date → prim → value
